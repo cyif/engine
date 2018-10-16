@@ -8,6 +8,7 @@ public class EngineRace extends AbstractEngine {
 
 	@Override
 	public void open(String path) throws EngineException {
+
 	}
 	
 	@Override

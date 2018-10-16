@@ -3,6 +3,7 @@ package com.alibabacloud.polar_race.engine.common.utils;
 public class RBTree <Key extends Comparable<Key>, Value>  {
 //    private static final boolean RED = true;
 //    private static final boolean BLACK = false;
+
     private Node root;
 
     private class Node {
@@ -10,10 +11,10 @@ public class RBTree <Key extends Comparable<Key>, Value>  {
         Value value;
         Node left = null;
         Node right = null;
+        //红色是1，黑色是0,减小内存的使用
+        byte color;
 
-        boolean color;
-
-        Node(Key key, Value value, boolean color) {
+        Node(Key key, Value value, byte color) {
             this.key = key;
             this.value = value;
             this.color = color;
@@ -24,7 +25,7 @@ public class RBTree <Key extends Comparable<Key>, Value>  {
         // 空节点属于黑节点
         if(x == null) return false;
         // 判断节点是否为红色
-        return x.color == true;
+        return x.color == 1;
     }
 
     public Value get(Key key) {
@@ -54,7 +55,7 @@ public class RBTree <Key extends Comparable<Key>, Value>  {
     private Node put(Node h, Key key, Value value) {
         // 创建一个新的红色的节点
         if(h == null) {
-            return new Node(key, value, true);
+            return new Node(key, value, (byte)1);
         }
 
         // 定位到需要插入的节点
@@ -88,7 +89,7 @@ public class RBTree <Key extends Comparable<Key>, Value>  {
         h.right = x.left;
         x.left = h;
         x.color = h.color;
-        h.color = true;
+        h.color = 1;
         return x;
     }
 
@@ -97,14 +98,14 @@ public class RBTree <Key extends Comparable<Key>, Value>  {
         h.left = x.right;
         x.right = h;
         x.color = h.color;
-        h.color = true;
+        h.color = 1;
         return x;
     }
 
     private void flipColor(Node h) {
-        h.color = true;
-        h.left.color = false;
-        h.right.color = false;
+        h.color = 1;
+        h.left.color = 0;
+        h.right.color = 0;
     }
 
 

@@ -15,7 +15,7 @@ public class ConcurrencyHashTable <Key extends Comparable<Key>, Value> {
     private int bucket_size;//桶的数量
     private int lock_size;//锁的数量，锁平均分配到桶上
 
-    ConcurrencyHashTable(int bucket_size, PutHashLock putMessageLock, int lock_size){
+    public ConcurrencyHashTable(int bucket_size, PutHashLock putMessageLock, int lock_size){
         this.bucket_size = bucket_size;
         this.lock_size = lock_size;
         this.table = new RBTree[bucket_size];
