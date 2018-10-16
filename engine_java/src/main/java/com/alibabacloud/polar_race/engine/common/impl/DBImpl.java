@@ -5,9 +5,16 @@ import com.alibabacloud.polar_race.engine.common.utils.ByteToInt;
 import com.alibabacloud.polar_race.engine.common.utils.ConcurrencyHashTable;
 import com.alibabacloud.polar_race.engine.common.utils.Key;
 import com.alibabacloud.polar_race.engine.common.utils.PutHashSpinLock;
+import com.sun.tools.javac.comp.DeferredAttr;
 import org.rocksdb.Slice;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -18,19 +25,58 @@ import java.util.concurrent.atomic.AtomicLong;
  * Time: 下午3:14
  */
 public class DBImpl {
+    private static final Logger log = LoggerFactory.getLogger(DBImpl.class);
     private ValueLog[] valueLogs;
     private KeyLog keyLog;
     private AtomicLong wrotePosition = new AtomicLong(0);
     private ConcurrencyHashTable<Key, byte[]> map;
 
 
-    public DBImpl(){
+    public DBImpl(String path){
         map = new ConcurrencyHashTable<Key, byte[]>(1024*1024, new PutHashSpinLock(), 1024);
 
-        for (int i=0; i<GlobalConfig.ValueFileNum; i++){
-            valueLogs[i] = new ValueLog(GlobalConfig.ValueFileSize, GlobalConfig.storePathValue);
+        //判断KeyLog文件是否存在,如果存在，进行内存恢复
+        File dir = new File(path + File.separator + GlobalConfig.storePathKey);
+        if (dir.exists()){
+            recoverKeyLog(path);
+            recoverHashtable();
+            recoverValueLog(path);
         }
-        keyLog = new KeyLog(GlobalConfig.ValueFileSize, GlobalConfig.storePathKey);
+
+        //如果不存在，说明是第一次open
+        else {
+            for (int i=0; i<GlobalConfig.ValueFileNum; i++){
+                valueLogs[i] = new ValueLog(GlobalConfig.ValueFileSize, path + File.separator + GlobalConfig.storePathValue, false);
+            }
+            keyLog = new KeyLog(GlobalConfig.KeyFileSize, path + File.separator + GlobalConfig.storePathKey);
+        }
+
+    }
+
+    public void recoverKeyLog(String path){
+        keyLog = new KeyLog(GlobalConfig.KeyFileSize, path + File.separator + GlobalConfig.storePathKey);
+        int length = keyLog.getFileLength();
+        keyLog.setWrotePosition(length);
+
+        this.wrotePosition = new AtomicLong(length * 4 * 1024 / 12);
+    }
+    public void recoverHashtable(){
+        ByteBuffer byteBuffer = keyLog.getKey();
+        byteBuffer.flip();
+
+        while (byteBuffer.position()<keyLog.getFileLength()){
+            byte[] key = new byte[8];
+            byteBuffer.get(key, 0, 8);
+            byte[] offset = new byte[4];
+            byteBuffer.get(offset, 0, 4);
+
+            map.put(new Key(key), offset);
+        }
+    }
+    public void recoverValueLog(String path){
+        for (int i=0; i<GlobalConfig.ValueFileNum; i++){
+            valueLogs[i] = new ValueLog(GlobalConfig.ValueFileSize, path + File.separator + GlobalConfig.storePathValue + File.separator + i, true);
+        }
     }
 
 

@@ -23,8 +23,7 @@ public class KeyLog {
     /*文件的大小,1024*1024*64*12 就够。1个g足够*/
     private final int FileSize;
 
-    /*映射的文件名*/
-    private static AtomicInteger fileName = new AtomicInteger(0);
+    private RandomAccessFile randomAccessFile;
 
     /*映射的fileChannel对象*/
     private FileChannel fileChannel;
@@ -41,16 +40,33 @@ public class KeyLog {
         ensureDirOK(storePath);
         /*打开文件，并将文件映射到内存*/
         try {
-            File file = new File(storePath + File.separator + fileName.getAndIncrement());
-            this.fileChannel = new RandomAccessFile(file, "rw").getChannel();
-            this.mappedByteBuffer = this.fileChannel.map(FileChannel.MapMode.READ_ONLY, 0, FileSize);
+            File file = new File(storePath + File.separator + 0);
+            this.randomAccessFile = new RandomAccessFile(file, "rw");
+            this.fileChannel = randomAccessFile.getChannel();
+            this.mappedByteBuffer = this.fileChannel.map(FileChannel.MapMode.READ_WRITE, 0, FileSize);
 
         } catch (FileNotFoundException e) {
-            log.error("create file channel " + fileName + " Failed. ", e);
+            log.error("create file channel " + 0 + " Failed. ", e);
         } catch (IOException e) {
-            log.error("map file " + fileName + " Failed. ", e);
+            log.error("map file " + 0 + " Failed. ", e);
         }
     }
+
+    public void setWrotePosition(int i){
+        wrotePosition = new AtomicInteger(i);
+    }
+
+    public int getFileLength(){
+        int ans = 0;
+        try {
+            ans = (int) this.randomAccessFile.length();
+        }
+        catch (IOException e){
+
+        }
+        return ans;
+    }
+
 
     public static void ensureDirOK(final String dirName) {
         if (dirName != null) {
@@ -78,11 +94,8 @@ public class KeyLog {
     }
 
     //mappedbytebuffer读取数据,用于恢复hash
-    ByteBuffer getKey(int offset) {
-        ByteBuffer byteBuffer = this.mappedByteBuffer.slice();
-        byteBuffer.position(offset);
-        byteBuffer.limit(offset+12);
-        return byteBuffer;
+    ByteBuffer getKey() {
+        return this.mappedByteBuffer.slice();
     }
 
 

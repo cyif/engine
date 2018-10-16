@@ -1,5 +1,7 @@
 package com.alibabacloud.polar_race.engine.common.config;
 
+import java.io.File;
+
 /**
  * Created by IntelliJ IDEA.
  * User: wenchao.qi
@@ -7,9 +9,8 @@ package com.alibabacloud.polar_race.engine.common.config;
  * Time: 下午1:50
  */
 public class GlobalConfig {
-    public static final String storePathRootDir = "alidata/";
-    public static final String storePathValue = storePathRootDir + "value/";
-    public static final String storePathKey = storePathRootDir + "key/";
+    public static final String storePathValue = "value";
+    public static final String storePathKey = "key";
 
     public static final int ValueFileSize = 1024 * 1024 * 1024;
     public static final long ValueFileNum = 64 * 1024 * 1024 * 4 * 1024 / ValueFileSize;

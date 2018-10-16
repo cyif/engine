@@ -27,19 +27,27 @@ public class ValueLog {
     /*映射的fileChannel对象*/
     private FileChannel fileChannel;
 
-    public ValueLog(int FileSize, String storePath) {
+    public ValueLog(int FileSize, String storePath, boolean recover) {
         this.FileSize = FileSize;
         /*检查文件夹是否存在*/
         ensureDirOK(storePath);
-        /*打开文件，并将文件映射到内存*/
+        /*打开文件*/
         try {
-            File file = new File(storePath + File.separator + fileName.getAndIncrement());
-            this.fileChannel = new RandomAccessFile(file, "rw").getChannel();
+            if (recover){
+                File file = new File(storePath);
+                this.fileChannel = new RandomAccessFile(file, "rw").getChannel();
+            }
+            else {
+                File file = new File(storePath + File.separator + fileName.getAndIncrement());
+                this.fileChannel = new RandomAccessFile(file, "rw").getChannel();
+            }
 
         } catch (FileNotFoundException e) {
             log.error("create file channel " + fileName + " Failed. ", e);
         }
     }
+
+
 
     public static void ensureDirOK(final String dirName) {
         if (dirName != null) {
@@ -55,7 +63,6 @@ public class ValueLog {
     void putMessage(byte[] value, int wrotePosition) {
         ByteBuffer byteBuffer = ByteBuffer.allocateDirect(4096);
         byteBuffer.put(value);
-        //否则继续写
         try {
             this.fileChannel.write(byteBuffer, wrotePosition);
         } catch (IOException e) {
