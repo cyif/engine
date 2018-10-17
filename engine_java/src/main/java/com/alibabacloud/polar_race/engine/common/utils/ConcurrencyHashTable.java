@@ -14,12 +14,21 @@ public class ConcurrencyHashTable <Key extends Comparable<Key>, Value> {
     private PutHashLock[] locks;
     private int bucket_size;//桶的数量
     private int lock_size;//锁的数量，锁平均分配到桶上
+    private int ratio;
 
-    public ConcurrencyHashTable(int bucket_size, PutHashLock putMessageLock, int lock_size){
+    public ConcurrencyHashTable(int bucket_size, int lock_size){
         this.bucket_size = bucket_size;
         this.lock_size = lock_size;
+        this.ratio = bucket_size / lock_size;
         this.table = new RBTree[bucket_size];
         this.locks = new PutHashLock[lock_size];
+
+        for (int i=0; i<bucket_size; i++){
+            table[i] = new RBTree<Key, Value>();
+        }
+        for (int i=0; i<lock_size; i++){
+            locks[i] = new PutHashSpinLock();
+        }
     }
 
     public Value get(Key key) {
@@ -32,9 +41,10 @@ public class ConcurrencyHashTable <Key extends Comparable<Key>, Value> {
         int hash = hash(key);
         RBTree<Key, Value> node = table[hash];
         //插入的时候需要上锁
-        locks[hash%lock_size].lock();
+        System.out.println((key.hashCode() & 0x7fffffff)%lock_size);
+        this.locks[hash / ratio].lock();
         node.insert(key, value);
-        locks[hash%lock_size].unlock();
+        locks[hash / ratio].unlock();
     }
 
     private int hash(Key key){

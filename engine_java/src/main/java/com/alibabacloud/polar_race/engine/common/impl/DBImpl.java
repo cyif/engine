@@ -29,7 +29,7 @@ public class DBImpl {
 
     public DBImpl(String path){
 
-        this.map = new ConcurrencyHashTable<Key, byte[]>(1024*1024, new PutHashSpinLock(), 1024);
+        this.map = new ConcurrencyHashTable<Key, byte[]>(1024*1024, 1024);
 
         //判断KeyLog文件是否存在,如果存在，进行内存恢复
         File dir = new File(path + File.separator + GlobalConfig.storePathKey);

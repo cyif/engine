@@ -23,24 +23,25 @@ public class Key implements Comparable<Key>{
         if (this == that) {
             return 0;
         }
-        if (this.data == that.data) {
+        if (this.data == that.data && this.data.length == that.data.length) {
             return 0;
         }
+        int minLength = Math.min(this.data.length, that.data.length);
 
-        for (int i = 0; i < 8; i++) {
+        for (int i = 0; i < minLength; i++) {
             int thisByte = 0xFF & this.data[i];
             int thatByte = 0xFF & that.data[i];
             if (thisByte != thatByte) {
                 return (thisByte) - (thatByte);
             }
         }
-        return 0;
+        return this.data.length - that.data.length;
     }
 
     @Override
     public int hashCode() {
         int hash = 0;
-        for (int i = 0; i < 8; i++) {
+        for (int i = 0; i < data.length; i++) {
             hash = 31 * hash + data[i];
         }
         if (hash == 0) {
