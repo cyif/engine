@@ -1,6 +1,7 @@
 import com.alibabacloud.polar_race.engine.common.EngineRace;
 import junit.framework.TestCase;
 
+import java.io.File;
 import java.util.List;
 import java.util.Random;
 
@@ -9,11 +10,12 @@ public class DemoTest extends TestCase {
 
     private static final int THREAD_NUM = 64;
     private static final int OPT_NUM_PER_THREAD = 10000;
+    private static final String DATA_PATH = "tmp/data";
 
     private EngineRace engine = new EngineRace();
 
-    public void testWriteAndRead() throws Exception{
-        engine.open("data/");
+    public void testRandomRead() throws Exception {
+        engine.open(DATA_PATH);
         Thread[] threads = new Thread[THREAD_NUM];
 
         // Write
@@ -71,5 +73,25 @@ public class DemoTest extends TestCase {
         for (int i = 0; i < THREAD_NUM; i++) {
             threads[i].join();
         }
+        clear(DATA_PATH);
+    }
+
+    private static boolean clear(String path) {
+        File dirFile = new File(path);
+        // 如果dir对应的文件不存在，则退出
+        if (!dirFile.exists()) {
+            return false;
+        }
+
+        if (dirFile.isFile()) {
+            return dirFile.delete();
+        } else {
+
+            for (File file : dirFile.listFiles()) {
+                clear(file.getPath());
+            }
+        }
+
+        return dirFile.delete();
     }
 }
