@@ -13,7 +13,7 @@ public class GlobalConfig {
     public static final String storePathKey = "key";
 
     public static final int ValueFileSize = 1024 * 1024 * 1024;
-    public static final long ValueFileNum = 64 * 1024 * 1024 * 4 * 1024 / ValueFileSize;
+    public static final int ValueFileNum = (int)(((long)64 * 1024 * 1024 * 4 * 1024) / ValueFileSize);
     public static final int KeyFileSize = 1024 * 1024 * 1024;
 
 }

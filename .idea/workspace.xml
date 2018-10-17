@@ -11,8 +11,6 @@
   <component name="ChangeListManager">
     <list default="true" id="fe3dc311-5074-4f0e-a8cb-f64de3a6578a" name="Default" comment="">
       <change beforePath="$PROJECT_DIR$/engine_java/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/engine_java/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/engine_java/src/main/java/com/alibabacloud/polar_race/engine/common/EngineRace.java" beforeDir="false" afterPath="$PROJECT_DIR$/engine_java/src/main/java/com/alibabacloud/polar_race/engine/common/EngineRace.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/engine_java/src/main/java/com/alibabacloud/polar_race/engine/common/utils/RBTree.java" beforeDir="false" afterPath="$PROJECT_DIR$/engine_java/src/main/java/com/alibabacloud/polar_race/engine/common/utils/RBTree.java" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -24,7 +22,7 @@
     <session id="453954238">
       <usages-collector id="statistics.lifecycle.project">
         <counts>
-          <entry key="project.closed" value="1" />
+          <entry key="project.closed" value="2" />
           <entry key="project.open.time.5" value="2" />
           <entry key="project.opened" value="2" />
         </counts>
@@ -130,7 +128,7 @@
     <detection-done>true</detection-done>
     <sorting>DEFINITION_ORDER</sorting>
   </component>
-  <component name="ProjectFrameBounds" extendedState="1">
+  <component name="ProjectFrameBounds">
     <option name="y" value="23" />
     <option name="width" value="1440" />
     <option name="height" value="799" />
@@ -296,8 +294,7 @@
     <option name="totallyTimeSpent" value="3535000" />
   </component>
   <component name="ToolWindowManager">
-    <frame x="0" y="23" width="1440" height="799" extended-state="1" />
-    <editor active="true" />
+    <frame x="0" y="23" width="1440" height="799" extended-state="0" />
     <layout>
       <window_info active="true" content_ui="combo" id="Project" order="0" visible="true" weight="0.25679544" />
       <window_info id="Structure" order="1" weight="0.25" />

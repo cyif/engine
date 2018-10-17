@@ -5,18 +5,12 @@ import com.alibabacloud.polar_race.engine.common.utils.ByteToInt;
 import com.alibabacloud.polar_race.engine.common.utils.ConcurrencyHashTable;
 import com.alibabacloud.polar_race.engine.common.utils.Key;
 import com.alibabacloud.polar_race.engine.common.utils.PutHashSpinLock;
-import com.sun.tools.javac.comp.DeferredAttr;
-import org.rocksdb.Slice;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
-import java.nio.channels.FileChannel;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
+
 
 /**
  * Created by IntelliJ IDEA.
@@ -26,43 +20,45 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public class DBImpl {
     private static final Logger log = LoggerFactory.getLogger(DBImpl.class);
+
     private ValueLog[] valueLogs;
     private KeyLog keyLog;
-    private AtomicLong wrotePosition = new AtomicLong(0);
+    private AtomicInteger wrotePosition = new AtomicInteger(0);//每次加1，代表第几个数据
     private ConcurrencyHashTable<Key, byte[]> map;
 
 
     public DBImpl(String path){
-        map = new ConcurrencyHashTable<Key, byte[]>(1024*1024, new PutHashSpinLock(), 1024);
+
+        this.map = new ConcurrencyHashTable<Key, byte[]>(1024*1024, new PutHashSpinLock(), 1024);
 
         //判断KeyLog文件是否存在,如果存在，进行内存恢复
         File dir = new File(path + File.separator + GlobalConfig.storePathKey);
         if (dir.exists()){
-            recoverKeyLog(path);
-            recoverHashtable();
-            recoverValueLog(path);
+            recoverKeyLog(path);//keylog恢复和wroteposition恢复
+            recoverHashtable();//hashtable恢复
         }
 
         //如果不存在，说明是第一次open
         else {
-            for (int i=0; i<GlobalConfig.ValueFileNum; i++){
-                valueLogs[i] = new ValueLog(GlobalConfig.ValueFileSize, path + File.separator + GlobalConfig.storePathValue, false);
-            }
             keyLog = new KeyLog(GlobalConfig.KeyFileSize, path + File.separator + GlobalConfig.storePathKey);
+        }
+
+        //打开或创建valuelog文件
+        for (int i=0; i<GlobalConfig.ValueFileNum; i++){
+            valueLogs[i] = new ValueLog(GlobalConfig.ValueFileSize, path + File.separator + GlobalConfig.storePathValue, i);
         }
 
     }
 
-    public void recoverKeyLog(String path){
+    private void recoverKeyLog(String path){
         keyLog = new KeyLog(GlobalConfig.KeyFileSize, path + File.separator + GlobalConfig.storePathKey);
         int length = keyLog.getFileLength();
-        keyLog.setWrotePosition(length);
+        this.wrotePosition = new AtomicInteger(length / 12);
 
-        this.wrotePosition = new AtomicLong(length * 4 * 1024 / 12);
     }
-    public void recoverHashtable(){
-        ByteBuffer byteBuffer = keyLog.getKey();
-        byteBuffer.flip();
+    private void recoverHashtable(){
+        ByteBuffer byteBuffer = keyLog.getKeyBuffer();
+        byteBuffer.position(0);
 
         while (byteBuffer.position()<keyLog.getFileLength()){
             byte[] key = new byte[8];
@@ -73,37 +69,33 @@ public class DBImpl {
             map.put(new Key(key), offset);
         }
     }
-    public void recoverValueLog(String path){
-        for (int i=0; i<GlobalConfig.ValueFileNum; i++){
-            valueLogs[i] = new ValueLog(GlobalConfig.ValueFileSize, path + File.separator + GlobalConfig.storePathValue + File.separator + i, true);
-        }
-    }
 
 
     public void write(byte[] key, byte[] value){
-        long currentPos = this.wrotePosition.getAndAdd(4096);
+        int currentPos = this.wrotePosition.getAndAdd(1);
 
-        int file_no = (int) currentPos / GlobalConfig.ValueFileSize;
-        int file_offset = (int) currentPos % GlobalConfig.ValueFileSize;
-        int global_offset = (int) currentPos / 4096;
+        int key_wrotePosition = currentPos * 12;//keyLog的wrotePosition
+
+        int value_file_no = (int)(((long) currentPos * 4096) / GlobalConfig.ValueFileSize);
+        int value_file_wrotePosition = (int)(((long) currentPos * 4096) % GlobalConfig.ValueFileSize);
+
         //value写入value文件
-        valueLogs[file_no].putMessage(value, file_offset);
-
+        valueLogs[value_file_no].putMessage(value, value_file_wrotePosition);
         //写入hashmap的offset是除以4K的
-        byte[] offset = ByteToInt.intToByteArray(global_offset);
+        byte[] offset = ByteToInt.intToByteArray(currentPos);
         //key和offset写入key文件
-        keyLog.putKey(key, offset);
+        keyLog.putKey(key, offset, key_wrotePosition);
         //key和offset写入hashmap
         map.put(new Key(key), offset);
     }
 
     public byte[] read(byte[] key){
         byte[] offset = map.get(new Key(key));
-        int global_offset = ByteToInt.byteArrayToInt(offset);
-        long global_offset1 = global_offset * 4096;
-        int file_no = (int) global_offset1 / GlobalConfig.ValueFileSize;
-        int file_offset = (int) global_offset1 % GlobalConfig.ValueFileSize;
+        int currentPos = ByteToInt.byteArrayToInt(offset);
+        long global_offset = (long) currentPos * 4096;
+        int value_file_no = (int)(((long) currentPos * 4096) / GlobalConfig.ValueFileSize);
+        int value_file_wrotePosition = (int)(((long) currentPos * 4096) % GlobalConfig.ValueFileSize);
 
-        return valueLogs[file_no].getMessage(file_offset);
+        return valueLogs[value_file_no].getMessage(value_file_wrotePosition);
     }
 }

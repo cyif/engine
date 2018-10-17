@@ -7,6 +7,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
+import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -17,33 +18,31 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Time: 下午1:43
  */
 public class ValueLog {
-    private static final Logger log = LoggerFactory.getLogger("ValueLog");
+    private static final Logger log = LoggerFactory.getLogger(ValueLog.class);
+
     /*文件的大小,最好是1G*/
     private final int FileSize;
-
-    /*映射的文件名*/
-    private static AtomicInteger fileName = new AtomicInteger(0);//需要256个g的文件
 
     /*映射的fileChannel对象*/
     private FileChannel fileChannel;
 
-    public ValueLog(int FileSize, String storePath, boolean recover) {
+    /*映射的内存对象*/
+    private MappedByteBuffer mappedByteBuffer;
+
+    public ValueLog(int FileSize, String storePath, int fileName) {
         this.FileSize = FileSize;
         /*检查文件夹是否存在*/
         ensureDirOK(storePath);
         /*打开文件*/
         try {
-            if (recover){
-                File file = new File(storePath);
-                this.fileChannel = new RandomAccessFile(file, "rw").getChannel();
-            }
-            else {
-                File file = new File(storePath + File.separator + fileName.getAndIncrement());
-                this.fileChannel = new RandomAccessFile(file, "rw").getChannel();
-            }
+            File file = new File(storePath + File.separator + fileName);
+            this.fileChannel = new RandomAccessFile(file, "rw").getChannel();
+            this.mappedByteBuffer = this.fileChannel.map(FileChannel.MapMode.READ_WRITE, 0, FileSize);
 
         } catch (FileNotFoundException e) {
             log.error("create file channel " + fileName + " Failed. ", e);
+        } catch (IOException e) {
+            log.error("map file " + 0 + " Failed. ", e);
         }
     }
 
@@ -59,26 +58,17 @@ public class ValueLog {
         }
     }
 
-    //directbytebuffer写一个数据
+    //mappedbytebuffer写一个数据
     void putMessage(byte[] value, int wrotePosition) {
-        ByteBuffer byteBuffer = ByteBuffer.allocateDirect(4096);
-        byteBuffer.put(value);
-        try {
-            this.fileChannel.write(byteBuffer, wrotePosition);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        ByteBuffer byteBuffer = this.mappedByteBuffer.slice();
+        byteBuffer.position(wrotePosition);
+        byteBuffer.put(value, 0, 4096);
     }
 
-    //directbytebuffer读取数据
+    //mappedbytebuffer读取数据
     byte[] getMessage(int offset) {
-        ByteBuffer byteBuffer = ByteBuffer.allocateDirect(4096);
-        try {
-            this.fileChannel.read(byteBuffer);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        byteBuffer.flip();
+        ByteBuffer byteBuffer = this.mappedByteBuffer.slice();
+        byteBuffer.position(offset);
         byte[] bytes = new byte[4096];
         byteBuffer.get(bytes);
         return bytes;

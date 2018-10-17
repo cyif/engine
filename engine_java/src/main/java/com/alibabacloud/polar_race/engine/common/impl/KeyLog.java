@@ -2,7 +2,6 @@ package com.alibabacloud.polar_race.engine.common.impl;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -10,7 +9,7 @@ import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
-import java.util.concurrent.atomic.AtomicInteger;
+
 
 /**
  * Created by IntelliJ IDEA.
@@ -18,8 +17,10 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Date: 2018/10/16
  * Time: 下午2:45
  */
+
 public class KeyLog {
-    private static final Logger log = LoggerFactory.getLogger("KeyLog");
+    private static final Logger log = LoggerFactory.getLogger(KeyLog.class);
+
     /*文件的大小,1024*1024*64*12 就够。1个g足够*/
     private final int FileSize;
 
@@ -31,9 +32,6 @@ public class KeyLog {
     /*映射的内存对象*/
     private MappedByteBuffer mappedByteBuffer;
 
-    /*文件尾指针*/
-    private AtomicInteger wrotePosition = new AtomicInteger(0);
-
     public KeyLog(int FileSize, String storePath) {
         this.FileSize = FileSize;
         /*检查文件夹是否存在*/
@@ -44,7 +42,6 @@ public class KeyLog {
             this.randomAccessFile = new RandomAccessFile(file, "rw");
             this.fileChannel = randomAccessFile.getChannel();
             this.mappedByteBuffer = this.fileChannel.map(FileChannel.MapMode.READ_WRITE, 0, FileSize);
-
         } catch (FileNotFoundException e) {
             log.error("create file channel " + 0 + " Failed. ", e);
         } catch (IOException e) {
@@ -52,17 +49,14 @@ public class KeyLog {
         }
     }
 
-    public void setWrotePosition(int i){
-        wrotePosition = new AtomicInteger(i);
-    }
-
+    //获得文件写到哪里的长度,用于recover
     public int getFileLength(){
         int ans = 0;
         try {
             ans = (int) this.randomAccessFile.length();
         }
         catch (IOException e){
-
+            log.error("get file length Failed. ", e);
         }
         return ans;
     }
@@ -78,25 +72,17 @@ public class KeyLog {
         }
     }
 
-    //directbytebuffer写一个数据
-    int putKey(byte[] key, byte[] offset) {
-        int currentPos = this.wrotePosition.getAndAdd(12);
-
-        ByteBuffer byteBuffer = ByteBuffer.allocateDirect(12);
-        byteBuffer.put(key);
-        byteBuffer.put(offset);
-        try {
-            this.fileChannel.write(byteBuffer, currentPos);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return currentPos;
+    //mappedbytebuffer写一个数据
+    void putKey(byte[] key, byte[] offset, int wrotePosition) {
+        ByteBuffer byteBuffer = this.mappedByteBuffer.slice();
+        byteBuffer.position(wrotePosition);
+        byteBuffer.put(key, 0, 8);
+        byteBuffer.put(offset, 0, 4);
     }
 
     //mappedbytebuffer读取数据,用于恢复hash
-    ByteBuffer getKey() {
+    ByteBuffer getKeyBuffer() {
         return this.mappedByteBuffer.slice();
     }
-
 
 }
