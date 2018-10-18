@@ -4,6 +4,7 @@ import com.alibabacloud.polar_race.engine.common.config.GlobalConfig;
 import com.alibabacloud.polar_race.engine.common.utils.ByteToInt;
 import com.alibabacloud.polar_race.engine.common.utils.ConcurrencyHashTable;
 import com.alibabacloud.polar_race.engine.common.utils.Key;
+import org.omg.PortableInterceptor.SYSTEM_EXCEPTION;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,7 +36,9 @@ public class DBImpl {
         File dir = new File(path + File.separator + GlobalConfig.storePathKey);
         if (dir.exists()){
             recoverKeyLog(path);//keylog恢复和wroteposition恢复
+            System.out.println("recoverKeylog finished");
             recoverHashtable();//hashtable恢复
+            System.out.println("recoverHashtable finished");
         }
 
         //如果不存在，说明是第一次open
@@ -44,6 +47,7 @@ public class DBImpl {
         }
 
         //打开或创建valuelog文件
+        this.valueLogs = new ValueLog[GlobalConfig.ValueFileNum];
         for (int i=0; i<GlobalConfig.ValueFileNum; i++){
             valueLogs[i] = new ValueLog(GlobalConfig.ValueFileSize, path + File.separator + GlobalConfig.storePathValue, i);
         }
@@ -60,6 +64,7 @@ public class DBImpl {
         ByteBuffer byteBuffer = keyLog.getKeyBuffer();
         byteBuffer.position(0);
 
+        System.out.println(keyLog.getFileLength());
         while (byteBuffer.position()<keyLog.getFileLength()){
             byte[] key = new byte[8];
             byteBuffer.get(key, 0, 8);

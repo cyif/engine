@@ -32,6 +32,7 @@ public class EngineRace extends AbstractEngine {
 	
 	@Override
 	public void close() {
+		db = null;
 	}
 
 }

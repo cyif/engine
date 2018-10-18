@@ -41,7 +41,6 @@ public class ConcurrencyHashTable <Key extends Comparable<Key>, Value> {
         int hash = hash(key);
         RBTree<Key, Value> node = table[hash];
         //插入的时候需要上锁
-        System.out.println((key.hashCode() & 0x7fffffff)%lock_size);
         this.locks[hash / ratio].lock();
         node.insert(key, value);
         locks[hash / ratio].unlock();
