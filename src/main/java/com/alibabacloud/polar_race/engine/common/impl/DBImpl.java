@@ -66,7 +66,7 @@ public class DBImpl {
 
         System.out.println(keyLog.getFileLength());
         while (byteBuffer.position()<keyLog.getFileLength()){
-            if (byteBuffer.getChar() != '1')
+            if (byteBuffer.get() != (byte) 1)
                 break;
             byte[] key = new byte[8];
             byteBuffer.get(key, 0, 8);

@@ -14,7 +14,7 @@ import org.junit.Test;
 public class DemoTest extends TestCase {
 
     private static final int THREAD_NUM = 64;
-    private static final int OPT_NUM_PER_THREAD = 1000;
+    private static final int OPT_NUM_PER_THREAD = 10000;
     private static final String DATA_PATH = "tmp/data";
 
     private EngineRace engine = new EngineRace();

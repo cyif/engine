@@ -76,7 +76,7 @@ public class KeyLog {
     void putKey(byte[] key, byte[] offset, int wrotePosition) {
         ByteBuffer byteBuffer = this.mappedByteBuffer.slice();
         byteBuffer.position(wrotePosition);
-        byteBuffer.putChar('1');
+        byteBuffer.put((byte) 1);
         byteBuffer.put(key, 0, 8);
         byteBuffer.put(offset, 0, 4);
     }
