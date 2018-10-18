@@ -66,6 +66,8 @@ public class DBImpl {
 
         System.out.println(keyLog.getFileLength());
         while (byteBuffer.position()<keyLog.getFileLength()){
+            if (byteBuffer.getChar() != '1')
+                break;
             byte[] key = new byte[8];
             byteBuffer.get(key, 0, 8);
             byte[] offset = new byte[4];
@@ -79,7 +81,7 @@ public class DBImpl {
     public void write(byte[] key, byte[] value){
         int currentPos = this.wrotePosition.getAndAdd(1);
 
-        int key_wrotePosition = currentPos * 12;//keyLog的wrotePosition
+        int key_wrotePosition = currentPos * 13;//keyLog的wrotePosition
 
         int value_file_no = (int)(((long) currentPos * 4096) / GlobalConfig.ValueFileSize);
         int value_file_wrotePosition = (int)(((long) currentPos * 4096) % GlobalConfig.ValueFileSize);
