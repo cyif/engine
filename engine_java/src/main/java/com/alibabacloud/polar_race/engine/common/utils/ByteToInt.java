@@ -24,15 +24,7 @@ public class ByteToInt {
     }
 
     public static long byteArrayToLong(byte[] b) {
-//        return   b[7] & 0xFF |
-//                (b[6] & 0xFF) << 8|
-//                (b[5] & 0xFF) << 16|
-//                (b[4] & 0xFF) << 24 |
-//                (b[3] & 0xFF) << 32 |
-//                (b[2] & 0xFF) << 40 |
-//                (b[1] & 0xFF) << 48 |
-//                (b[0] & 0xFF) << 56;
-        long s = 0;
+
         long s0 = b[0] & 0xff;// 最低位
         long s1 = b[1] & 0xff;
         long s2 = b[2] & 0xff;
@@ -50,22 +42,11 @@ public class ByteToInt {
         s5 <<= 8 * 5;
         s6 <<= 8 * 6;
         s7 <<= 8 * 7;
-        s = s0 | s1 | s2 | s3 | s4 | s5 | s6 | s7;
-        return s;
+        return s0 | s1 | s2 | s3 | s4 | s5 | s6 | s7;
+
     }
 
     public static byte[] longToByteArray(long a) {
-//        return new byte[] {
-//                (byte) ((a >> 56) & 0xFF),
-//                (byte) ((a >> 48) & 0xFF),
-//                (byte) ((a >> 40) & 0xFF),
-//                (byte) ((a >> 32) & 0xFF),
-//                (byte) ((a >> 24) & 0xFF),
-//                (byte) ((a >> 16) & 0xFF),
-//                (byte) ((a >> 8) & 0xFF),
-//                (byte) (a & 0xFF)
-//        };
-
         long temp = a;
         byte[] b = new byte[8];
         for (int i = 0; i < b.length; i++) {

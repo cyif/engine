@@ -22,9 +22,7 @@ public class KeyLog {
     private static final Logger log = LoggerFactory.getLogger(KeyLog.class);
 
     /*文件的大小,1024*1024*64*12 就够。1个g足够*/
-    private final int FileSize;
-
-    private RandomAccessFile randomAccessFile;
+//    private final int FileSize;
 
     /*映射的fileChannel对象*/
     private FileChannel fileChannel;
@@ -33,14 +31,13 @@ public class KeyLog {
     private MappedByteBuffer mappedByteBuffer;
 
     public KeyLog(int FileSize, String storePath) {
-        this.FileSize = FileSize;
+//        this.FileSize = FileSize;
         /*检查文件夹是否存在*/
         ensureDirOK(storePath);
         /*打开文件，并将文件映射到内存*/
         try {
             File file = new File(storePath + File.separator + 0);
-            this.randomAccessFile = new RandomAccessFile(file, "rw");
-            this.fileChannel = randomAccessFile.getChannel();
+            this.fileChannel = new RandomAccessFile(file, "rw").getChannel();
             this.mappedByteBuffer = this.fileChannel.map(FileChannel.MapMode.READ_WRITE, 0, FileSize);
         } catch (FileNotFoundException e) {
             log.error("create file channel " + 0 + " Failed. ", e);
@@ -49,17 +46,17 @@ public class KeyLog {
         }
     }
 
-    //获得文件写到哪里的长度,用于recover
-    public int getFileLength(){
-        int ans = 0;
-        try {
-            ans = (int) this.randomAccessFile.length();
-        }
-        catch (IOException e){
-            log.error("get file length Failed. ", e);
-        }
-        return ans;
-    }
+//    //获得文件写到哪里的长度,用于recover...不好使啊
+//    public int getFileLength(){
+//        int ans = 0;
+//        try {
+//            ans = (int) this.randomAccessFile.length();
+//        }
+//        catch (IOException e){
+//            log.error("get file length Failed. ", e);
+//        }
+//        return ans;
+//    }
 
 
     public static void ensureDirOK(final String dirName) {
@@ -72,14 +69,7 @@ public class KeyLog {
         }
     }
 
-    //mappedbytebuffer写一个数据
-    void putKey(byte[] key, byte[] offset, int wrotePosition) {
-        ByteBuffer byteBuffer = this.mappedByteBuffer.slice();
-        byteBuffer.position(wrotePosition);
-        byteBuffer.put((byte) 1);
-        byteBuffer.put(key, 0, 8);
-        byteBuffer.put(offset, 0, 4);
-    }
+
     void putKey(byte[] key,int offset, int wrotePosition) {
         ByteBuffer byteBuffer = this.mappedByteBuffer.slice();
         byteBuffer.position(wrotePosition);

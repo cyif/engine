@@ -21,7 +21,7 @@ public class ValueLog {
     private static final Logger log = LoggerFactory.getLogger(ValueLog.class);
 
     /*文件的大小,最好是1G*/
-    private final int FileSize;
+//    private final int FileSize;
 
     /*映射的fileChannel对象*/
     private FileChannel fileChannel;
@@ -30,7 +30,7 @@ public class ValueLog {
     private MappedByteBuffer mappedByteBuffer;
 
     public ValueLog(int FileSize, String storePath, int fileName) {
-        this.FileSize = FileSize;
+//        this.FileSize = FileSize;
         /*检查文件夹是否存在*/
         ensureDirOK(storePath);
         /*打开文件*/

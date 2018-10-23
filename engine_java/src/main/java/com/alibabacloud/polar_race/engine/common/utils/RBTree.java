@@ -62,7 +62,6 @@ public class RBTree {
         }
 
         // 定位到需要插入的节点
-//        int compare = internalKey.compareTo(h.internalKey);
         int compare = compareByte(key, h.key);
 
         if(compare < 0) {
@@ -116,7 +115,7 @@ public class RBTree {
 
 
 
-    public int compareByte(byte[] bytes1, long key){
+    private int compareByte(byte[] bytes1, long key){
         byte[] bytes2 = ByteToInt.longToByteArray(key);
         for (int i=0; i<bytes1.length; i++){
             int thisByte = 0xFF & bytes1[i];

@@ -13,12 +13,12 @@ public class ConcurrencyHashTable {
     private RBTree[] table;
     private PutHashLock[] locks;
     private int bucket_size;//桶的数量
-    private int lock_size;//锁的数量，锁平均分配到桶上
+//    private int lock_size;//锁的数量，锁平均分配到桶上
     private int ratio;
 
     public ConcurrencyHashTable(int bucket_size, int lock_size){
         this.bucket_size = bucket_size;
-        this.lock_size = lock_size;
+//        this.lock_size = lock_size;
         this.ratio = bucket_size / lock_size;
         this.table = new RBTree[bucket_size];
         this.locks = new PutHashLock[lock_size];
