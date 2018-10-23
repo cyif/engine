@@ -23,6 +23,59 @@ public class ByteToInt {
         };
     }
 
+    public static long byteArrayToLong(byte[] b) {
+//        return   b[7] & 0xFF |
+//                (b[6] & 0xFF) << 8|
+//                (b[5] & 0xFF) << 16|
+//                (b[4] & 0xFF) << 24 |
+//                (b[3] & 0xFF) << 32 |
+//                (b[2] & 0xFF) << 40 |
+//                (b[1] & 0xFF) << 48 |
+//                (b[0] & 0xFF) << 56;
+        long s = 0;
+        long s0 = b[0] & 0xff;// 最低位
+        long s1 = b[1] & 0xff;
+        long s2 = b[2] & 0xff;
+        long s3 = b[3] & 0xff;
+        long s4 = b[4] & 0xff;// 最低位
+        long s5 = b[5] & 0xff;
+        long s6 = b[6] & 0xff;
+        long s7 = b[7] & 0xff;
+
+        // s0不变
+        s1 <<= 8;
+        s2 <<= 16;
+        s3 <<= 24;
+        s4 <<= 8 * 4;
+        s5 <<= 8 * 5;
+        s6 <<= 8 * 6;
+        s7 <<= 8 * 7;
+        s = s0 | s1 | s2 | s3 | s4 | s5 | s6 | s7;
+        return s;
+    }
+
+    public static byte[] longToByteArray(long a) {
+//        return new byte[] {
+//                (byte) ((a >> 56) & 0xFF),
+//                (byte) ((a >> 48) & 0xFF),
+//                (byte) ((a >> 40) & 0xFF),
+//                (byte) ((a >> 32) & 0xFF),
+//                (byte) ((a >> 24) & 0xFF),
+//                (byte) ((a >> 16) & 0xFF),
+//                (byte) ((a >> 8) & 0xFF),
+//                (byte) (a & 0xFF)
+//        };
+
+        long temp = a;
+        byte[] b = new byte[8];
+        for (int i = 0; i < b.length; i++) {
+            b[i] = new Long(temp & 0xff).byteValue();//
+
+                    temp = temp >> 8; // 向右移8位
+        }
+        return b;
+    }
+
 
     //因为offset最多需要26位，所以28位是很足够的
     public static byte[] intToVarByteArray(int value){

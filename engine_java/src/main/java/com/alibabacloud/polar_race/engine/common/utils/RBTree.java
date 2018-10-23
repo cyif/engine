@@ -1,22 +1,24 @@
 package com.alibabacloud.polar_race.engine.common.utils;
 
-public class RBTree <Key extends Comparable<Key>, Value>  {
+import java.nio.ByteBuffer;
+
+public class RBTree {
 //    private static final boolean RED = true;
 //    private static final boolean BLACK = false;
 
     private Node root;
 
     private class Node {
-        Key key;
-        Value value;
+        long key;
+        int offset;
         Node left = null;
         Node right = null;
         //红色是1，黑色是0,减小内存的使用
         byte color;
 
-        Node(Key key, Value value, byte color) {
-            this.key = key;
-            this.value = value;
+        Node(byte[] key, int offset, byte color) {
+            this.key = ByteToInt.byteArrayToLong(key);
+            this.offset = offset;
             this.color = color;
         }
     }
@@ -28,10 +30,11 @@ public class RBTree <Key extends Comparable<Key>, Value>  {
         return x.color == 1;
     }
 
-    public Value get(Key key) {
+
+    public int get(byte[] key) {
         Node x = root;
         while(x != null) {
-            int compare = key.compareTo(x.key);
+            int compare = compareByte(key, x.key);
             if(compare < 0) {
                 x = x.left;
             }
@@ -39,33 +42,35 @@ public class RBTree <Key extends Comparable<Key>, Value>  {
                 x = x.right;
             }
             else {
-                return x.value;
+                return x.offset;
             }
         }
         // 没有找到
-        return null;
+        return -1;
     }
 
 
 
-    public void insert(Key key, Value value) {
-        root = put(root, key, value);
+    public void insert(byte[] key, int offset) {
+        root = put(root, key, offset);
     }
 
-    private Node put(Node h, Key key, Value value) {
+    private Node put(Node h, byte[] key, int offset) {
         // 创建一个新的红色的节点
         if(h == null) {
-            return new Node(key, value, (byte)1);
+            return new Node(key, offset, (byte)1);
         }
 
         // 定位到需要插入的节点
-        int compare = key.compareTo(h.key);
+//        int compare = internalKey.compareTo(h.internalKey);
+        int compare = compareByte(key, h.key);
+
         if(compare < 0) {
-            h.left = put(h.left, key, value);
+            h.left = put(h.left, key, offset);
         } else if(compare > 0) {
-            h.right = put(h.right, key, value);
+            h.right = put(h.right, key, offset);
         } else {
-            h.value = value;
+            h.offset = offset;
         }
 
         // 调整红黑树，使其平衡
@@ -81,6 +86,7 @@ public class RBTree <Key extends Comparable<Key>, Value>  {
 
         return h;
     }
+
 
 
 
@@ -108,5 +114,18 @@ public class RBTree <Key extends Comparable<Key>, Value>  {
         h.right.color = 0;
     }
 
+
+
+    public int compareByte(byte[] bytes1, long key){
+        byte[] bytes2 = ByteToInt.longToByteArray(key);
+        for (int i=0; i<bytes1.length; i++){
+            int thisByte = 0xFF & bytes1[i];
+            int thatByte = 0xFF & bytes2[i];
+            if (thisByte != thatByte)
+                return thisByte - thatByte;
+        }
+
+        return bytes1.length - bytes2.length;
+    }
 
 }

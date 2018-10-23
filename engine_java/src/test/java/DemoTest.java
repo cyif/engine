@@ -14,12 +14,12 @@ import java.util.Random;
 public class DemoTest extends TestCase {
 
     private static final int THREAD_NUM = 64;
-    private static final int OPT_NUM_PER_THREAD = 10000;
+    private static final int OPT_NUM_PER_THREAD = 1000;
     private static final String DATA_PATH = "tmp/data";
 
     private EngineRace engine = new EngineRace();
 
-    public void testRandomRead() throws Exception {
+    public void testWrite() throws Exception {
         engine.open(DATA_PATH);
         Thread[] threads = new Thread[THREAD_NUM];
 
@@ -41,7 +41,6 @@ public class DemoTest extends TestCase {
                     }
             );
         }
-
         for (int i = 0; i < THREAD_NUM; i++) {
             threads[i].start();
         }
@@ -51,7 +50,13 @@ public class DemoTest extends TestCase {
 
         engine.close();
         System.out.println("write finished");
+
+    }
+
+
+    public void testRandomRead() throws Exception {
         engine.open(DATA_PATH);
+        Thread[] threads = new Thread[THREAD_NUM];
 
         // Read
         final Random random = new Random();
@@ -82,7 +87,8 @@ public class DemoTest extends TestCase {
         for (int i = 0; i < THREAD_NUM; i++) {
             threads[i].join();
         }
-        clear(DATA_PATH);
+//        clear(DATA_PATH);
+        System.out.println("read finished");
     }
 
     private static boolean clear(String path) {

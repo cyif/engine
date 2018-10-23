@@ -80,6 +80,14 @@ public class KeyLog {
         byteBuffer.put(key, 0, 8);
         byteBuffer.put(offset, 0, 4);
     }
+    void putKey(byte[] key,int offset, int wrotePosition) {
+        ByteBuffer byteBuffer = this.mappedByteBuffer.slice();
+        byteBuffer.position(wrotePosition);
+        byteBuffer.put((byte) 1);
+        byteBuffer.put(key, 0, 8);
+        byteBuffer.putInt(offset);
+    }
+
 
     //mappedbytebuffer读取数据,用于恢复hash
     ByteBuffer getKeyBuffer() {
