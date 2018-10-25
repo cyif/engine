@@ -1,7 +1,5 @@
 import com.alibabacloud.polar_race.engine.common.EngineRace;
 import junit.framework.TestCase;
-import sun.jvm.hotspot.utilities.RBTree;
-
 import java.io.File;
 import java.util.List;
 import java.util.Random;

@@ -2,9 +2,6 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="ee0a85b7-dca7-4d66-bb55-64179d999b6a" name="Default" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
-      <change beforePath="$PROJECT_DIR$/jvm_parameters" afterPath="$PROJECT_DIR$/jvm_parameters" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/alibabacloud/polar_race/engine/common/impl/DBImpl.java" afterPath="$PROJECT_DIR$/src/main/java/com/alibabacloud/polar_race/engine/common/impl/DBImpl.java" />
       <change beforePath="$PROJECT_DIR$/src/test/java/DemoTest.java" afterPath="$PROJECT_DIR$/src/test/java/DemoTest.java" />
     </list>
     <ignored path="$PROJECT_DIR$/target/" />
@@ -17,13 +14,14 @@
   </component>
   <component name="FileEditorManager">
     <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
-      <file leaf-file-name="DemoTest.java" pinned="false" current-in-tab="false">
+      <file leaf-file-name="DemoTest.java" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/test/java/DemoTest.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="1309">
-              <caret line="100" column="0" lean-forward="false" selection-start-line="100" selection-start-column="0" selection-end-line="100" selection-end-column="0" />
+            <state relative-caret-position="17">
+              <caret line="1" column="32" lean-forward="false" selection-start-line="1" selection-start-column="32" selection-end-line="1" selection-end-column="32" />
               <folding>
-                <element signature="imports" expanded="true" />
+                <element signature="e#841#1413#0" expanded="true" />
+                <element signature="e#1412#1413#0" expanded="true" />
               </folding>
             </state>
           </provider>
@@ -39,11 +37,11 @@
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="DBImpl.java" pinned="false" current-in-tab="true">
+      <file leaf-file-name="DBImpl.java" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/main/java/com/alibabacloud/polar_race/engine/common/impl/DBImpl.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="336">
-              <caret line="30" column="48" lean-forward="true" selection-start-line="30" selection-start-column="48" selection-end-line="30" selection-end-column="48" />
+            <state relative-caret-position="166">
+              <caret line="20" column="16" lean-forward="false" selection-start-line="20" selection-start-column="16" selection-end-line="20" selection-end-column="16" />
               <folding>
                 <element signature="imports" expanded="true" />
               </folding>
@@ -151,9 +149,9 @@
         <option value="$PROJECT_DIR$/src/main/java/com/alibabacloud/polar_race/engine/common/utils/ConcurrencyHashTable.java" />
         <option value="$PROJECT_DIR$/src/main/java/com/alibabacloud/polar_race/engine/common/impl/KeyLog.java" />
         <option value="$PROJECT_DIR$/src/main/java/com/alibabacloud/polar_race/engine/common/impl/ValueLog.java" />
-        <option value="$PROJECT_DIR$/src/test/java/DemoTest.java" />
         <option value="$PROJECT_DIR$/jvm_parameters" />
         <option value="$PROJECT_DIR$/src/main/java/com/alibabacloud/polar_race/engine/common/impl/DBImpl.java" />
+        <option value="$PROJECT_DIR$/src/test/java/DemoTest.java" />
       </list>
     </option>
   </component>
@@ -489,7 +487,7 @@
       <workItem from="1540202939033" duration="4276000" />
       <workItem from="1540216697818" duration="3563000" />
       <workItem from="1540271420347" duration="4770000" />
-      <workItem from="1540440810437" duration="1578000" />
+      <workItem from="1540440810437" duration="2303000" />
     </task>
     <servers />
   </component>
@@ -526,7 +524,7 @@
     </history-entry>
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="18134000" />
+    <option name="totallyTimeSpent" value="18859000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="0" y="23" width="1440" height="799" extended-state="0" />
@@ -626,7 +624,8 @@
         <state relative-caret-position="0">
           <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
           <folding>
-            <element signature="imports" expanded="true" />
+            <element signature="e#841#1413#0" expanded="true" />
+            <element signature="e#1412#1413#0" expanded="true" />
           </folding>
         </state>
       </provider>
@@ -688,7 +687,8 @@
         <state relative-caret-position="0">
           <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
           <folding>
-            <element signature="imports" expanded="true" />
+            <element signature="e#841#1413#0" expanded="true" />
+            <element signature="e#1412#1413#0" expanded="true" />
           </folding>
         </state>
       </provider>
@@ -751,7 +751,8 @@
         <state relative-caret-position="1107">
           <caret line="46" column="9" lean-forward="false" selection-start-line="46" selection-start-column="9" selection-end-line="46" selection-end-column="9" />
           <folding>
-            <element signature="imports" expanded="true" />
+            <element signature="e#841#1413#0" expanded="true" />
+            <element signature="e#1412#1413#0" expanded="true" />
           </folding>
         </state>
       </provider>
@@ -806,7 +807,8 @@
         <state relative-caret-position="0">
           <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
           <folding>
-            <element signature="imports" expanded="true" />
+            <element signature="e#841#1413#0" expanded="true" />
+            <element signature="e#1412#1413#0" expanded="true" />
           </folding>
         </state>
       </provider>
@@ -824,7 +826,8 @@
         <state relative-caret-position="0">
           <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
           <folding>
-            <element signature="imports" expanded="true" />
+            <element signature="e#841#1413#0" expanded="true" />
+            <element signature="e#1412#1413#0" expanded="true" />
           </folding>
         </state>
       </provider>
@@ -950,22 +953,23 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/test/java/DemoTest.java">
+    <entry file="file://$PROJECT_DIR$/src/main/java/com/alibabacloud/polar_race/engine/common/impl/DBImpl.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="1309">
-          <caret line="100" column="0" lean-forward="false" selection-start-line="100" selection-start-column="0" selection-end-line="100" selection-end-column="0" />
+        <state relative-caret-position="166">
+          <caret line="20" column="16" lean-forward="false" selection-start-line="20" selection-start-column="16" selection-end-line="20" selection-end-column="16" />
           <folding>
             <element signature="imports" expanded="true" />
           </folding>
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/main/java/com/alibabacloud/polar_race/engine/common/impl/DBImpl.java">
+    <entry file="file://$PROJECT_DIR$/src/test/java/DemoTest.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="336">
-          <caret line="30" column="48" lean-forward="true" selection-start-line="30" selection-start-column="48" selection-end-line="30" selection-end-column="48" />
+        <state relative-caret-position="17">
+          <caret line="1" column="32" lean-forward="false" selection-start-line="1" selection-start-column="32" selection-end-line="1" selection-end-column="32" />
           <folding>
-            <element signature="imports" expanded="true" />
+            <element signature="e#841#1413#0" expanded="true" />
+            <element signature="e#1412#1413#0" expanded="true" />
           </folding>
         </state>
       </provider>
