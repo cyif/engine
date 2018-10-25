@@ -32,13 +32,13 @@ public class KeyLog {
         ensureDirOK(storePath);
         /*打开文件，并将文件映射到内存*/
         try {
-            File file = new File(storePath + File.separator + 0);
+            File file = new File(storePath + File.separator + "key");
             this.fileChannel = new RandomAccessFile(file, "rw").getChannel();
             this.mappedByteBuffer = this.fileChannel.map(FileChannel.MapMode.READ_WRITE, 0, FileSize);
         } catch (FileNotFoundException e) {
-            System.out.println("create file channel " + 0 + " Failed. ");
+            System.out.println("create file channel " + "key" + " Failed. ");
         } catch (IOException e) {
-            System.out.println("map file " + 0 + " Failed. ");
+            System.out.println("map file " + "key" + " Failed. ");
         }
     }
 

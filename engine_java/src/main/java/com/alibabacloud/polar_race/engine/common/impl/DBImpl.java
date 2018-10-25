@@ -25,11 +25,11 @@ public class DBImpl {
     public DBImpl(String path){
 
         //判断KeyLog文件是否存在,如果存在，进行内存恢复
-        File dir = new File(path + File.separator + GlobalConfig.storePathKey);
+        File dir = new File(path + File.separator + "key");
         if (dir.exists()){
-            System.out.println("---------------Start read---------------");
+            System.out.println("---------------Start read or write append---------------");
             this.map = new ConcurrencyHashTable(1024*1024, 128);
-            keyLog = new KeyLog(GlobalConfig.KeyFileSize, path + File.separator + GlobalConfig.storePathKey);//keylog恢复
+            keyLog = new KeyLog(GlobalConfig.KeyFileSize, path);//keylog恢复
             recoverHashtable();//hashtable恢复和wroteposition恢复
             System.out.println("Recover finished");
         }
@@ -37,13 +37,13 @@ public class DBImpl {
         //如果不存在，说明是第一次open
         else {
             System.out.println("---------------Start first write---------------");
-            keyLog = new KeyLog(GlobalConfig.KeyFileSize, path + File.separator + GlobalConfig.storePathKey);
+            keyLog = new KeyLog(GlobalConfig.KeyFileSize, path);
         }
 
         //打开或创建valuelog文件
         this.valueLogs = new ValueLog[GlobalConfig.ValueFileNum];
         for (int i=0; i<GlobalConfig.ValueFileNum; i++){
-            valueLogs[i] = new ValueLog(GlobalConfig.ValueFileSize, path + File.separator + GlobalConfig.storePathValue, i);
+            valueLogs[i] = new ValueLog(GlobalConfig.ValueFileSize, path + File.separator, i);
         }
 
     }

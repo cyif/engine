@@ -9,8 +9,8 @@ import java.io.File;
  * Time: 下午1:50
  */
 public class GlobalConfig {
-    public static final String storePathValue = "value";
-    public static final String storePathKey = "key";
+//    public static final String storePathValue = "value";
+//    public static final String storePathKey = "key";
 
     public static final int ValueFileSize = 1024 * 1024 * 1024;
     public static final int ValueFileNum = (int)(((long)64 * 1024 * 1024 * 4 * 1024) / ValueFileSize);
