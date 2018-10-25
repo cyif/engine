@@ -58,7 +58,7 @@ public class DBImpl {
                 break;
             int now = this.wrotePosition.getAndAdd(1);//恢复wroteposition
 
-            if (now % 1024*64 == 0)
+            if (now % (1024*64) == 0)
                 System.out.println("recover   " + now);
 
             byte[] key = new byte[8];
