@@ -5,7 +5,11 @@ import com.alibabacloud.polar_race.engine.common.utils.ConcurrencyHashTable;
 
 
 import java.io.File;
+import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.concurrent.atomic.AtomicInteger;
 
 
@@ -23,6 +27,13 @@ public class DBImpl {
 
 
     public DBImpl(String path){
+
+        try {
+            createDBPath(path);
+        }catch (IOException e){
+            System.out.println("create path error");
+            e.printStackTrace();
+        }
 
         //判断KeyLog文件是否存在,如果存在，进行内存恢复
         File dir = new File(path + File.separator + "key");
@@ -48,6 +59,11 @@ public class DBImpl {
 
     }
 
+    public static void createDBPath(String dbPath) throws IOException {
+        Path path = Paths.get(dbPath);
+        if (!Files.exists(path))
+            Files.createDirectory(path);
+    }
 
     private void recoverHashtable(){
         ByteBuffer byteBuffer = keyLog.getKeyBuffer();

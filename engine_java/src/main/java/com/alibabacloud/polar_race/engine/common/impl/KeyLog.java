@@ -29,10 +29,19 @@ public class KeyLog {
     public KeyLog(int FileSize, String storePath) {
 //        this.FileSize = FileSize;
         /*检查文件夹是否存在*/
-        ensureDirOK(storePath);
+//        ensureDirOK(storePath);
         /*打开文件，并将文件映射到内存*/
         try {
-            File file = new File(storePath + File.separator + "key");
+            File file = new File(storePath, "key");
+            if (!file.exists()){
+                try {
+                    file.createNewFile();
+                }
+                catch (IOException e){
+                    System.out.println("Create file" + "key" + "failed");
+                    e.printStackTrace();
+                }
+            }
             this.fileChannel = new RandomAccessFile(file, "rw").getChannel();
             this.mappedByteBuffer = this.fileChannel.map(FileChannel.MapMode.READ_WRITE, 0, FileSize);
         } catch (FileNotFoundException e) {

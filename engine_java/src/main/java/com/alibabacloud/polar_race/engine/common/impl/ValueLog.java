@@ -1,5 +1,7 @@
 package com.alibabacloud.polar_race.engine.common.impl;
 
+
+
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -7,6 +9,7 @@ import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
+
 
 /**
  * Created by IntelliJ IDEA.
@@ -28,10 +31,19 @@ public class ValueLog {
     public ValueLog(int FileSize, String storePath, int fileName) {
 //        this.FileSize = FileSize;
         /*检查文件夹是否存在*/
-        ensureDirOK(storePath);
+//        ensureDirOK(storePath);
         /*打开文件*/
         try {
-            File file = new File(storePath + File.separator + fileName);
+            File file = new File(storePath, String.valueOf(fileName));
+            if (!file.exists()){
+                try {
+                    file.createNewFile();
+                }
+                catch (IOException e){
+                    System.out.println("Create file" + fileName + "failed");
+                    e.printStackTrace();
+                }
+            }
             this.fileChannel = new RandomAccessFile(file, "rw").getChannel();
             this.mappedByteBuffer = this.fileChannel.map(FileChannel.MapMode.READ_WRITE, 0, FileSize);
 
