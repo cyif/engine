@@ -28,7 +28,7 @@ public class DBImpl {
         File dir = new File(path + File.separator + GlobalConfig.storePathKey);
         if (dir.exists()){
             System.out.println("---------------Start read---------------");
-            this.map = new ConcurrencyHashTable(1024*1024, 1024);
+            this.map = new ConcurrencyHashTable(1024*1024, 128);
             keyLog = new KeyLog(GlobalConfig.KeyFileSize, path + File.separator + GlobalConfig.storePathKey);//keylog恢复
             recoverHashtable();//hashtable恢复和wroteposition恢复
             System.out.println("Recover finished");
