@@ -36,7 +36,7 @@ public class DBImpl {
         }
 
         //判断KeyLog文件是否存在,如果存在，进行内存恢复
-        File dir = new File(path + File.separator + "key");
+        File dir = new File(path, "key");
         if (dir.exists()){
             System.out.println("---------------Start read or write append---------------");
             this.map = new ConcurrencyHashTable(1024*1024, 128);
