@@ -1,7 +1,5 @@
 package com.alibabacloud.polar_race.engine.common.impl;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -9,7 +7,6 @@ import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Created by IntelliJ IDEA.
@@ -18,7 +15,6 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Time: 下午1:43
  */
 public class ValueLog {
-    private static final Logger log = LoggerFactory.getLogger(ValueLog.class);
 
     /*文件的大小,最好是1G*/
 //    private final int FileSize;
@@ -40,9 +36,9 @@ public class ValueLog {
             this.mappedByteBuffer = this.fileChannel.map(FileChannel.MapMode.READ_WRITE, 0, FileSize);
 
         } catch (FileNotFoundException e) {
-            log.error("create file channel " + fileName + " Failed. ", e);
+            System.out.println("create file channel " + fileName + " Failed. ");
         } catch (IOException e) {
-            log.error("map file " + 0 + " Failed. ", e);
+            System.out.println("map file " + 0 + " Failed. ");
         }
     }
 
@@ -53,7 +49,7 @@ public class ValueLog {
             File f = new File(dirName);
             if (!f.exists()) {
                 boolean result = f.mkdirs();
-                log.info(dirName + " mkdir " + (result ? "OK" : "Failed"));
+                System.out.println(dirName + " mkdir " + (result ? "OK" : "Failed"));
             }
         }
     }

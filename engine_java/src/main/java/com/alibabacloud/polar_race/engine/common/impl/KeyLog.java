@@ -1,7 +1,5 @@
 package com.alibabacloud.polar_race.engine.common.impl;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -19,8 +17,6 @@ import java.nio.channels.FileChannel;
  */
 
 public class KeyLog {
-    private static final Logger log = LoggerFactory.getLogger(KeyLog.class);
-
     /*文件的大小,1024*1024*64*12 就够。1个g足够*/
 //    private final int FileSize;
 
@@ -40,9 +36,9 @@ public class KeyLog {
             this.fileChannel = new RandomAccessFile(file, "rw").getChannel();
             this.mappedByteBuffer = this.fileChannel.map(FileChannel.MapMode.READ_WRITE, 0, FileSize);
         } catch (FileNotFoundException e) {
-            log.error("create file channel " + 0 + " Failed. ", e);
+            System.out.println("create file channel " + 0 + " Failed. ");
         } catch (IOException e) {
-            log.error("map file " + 0 + " Failed. ", e);
+            System.out.println("map file " + 0 + " Failed. ");
         }
     }
 
@@ -64,7 +60,7 @@ public class KeyLog {
             File f = new File(dirName);
             if (!f.exists()) {
                 boolean result = f.mkdirs();
-                log.info(dirName + " mkdir " + (result ? "OK" : "Failed"));
+                System.out.println(dirName + " mkdir " + (result ? "OK" : "Failed"));
             }
         }
     }

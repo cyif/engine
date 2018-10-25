@@ -1,11 +1,8 @@
 package com.alibabacloud.polar_race.engine.common.impl;
-
 import com.alibabacloud.polar_race.engine.common.config.GlobalConfig;
-import com.alibabacloud.polar_race.engine.common.utils.ByteToInt;
 import com.alibabacloud.polar_race.engine.common.utils.ConcurrencyHashTable;
-import org.omg.PortableInterceptor.SYSTEM_EXCEPTION;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
+
 
 import java.io.File;
 import java.nio.ByteBuffer;
@@ -19,8 +16,6 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Time: 下午3:14
  */
 public class DBImpl {
-    private static final Logger log = LoggerFactory.getLogger(DBImpl.class);
-
     private ValueLog[] valueLogs;
     private KeyLog keyLog;
     private AtomicInteger wrotePosition = new AtomicInteger(0);//每次加1，代表第几个数据
@@ -32,16 +27,16 @@ public class DBImpl {
         //判断KeyLog文件是否存在,如果存在，进行内存恢复
         File dir = new File(path + File.separator + GlobalConfig.storePathKey);
         if (dir.exists()){
-            log.info("---------------Start read---------------");
+            System.out.println("---------------Start read---------------");
             this.map = new ConcurrencyHashTable(64*1024*1024, 1024);
             keyLog = new KeyLog(GlobalConfig.KeyFileSize, path + File.separator + GlobalConfig.storePathKey);//keylog恢复
             recoverHashtable();//hashtable恢复和wroteposition恢复
-            log.info("Recover finished");
+            System.out.println("Recover finished");
         }
 
         //如果不存在，说明是第一次open
         else {
-            log.info("---------------Start first write---------------");
+            System.out.println("---------------Start first write---------------");
             keyLog = new KeyLog(GlobalConfig.KeyFileSize, path + File.separator + GlobalConfig.storePathKey);
         }
 
