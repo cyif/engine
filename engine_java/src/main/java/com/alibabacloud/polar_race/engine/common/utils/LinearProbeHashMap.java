@@ -1,5 +1,7 @@
 package com.alibabacloud.polar_race.engine.common.utils;
 
+import java.nio.ByteBuffer;
+
 /**
  * Created by IntelliJ IDEA.
  * User: wenchao.qi
@@ -7,12 +9,15 @@ package com.alibabacloud.polar_race.engine.common.utils;
  * Time: 下午9:40
  */
 public class LinearProbeHashMap {
-    private byte[] key_map;
+
+    private ByteBuffer key_map;
+//    private byte[] key_map;
     private int[] offset_map;
     private int bucket_size;
     //bucket_size最小 64*1024*1024
     public LinearProbeHashMap(int bucket_size){
-        key_map = new byte[bucket_size * 9];
+//        key_map = new byte[bucket_size * 9];
+        key_map = ByteBuffer.allocate(bucket_size * 9);
         offset_map = new int[bucket_size];
         this.bucket_size = bucket_size;
         System.out.println("new map successfully");
@@ -26,10 +31,14 @@ public class LinearProbeHashMap {
             int offset_index = (hash + i) % bucket_size;
             int key_index = offset_index * 9;
             // 找到了空位
-            if (key_map[key_index] == 0) {
-                key_map[key_index] = 1;
-                for (byte b : key)
-                    key_map[++key_index] = b;
+//            if (key_map[key_index] == 0) {
+//                key_map[key_index] = 1;
+//                for (byte b : key)
+//                    key_map[++key_index] = b;
+            if (key_map.get(key_index) == 0) {
+                key_map.position(key_index);
+                key_map.put((byte) 1);
+                key_map.put(key);
 
                 offset_map[offset_index] = offset;
                 return;
@@ -59,7 +68,9 @@ public class LinearProbeHashMap {
 
     private boolean equalKey(int start, byte[] key){
         for (int i=0; i<key.length; i++){
-            if (key_map[start+i] != key[i])
+//            if (key_map[start+i] != key[i])
+//                return false;
+            if (key_map.get(start+i) != key[i])
                 return false;
         }
         return true;
