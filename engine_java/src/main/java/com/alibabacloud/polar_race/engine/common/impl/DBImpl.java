@@ -1,7 +1,7 @@
 package com.alibabacloud.polar_race.engine.common.impl;
 import com.alibabacloud.polar_race.engine.common.config.GlobalConfig;
 import com.alibabacloud.polar_race.engine.common.utils.ConcurrencyHashTable;
-
+import com.alibabacloud.polar_race.engine.common.utils.LinearProbeHashMap;
 
 
 import java.io.File;
@@ -23,8 +23,9 @@ public class DBImpl {
     private ValueLog[] valueLogs;
     private KeyLog keyLog;
     private AtomicInteger wrotePosition = new AtomicInteger(0);//每次加1，代表第几个数据
-    private ConcurrencyHashTable map;
+//    private ConcurrencyHashTable map;
 
+    private LinearProbeHashMap map;
 
     public DBImpl(String path){
 
@@ -39,7 +40,10 @@ public class DBImpl {
         File dir = new File(path, "key");
         if (dir.exists()){
             System.out.println("---------------Start read or write append---------------");
-            this.map = new ConcurrencyHashTable(1024*1024, 128);
+//            this.map = new ConcurrencyHashTable(8*1024*1024, 128);
+
+            this.map = new LinearProbeHashMap(100 * 1024 * 1024);
+
             keyLog = new KeyLog(GlobalConfig.KeyFileSize, path);//keylog恢复
             recoverHashtable();//hashtable恢复和wroteposition恢复
             System.out.println("Recover finished");
@@ -68,17 +72,21 @@ public class DBImpl {
     private void recoverHashtable(){
         ByteBuffer byteBuffer = keyLog.getKeyBuffer();
         byteBuffer.position(0);
+        int now = 0;
 
         while (true){
-            if (byteBuffer.get() != (byte) 1)
+            if (byteBuffer.get() != (byte) 1){
+                this.wrotePosition = new AtomicInteger(now);
                 break;
-            int now = this.wrotePosition.getAndAdd(1);//恢复wroteposition
+            }
 
             if (now % (1024*64) == 0)
                 System.out.println("recover   " + now);
+            now++;
 
             byte[] key = new byte[8];
             byteBuffer.get(key, 0, 8);
+
             map.put(key, byteBuffer.getInt());
         }
     }
@@ -100,6 +108,7 @@ public class DBImpl {
 
     public byte[] read(byte[] key){
         int currentPos =  map.get(key);
+
 
 //        int value_file_no = (int)((long) currentPos * 4096 / GlobalConfig.ValueFileSize);
         int value_file_wrotePosition = (int)(((long)currentPos * 4096) % GlobalConfig.ValueFileSize);
