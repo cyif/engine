@@ -8,6 +8,8 @@
 
 package com.alibabacloud.polar_race.engine.common.utils;
 
+import com.alibabacloud.polar_race.engine.common.config.GlobalConfig;
+
 //hashtable 每个节点存的红黑树，写上锁。可选择自旋锁或者普通锁，以及锁的数量
 public class ConcurrencyHashTable {
     private ListDB[] table;
@@ -47,15 +49,21 @@ public class ConcurrencyHashTable {
     }
 
     private int hash(byte[] key){
-        int hash = 0;
-        for (int i = 0; i < key.length; i++) {
-            hash = 31 * hash + key[i];
-        }
-        if (hash == 0) {
-            hash = 1;
-        }
+//        int hash = 0;
+//        for (int i = 0; i < key.length; i++) {
+//            hash = 31 * hash + key[i];
+//        }
+//        if (hash == 0) {
+//            hash = 1;
+//        }
+//
+//        return (hash & 0x7fffffff) % bucket_size;
 
-        return (hash & 0x7fffffff) % bucket_size;
+        int h = GlobalConfig.kFinish;
+        for (int i = 0; i < key.length; i++) {
+            h = (h * GlobalConfig.kA) ^ (key[0] * GlobalConfig.kB);
+        }
+        return h % bucket_size;
     }
 
 
