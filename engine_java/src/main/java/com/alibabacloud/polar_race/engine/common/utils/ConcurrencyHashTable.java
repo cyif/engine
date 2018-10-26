@@ -63,7 +63,7 @@ public class ConcurrencyHashTable {
         for (int i = 0; i < key.length; i++) {
             h = (h * GlobalConfig.kA) ^ (key[0] * GlobalConfig.kB);
         }
-        return h % bucket_size;
+        return (h & 0x7fffffff) % bucket_size;
     }
 
 
