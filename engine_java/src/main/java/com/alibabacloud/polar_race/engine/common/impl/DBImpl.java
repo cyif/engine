@@ -87,8 +87,11 @@ public class DBImpl {
     public void write(byte[] key, byte[] value){
         int currentPos = this.wrotePosition.getAndAdd(1);
         int key_wrotePosition = currentPos * 13;//keyLog的wrotePosition
-        int value_file_no = (int)(((long) currentPos * 4096) / GlobalConfig.ValueFileSize);
-        int value_file_wrotePosition = (int)(((long) currentPos * 4096) % GlobalConfig.ValueFileSize);
+
+//        int value_file_no = (int)(((long) currentPos * 4096) / GlobalConfig.ValueFileSize);
+        int value_file_wrotePosition = (int)(((long)currentPos * 4096) % GlobalConfig.ValueFileSize);
+        int value_file_no = (int) currentPos / 262144;
+
         //value写入value文件
         valueLogs[value_file_no].putMessage(value, value_file_wrotePosition);
         //key和offset写入key文件
@@ -97,9 +100,10 @@ public class DBImpl {
 
     public byte[] read(byte[] key){
         int currentPos =  map.get(key);
-        long global_offset = (long) currentPos * 4096;
-        int value_file_no = (int)(global_offset / GlobalConfig.ValueFileSize);
-        int value_file_wrotePosition = (int)(global_offset % GlobalConfig.ValueFileSize);
+
+//        int value_file_no = (int)((long) currentPos * 4096 / GlobalConfig.ValueFileSize);
+        int value_file_wrotePosition = (int)(((long)currentPos * 4096) % GlobalConfig.ValueFileSize);
+        int value_file_no = (int) currentPos / 262144;
 
         return valueLogs[value_file_no].getMessage(value_file_wrotePosition);
     }
