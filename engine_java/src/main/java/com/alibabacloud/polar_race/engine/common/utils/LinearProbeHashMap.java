@@ -15,6 +15,7 @@ public class LinearProbeHashMap {
         key_map = new byte[bucket_size * 9];
         offset_map = new int[bucket_size];
         this.bucket_size = bucket_size;
+        System.out.println("new map successfully");
     }
 
     //为什么是9。第一位1或0代表是否这个位置已经存在
