@@ -21,9 +21,7 @@ public class EngineRace extends AbstractEngine {
 	
 	@Override
 	public byte[] read(byte[] key) throws EngineException {
-		byte[] value = null;
-		value = db.read(key);
-		return value;
+		return db.read(key);
 	}
 	
 	@Override

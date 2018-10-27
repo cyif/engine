@@ -70,7 +70,7 @@ public class ValueLog {
     void putMessage(byte[] value, int wrotePosition) {
         ByteBuffer byteBuffer = this.mappedByteBuffer.slice();
         byteBuffer.position(wrotePosition);
-        byteBuffer.put(value, 0, 4096);
+        byteBuffer.put(value);
     }
 
     //mappedbytebuffer读取数据

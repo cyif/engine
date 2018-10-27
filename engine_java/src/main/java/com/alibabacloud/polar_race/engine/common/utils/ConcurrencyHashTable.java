@@ -25,9 +25,9 @@ public class ConcurrencyHashTable {
         this.table = new ListDB[bucket_size];
 //        this.locks = new PutHashLock[lock_size];
 
-        for (int i=0; i<bucket_size; i++){
-            table[i] = new ListDB();
-        }
+//        for (int i=0; i<bucket_size; i++){
+//            table[i] = new ListDB();
+//        }
 //        for (int i=0; i<lock_size; i++){
 //            locks[i] = new PutHashSpinLock();
 //        }
@@ -41,29 +41,32 @@ public class ConcurrencyHashTable {
 
     public void put(byte[] key, int offset) {
         int hash = hash(key);
-        ListDB node = table[hash];
+
+        if (table[hash]==null)
+            table[hash] = new ListDB();
+
         //插入的时候需要上锁
 //        this.locks[hash / ratio].lock();
-        node.insert(key, offset);
+        table[hash].insert(key, offset);
 //        locks[hash / ratio].unlock();
     }
 
     private int hash(byte[] key){
-//        int hash = 0;
-//        for (int i = 0; i < key.length; i++) {
-//            hash = 131 * hash + key[i];
-//        }
-//        if (hash == 0) {
-//            hash = 1;
-//        }
-//
-//        return (hash & 0x7fffffff) % bucket_size;
-
-        int h = GlobalConfig.kFinish;
+        int hash = 0;
         for (int i = 0; i < key.length; i++) {
-            h = (h * GlobalConfig.kA) ^ (key[0] * GlobalConfig.kB);
+            hash = 131 * hash + key[i];
         }
-        return (h & 0x7fffffff) % bucket_size;
+        if (hash == 0) {
+            hash = 1;
+        }
+
+        return (hash & 0x7fffffff) % bucket_size;
+
+//        int h = GlobalConfig.kFinish;
+//        for (int i = 0; i < key.length; i++) {
+//            h = (h * GlobalConfig.kA) ^ (key[0] * GlobalConfig.kB);
+//        }
+//        return (h & 0x7fffffff) % bucket_size;
     }
 
 
