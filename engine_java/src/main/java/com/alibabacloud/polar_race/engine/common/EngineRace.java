@@ -33,6 +33,7 @@ public class EngineRace extends AbstractEngine {
 	public void close() {
 	    System.out.println("==============db================");
 		db = null;
+		System.gc();
 	}
 
 }
