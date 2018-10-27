@@ -25,6 +25,7 @@ public class DBImpl {
     private AtomicInteger wrotePosition = new AtomicInteger(0);//每次加1，代表第几个数据
     private ConcurrencyHashTable map;
 
+    private int lastFileNo = 0;
 
     public DBImpl(String path){
 
@@ -88,9 +89,16 @@ public class DBImpl {
         int currentPos = this.wrotePosition.getAndAdd(1);
         int key_wrotePosition = currentPos * 13;//keyLog的wrotePosition
 
+
 //        int value_file_no = (int)(((long) currentPos * 4096) / GlobalConfig.ValueFileSize);
         int value_file_wrotePosition = (int)(((long)currentPos * 4096) % GlobalConfig.ValueFileSize);
         int value_file_no = (int) currentPos / 262144;
+
+        //clean
+        if (value_file_no > lastFileNo){
+            valueLogs[lastFileNo] = null;
+        }
+        else lastFileNo = value_file_no;
 
         //value写入value文件
         valueLogs[value_file_no].putMessage(value, value_file_wrotePosition);
