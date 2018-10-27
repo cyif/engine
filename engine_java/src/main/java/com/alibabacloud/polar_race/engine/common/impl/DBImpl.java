@@ -1,5 +1,7 @@
 package com.alibabacloud.polar_race.engine.common.impl;
 import com.alibabacloud.polar_race.engine.common.config.GlobalConfig;
+import com.alibabacloud.polar_race.engine.common.exceptions.EngineException;
+import com.alibabacloud.polar_race.engine.common.exceptions.RetCodeEnum;
 import com.alibabacloud.polar_race.engine.common.utils.ConcurrencyHashTable;
 
 
@@ -40,7 +42,7 @@ public class DBImpl {
         File dir = new File(path, "key");
         if (dir.exists()){
             System.out.println("---------------Start read or write append---------------");
-            this.map = new ConcurrencyHashTable(1024*1024, 0);
+            this.map = new ConcurrencyHashTable(512*1024, 0);
             keyLog = new KeyLog(GlobalConfig.KeyFileSize, path);//keylog恢复
             recoverHashtable();//hashtable恢复和wroteposition恢复
             System.out.println("Recover finished");
@@ -106,8 +108,10 @@ public class DBImpl {
         keyLog.putKey(key, currentPos, key_wrotePosition);
     }
 
-    public byte[] read(byte[] key){
+    public byte[] read(byte[] key) throws EngineException{
         int currentPos =  map.get(key);
+        if (currentPos==-1)
+            throw new EngineException(RetCodeEnum.NOT_FOUND, "not found this key");
 
 //        int value_file_no = (int)((long) currentPos * 4096 / GlobalConfig.ValueFileSize);
         int value_file_wrotePosition = (int)(((long)currentPos * 4096) % GlobalConfig.ValueFileSize);
