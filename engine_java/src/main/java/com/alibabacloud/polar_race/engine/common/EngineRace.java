@@ -30,6 +30,7 @@ public class EngineRace extends AbstractEngine {
 	
 	@Override
 	public void close() {
+	    System.out.println("==============db================");
 		db = null;
 	}
 
