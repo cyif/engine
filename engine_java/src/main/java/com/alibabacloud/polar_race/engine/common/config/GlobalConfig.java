@@ -11,7 +11,6 @@ import java.io.File;
 public class GlobalConfig {
 //    public static final String storePathValue = "value";
 //    public static final String storePathKey = "key";
-
     public static int kA = 54059;  // a prime
     public static int kB = 76963;  // another prime
     public static  int kFinish = 37;  // also prime

@@ -13,24 +13,24 @@ import com.alibabacloud.polar_race.engine.common.config.GlobalConfig;
 //hashtable 每个节点存的红黑树，写上锁。可选择自旋锁或者普通锁，以及锁的数量
 public class ConcurrencyHashTable {
     private ListDB[] table;
-    private PutHashLock[] locks;
+//    private PutHashLock[] locks;
     private int bucket_size;//桶的数量
 //    private int lock_size;//锁的数量，锁平均分配到桶上
-    private int ratio;
+//    private int ratio;
 
     public ConcurrencyHashTable(int bucket_size, int lock_size){
         this.bucket_size = bucket_size;
 //        this.lock_size = lock_size;
-        this.ratio = bucket_size / lock_size;
+//        this.ratio = bucket_size / lock_size;
         this.table = new ListDB[bucket_size];
-        this.locks = new PutHashLock[lock_size];
+//        this.locks = new PutHashLock[lock_size];
 
         for (int i=0; i<bucket_size; i++){
             table[i] = new ListDB();
         }
-        for (int i=0; i<lock_size; i++){
-            locks[i] = new PutHashSpinLock();
-        }
+//        for (int i=0; i<lock_size; i++){
+//            locks[i] = new PutHashSpinLock();
+//        }
     }
 
     public int get(byte[] key) {
@@ -43,27 +43,27 @@ public class ConcurrencyHashTable {
         int hash = hash(key);
         ListDB node = table[hash];
         //插入的时候需要上锁
-        this.locks[hash / ratio].lock();
+//        this.locks[hash / ratio].lock();
         node.insert(key, offset);
-        locks[hash / ratio].unlock();
+//        locks[hash / ratio].unlock();
     }
 
     private int hash(byte[] key){
-        int hash = 0;
-        for (int i = 0; i < key.length; i++) {
-            hash = 131 * hash + key[i];
-        }
-        if (hash == 0) {
-            hash = 1;
-        }
-
-        return (hash & 0x7fffffff) % bucket_size;
-
-//        int h = GlobalConfig.kFinish;
+//        int hash = 0;
 //        for (int i = 0; i < key.length; i++) {
-//            h = (h * GlobalConfig.kA) ^ (key[0] * GlobalConfig.kB);
+//            hash = 131 * hash + key[i];
 //        }
-//        return (h & 0x7fffffff) % bucket_size;
+//        if (hash == 0) {
+//            hash = 1;
+//        }
+//
+//        return (hash & 0x7fffffff) % bucket_size;
+
+        int h = GlobalConfig.kFinish;
+        for (int i = 0; i < key.length; i++) {
+            h = (h * GlobalConfig.kA) ^ (key[0] * GlobalConfig.kB);
+        }
+        return (h & 0x7fffffff) % bucket_size;
     }
 
 
