@@ -12,8 +12,8 @@ import com.alibabacloud.polar_race.engine.common.config.GlobalConfig;
 
 //hashtable 每个节点存的红黑树，写上锁。可选择自旋锁或者普通锁，以及锁的数量
 public class ConcurrencyHashTable {
-//    private ListDB[] table;
-    private RBTree[] trees;
+    private ListDB[] table;
+//    private RBTree[] trees;
 //    private PutHashLock[] locks;
     private int bucket_size;//桶的数量
 //    private int lock_size;//锁的数量，锁平均分配到桶上
@@ -23,8 +23,8 @@ public class ConcurrencyHashTable {
         this.bucket_size = bucket_size;
 //        this.lock_size = lock_size;
 //        this.ratio = bucket_size / lock_size;
-//        this.table = new ListDB[bucket_size];
-        this.trees = new RBTree[bucket_size];
+        this.table = new ListDB[bucket_size];
+//        this.trees = new RBTree[bucket_size];
 //        this.locks = new PutHashLock[lock_size];
 
 //        for (int i=0; i<bucket_size; i++){
@@ -37,25 +37,24 @@ public class ConcurrencyHashTable {
 
     public int get(byte[] key) {
         int hash = hash(key);
-//        ListDB node = table[hash];
-//        return node.get(key);
 
-        return trees[hash].get(key);
+        return table[hash].get(key);
+//        return trees[hash].get(key);
     }
 
     public void put(byte[] key, int offset) {
         int hash = hash(key);
 
-//        if (table[hash]==null)
-//            table[hash] = new ListDB();
+        if (table[hash]==null)
+            table[hash] = new ListDB();
 
-        if (trees[hash]==null)
-            trees[hash] = new RBTree();
+//        if (trees[hash]==null)
+//            trees[hash] = new RBTree();
 
         //插入的时候需要上锁
 //        this.locks[hash / ratio].lock();
-//        table[hash].insert(key, offset);
-        trees[hash].insert(key, offset);
+        table[hash].insert(key, offset);
+//        trees[hash].insert(key, offset);
 //        locks[hash / ratio].unlock();
     }
 
