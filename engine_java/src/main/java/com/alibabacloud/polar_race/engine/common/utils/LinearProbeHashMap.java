@@ -79,20 +79,20 @@ public class LinearProbeHashMap {
     }
 
     private int hash(byte[] key){
-//        int hash = 0;
-//        for (int i : key) {
-//            hash = 131 * hash + i;
-//        }
-//        if (hash == 0) {
-//            hash = 1;
-//        }
-//
-//        return (hash & 0x7fffffff) % bucket_size;
-
-        int h = GlobalConfig.kFinish;
-        for (int i = 0; i < key.length; i++) {
-            h = (h * GlobalConfig.kA) ^ (key[0] * GlobalConfig.kB);
+        int hash = 0;
+        for (int i : key) {
+            hash = 131 * hash + i;
         }
-        return (h & 0x7fffffff) % bucket_size;
+        if (hash == 0) {
+            hash = 1;
+        }
+
+        return (hash & 0x7fffffff) % bucket_size;
+
+//        int h = GlobalConfig.kFinish;
+//        for (int i = 0; i < key.length; i++) {
+//            h = (h * GlobalConfig.kA) ^ (key[0] * GlobalConfig.kB);
+//        }
+//        return (h & 0x7fffffff) % bucket_size;
     }
 }
