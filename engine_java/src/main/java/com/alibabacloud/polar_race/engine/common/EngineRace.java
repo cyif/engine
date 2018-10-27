@@ -11,6 +11,7 @@ public class EngineRace extends AbstractEngine {
 
 	@Override
 	public void open(String path) throws EngineException {
+		System.out.println("=======================db open=========================");
 		db = new DBImpl(path);
 	}
 	
@@ -31,7 +32,7 @@ public class EngineRace extends AbstractEngine {
 
 	@Override
 	public void close() {
-	    System.out.println("==============db================");
+	    System.out.println("=======================db close======================");
 		db = null;
 		System.gc();
 	}

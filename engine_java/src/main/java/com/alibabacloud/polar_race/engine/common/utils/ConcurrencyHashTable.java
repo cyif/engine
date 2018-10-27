@@ -59,21 +59,21 @@ public class ConcurrencyHashTable {
     }
 
     private int hash(byte[] key){
-        int hash = 0;
-        for (int i = 0; i < key.length; i++) {
-            hash = 131 * hash + key[i];
-        }
-        if (hash == 0) {
-            hash = 1;
-        }
-
-        return (hash & 0x7fffffff) % bucket_size;
-
-//        int h = GlobalConfig.kFinish;
+//        int hash = 0;
 //        for (int i = 0; i < key.length; i++) {
-//            h = (h * GlobalConfig.kA) ^ (key[0] * GlobalConfig.kB);
+//            hash = 131 * hash + key[i];
 //        }
-//        return (h & 0x7fffffff) % bucket_size;
+//        if (hash == 0) {
+//            hash = 1;
+//        }
+//
+//        return (hash & 0x7fffffff) % bucket_size;
+
+        int h = GlobalConfig.kFinish;
+        for (int i = 0; i < key.length; i++) {
+            h = (h * GlobalConfig.kA) ^ (key[0] * GlobalConfig.kB);
+        }
+        return (h & 0x7fffffff) % bucket_size;
     }
 
 
