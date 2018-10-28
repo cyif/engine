@@ -2,6 +2,9 @@ package com.alibabacloud.polar_race.engine.common.impl;
 
 
 
+import com.sun.xml.internal.ws.policy.privateutil.PolicyUtils;
+
+import javax.imageio.IIOException;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -19,68 +22,68 @@ import java.nio.channels.FileChannel;
  */
 public class ValueLog {
 
-    /*文件的大小,最好是1G*/
-//    private final int FileSize;
-
     /*映射的fileChannel对象*/
     private FileChannel fileChannel;
 
-    /*映射的内存对象*/
-    private MappedByteBuffer mappedByteBuffer;
+    private RandomAccessFile randomAccessFile;
+    //直接内存
+    private ByteBuffer byteBuffer;
 
-    public ValueLog(int FileSize, String storePath, int fileName) {
-//        this.FileSize = FileSize;
-        /*检查文件夹是否存在*/
-//        ensureDirOK(storePath);
+
+    public ValueLog(String storePath) {
+        this.byteBuffer = ByteBuffer.allocateDirect(4096);
         /*打开文件*/
         try {
-            File file = new File(storePath, String.valueOf(fileName));
+            File file = new File(storePath, "value");
             if (!file.exists()){
                 try {
                     file.createNewFile();
                 }
                 catch (IOException e){
-                    System.out.println("Create file" + fileName + "failed");
+                    System.out.println("Create file" + "valueLog" + "failed");
                     e.printStackTrace();
                 }
             }
-            this.fileChannel = new RandomAccessFile(file, "rw").getChannel();
-            this.mappedByteBuffer = this.fileChannel.map(FileChannel.MapMode.READ_WRITE, 0, FileSize);
-
+            this.randomAccessFile = new RandomAccessFile(file, "rw");
+            this.fileChannel = this.randomAccessFile.getChannel();
         } catch (FileNotFoundException e) {
-            System.out.println("create file channel " + fileName + " Failed. ");
-        } catch (IOException e) {
-            System.out.println("map file " + 0 + " Failed. ");
+            System.out.println("create file channel " + "valueLog" + " Failed. ");
+        }
+    }
+
+    public long getFileLength(){
+        try {
+            return this.randomAccessFile.length();
+        } catch (IOException e){
+            e.printStackTrace();
+        }
+        return -1;
+    }
+
+
+    void putMessage(byte[] value, long wrotePosition) {
+        this.byteBuffer.clear();
+        this.byteBuffer.put(value);
+        this.byteBuffer.flip();
+        try {
+            this.fileChannel.write(this.byteBuffer, wrotePosition);
+        } catch (IOException e){
+            e.printStackTrace();
         }
     }
 
 
-
-    public static void ensureDirOK(final String dirName) {
-        if (dirName != null) {
-            File f = new File(dirName);
-            if (!f.exists()) {
-                boolean result = f.mkdirs();
-                System.out.println(dirName + " mkdir " + (result ? "OK" : "Failed"));
-            }
+    byte[] getMessage(long offset) {
+        ByteBuffer byteBuffer = ByteBuffer.allocate(4096);
+        try {
+            fileChannel.read(byteBuffer, offset);
+        } catch (IOException e){
+            e.printStackTrace();
         }
-    }
 
-    //mappedbytebuffer写一个数据
-    void putMessage(byte[] value, int wrotePosition) {
-        ByteBuffer byteBuffer = this.mappedByteBuffer.slice();
-        byteBuffer.position(wrotePosition);
-        byteBuffer.put(value);
-    }
-
-    //mappedbytebuffer读取数据
-    byte[] getMessage(int offset) {
-        ByteBuffer byteBuffer = this.mappedByteBuffer.slice();
-        byteBuffer.position(offset);
         byte[] bytes = new byte[4096];
+        byteBuffer.flip();
         byteBuffer.get(bytes);
         return bytes;
     }
-
-
 }

@@ -3,7 +3,9 @@ import com.alibabacloud.polar_race.engine.common.config.GlobalConfig;
 import com.alibabacloud.polar_race.engine.common.exceptions.EngineException;
 import com.alibabacloud.polar_race.engine.common.exceptions.RetCodeEnum;
 import com.alibabacloud.polar_race.engine.common.utils.ConcurrencyHashTable;
-
+import com.alibabacloud.polar_race.engine.common.utils.PutMessageLock;
+import com.alibabacloud.polar_race.engine.common.utils.PutMessageReentrantLock;
+import com.alibabacloud.polar_race.engine.common.utils.PutMessageSpinLock;
 
 
 import java.io.File;
@@ -22,12 +24,12 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Time: 下午3:14
  */
 public class DBImpl {
-    private ValueLog[] valueLogs;
+    private ValueLog valueLog;
     private KeyLog keyLog;
-    private AtomicInteger wrotePosition = new AtomicInteger(0);//每次加1，代表第几个数据
+    private int wrotePosition;
     private ConcurrencyHashTable map;
+    private PutMessageLock lock;
 
-    private int lastFileNo = 0;
 
     public DBImpl(String path){
 
@@ -38,6 +40,8 @@ public class DBImpl {
             e.printStackTrace();
         }
 
+        this.valueLog = new ValueLog(path);
+        this.lock = new PutMessageReentrantLock();
         //判断KeyLog文件是否存在,如果存在，进行内存恢复
         File dir = new File(path, "key");
         if (dir.exists()){
@@ -55,10 +59,7 @@ public class DBImpl {
         }
 
         //打开或创建valuelog文件
-        this.valueLogs = new ValueLog[GlobalConfig.ValueFileNum];
-        for (int i=0; i<GlobalConfig.ValueFileNum; i++){
-            valueLogs[i] = new ValueLog(GlobalConfig.ValueFileSize, path + File.separator, i);
-        }
+
 
     }
 
@@ -72,40 +73,33 @@ public class DBImpl {
         ByteBuffer byteBuffer = keyLog.getKeyBuffer();
         byteBuffer.position(0);
 
-        while (true){
-            if (byteBuffer.get() != (byte) 1)
-                break;
-            int now = this.wrotePosition.getAndAdd(1);//恢复wroteposition
+        this.wrotePosition = (int) (this.valueLog.getFileLength() / 4096);
+        System.out.println(wrotePosition);
 
-            if (now % (1024*256) == 0)
-                System.out.println("recover   " + now);
+        int size = wrotePosition;
+
+        while (size > 0){
+            if (size % (1024*256) == 0)
+                System.out.println("recover   " + size);
 
             byte[] key = new byte[8];
             byteBuffer.get(key, 0, 8);
             map.put(key, byteBuffer.getInt());
+
+            size--;
         }
     }
 
 
     public void write(byte[] key, byte[] value){
-        int currentPos = this.wrotePosition.getAndAdd(1);
-        int key_wrotePosition = currentPos * 13;//keyLog的wrotePosition
+        lock.lock();
+        valueLog.putMessage(value, (long) wrotePosition*4096);
+//        keyLog.putKey(key, wrotePosition, wrotePosition*12);
+        int num = wrotePosition;
+        wrotePosition ++;
+        lock.unlock();
 
-
-//        int value_file_no = (int)(((long) currentPos * 4096) / GlobalConfig.ValueFileSize);
-        int value_file_wrotePosition = (int)(((long)currentPos * 4096) % GlobalConfig.ValueFileSize);
-        int value_file_no = (int) currentPos / 262144;
-
-        //clean
-        if (value_file_no > lastFileNo){
-            valueLogs[lastFileNo] = null;
-        }
-        else lastFileNo = value_file_no;
-
-        //value写入value文件
-        valueLogs[value_file_no].putMessage(value, value_file_wrotePosition);
-        //key和offset写入key文件
-        keyLog.putKey(key, currentPos, key_wrotePosition);
+        keyLog.putKey(key, num, num*12);
     }
 
     public byte[] read(byte[] key) throws EngineException{
@@ -113,10 +107,8 @@ public class DBImpl {
         if (currentPos==-1)
             throw new EngineException(RetCodeEnum.NOT_FOUND, "not found this key");
 
-//        int value_file_no = (int)((long) currentPos * 4096 / GlobalConfig.ValueFileSize);
-        int value_file_wrotePosition = (int)(((long)currentPos * 4096) % GlobalConfig.ValueFileSize);
-        int value_file_no = (int) currentPos / 262144;
+        long value_file_wrotePosition = (long)currentPos * 4096;
 
-        return valueLogs[value_file_no].getMessage(value_file_wrotePosition);
+        return valueLog.getMessage(value_file_wrotePosition);
     }
 }

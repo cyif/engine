@@ -26,6 +26,7 @@ public class KeyLog {
     /*映射的内存对象*/
     private MappedByteBuffer mappedByteBuffer;
 
+
     public KeyLog(int FileSize, String storePath) {
 //        this.FileSize = FileSize;
         /*检查文件夹是否存在*/
@@ -44,6 +45,7 @@ public class KeyLog {
             }
             this.fileChannel = new RandomAccessFile(file, "rw").getChannel();
             this.mappedByteBuffer = this.fileChannel.map(FileChannel.MapMode.READ_WRITE, 0, FileSize);
+
         } catch (FileNotFoundException e) {
             System.out.println("create file channel " + "key" + " Failed. ");
         } catch (IOException e) {
@@ -76,12 +78,16 @@ public class KeyLog {
 
 
     void putKey(byte[] key,int offset, int wrotePosition) {
-        ByteBuffer byteBuffer = this.mappedByteBuffer.slice();
+        ByteBuffer byteBuffer = mappedByteBuffer.slice();
         byteBuffer.position(wrotePosition);
-        byteBuffer.put((byte) 1);
         byteBuffer.put(key);
         byteBuffer.putInt(offset);
+
+//        mappedByteBuffer.position(wrotePosition);
+//        mappedByteBuffer.put(key);
+//        mappedByteBuffer.putInt(offset);
     }
+
 
 
     //mappedbytebuffer读取数据,用于恢复hash

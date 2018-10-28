@@ -8,7 +8,7 @@ import java.util.concurrent.locks.ReentrantLock;
  * Date: 2018/10/16
  * Time: 上午10:35
  */
-public class PutHashReentrantLock implements PutHashLock{
+public class PutMessageReentrantLock implements PutMessageLock{
     private ReentrantLock putMessageNormalLock = new ReentrantLock(); // NonfairSync
 
     public void lock() {
