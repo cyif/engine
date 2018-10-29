@@ -73,7 +73,10 @@ public class DBImpl {
         ByteBuffer byteBuffer = keyLog.getKeyBuffer();
         byteBuffer.position(0);
 
+        this.valueLog.setWrotePosition(this.valueLog.getFileLength());
         this.wrotePosition = (int) (this.valueLog.getFileLength() / 4096);
+        this.keyLog.setWrotePosition(this.wrotePosition*12);
+
         System.out.println(wrotePosition);
 
         int size = wrotePosition;
@@ -93,13 +96,14 @@ public class DBImpl {
 
     public void write(byte[] key, byte[] value){
         lock.lock();
-        valueLog.putMessage(value, (long) wrotePosition*4096);
-//        keyLog.putKey(key, wrotePosition, wrotePosition*12);
-        int num = wrotePosition;
-        wrotePosition ++;
+        valueLog.putMessage(value);
+        keyLog.putKey(key, wrotePosition);
+        wrotePosition++;
+//        int num = wrotePosition++;
+
         lock.unlock();
 
-        keyLog.putKey(key, num, num*12);
+//        keyLog.putKey(key, num, num*12);
     }
 
     public byte[] read(byte[] key) throws EngineException{

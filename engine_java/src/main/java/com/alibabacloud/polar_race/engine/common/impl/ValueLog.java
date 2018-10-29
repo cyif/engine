@@ -69,6 +69,25 @@ public class ValueLog {
         }
     }
 
+    void setWrotePosition(long wrotePosition){
+        try {
+            this.fileChannel.position(wrotePosition);
+        }
+        catch (IOException e){
+            e.printStackTrace();
+        }
+    }
+    void putMessage(byte[] value) {
+        this.byteBuffer.clear();
+        this.byteBuffer.put(value);
+        this.byteBuffer.flip();
+        try {
+            this.fileChannel.write(this.byteBuffer);
+        } catch (IOException e){
+            e.printStackTrace();
+        }
+    }
+
 
     byte[] getMessage(long offset) {
         ByteBuffer byteBuffer = ByteBuffer.allocate(4096);
