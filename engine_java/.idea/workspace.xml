@@ -3,9 +3,10 @@
   <component name="ChangeListManager">
     <list default="true" id="ee0a85b7-dca7-4d66-bb55-64179d999b6a" name="Default" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
+      <change beforePath="$PROJECT_DIR$/jvm_parameters" afterPath="$PROJECT_DIR$/jvm_parameters" />
       <change beforePath="$PROJECT_DIR$/src/main/java/com/alibabacloud/polar_race/engine/common/impl/DBImpl.java" afterPath="$PROJECT_DIR$/src/main/java/com/alibabacloud/polar_race/engine/common/impl/DBImpl.java" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/alibabacloud/polar_race/engine/common/impl/KeyLog.java" afterPath="$PROJECT_DIR$/src/main/java/com/alibabacloud/polar_race/engine/common/impl/KeyLog.java" />
       <change beforePath="$PROJECT_DIR$/src/main/java/com/alibabacloud/polar_race/engine/common/impl/ValueLog.java" afterPath="$PROJECT_DIR$/src/main/java/com/alibabacloud/polar_race/engine/common/impl/ValueLog.java" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/alibabacloud/polar_race/engine/common/utils/ConcurrencyHashTable.java" afterPath="$PROJECT_DIR$/src/main/java/com/alibabacloud/polar_race/engine/common/utils/ConcurrencyHashTable.java" />
     </list>
     <ignored path="$PROJECT_DIR$/target/" />
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
@@ -20,8 +21,20 @@
       <file leaf-file-name="ValueLog.java" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/main/java/com/alibabacloud/polar_race/engine/common/impl/ValueLog.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="-806">
-              <caret line="24" column="4" lean-forward="false" selection-start-line="24" selection-start-column="4" selection-end-line="24" selection-end-column="46" />
+            <state relative-caret-position="525">
+              <caret line="115" column="20" lean-forward="false" selection-start-line="115" selection-start-column="20" selection-end-line="116" selection-end-column="21" />
+              <folding>
+                <element signature="imports" expanded="true" />
+              </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="EngineRace.java" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/src/main/java/com/alibabacloud/polar_race/engine/common/EngineRace.java">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="289">
+              <caret line="17" column="19" lean-forward="false" selection-start-line="17" selection-start-column="19" selection-end-line="17" selection-end-column="19" />
               <folding>
                 <element signature="imports" expanded="true" />
               </folding>
@@ -32,7 +45,7 @@
       <file leaf-file-name="KeyLog.java" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/main/java/com/alibabacloud/polar_race/engine/common/impl/KeyLog.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="1165">
+            <state relative-caret-position="95">
               <caret line="90" column="9" lean-forward="false" selection-start-line="90" selection-start-column="9" selection-end-line="90" selection-end-column="9" />
               <folding>
                 <element signature="e#2604#2605#0" expanded="true" />
@@ -42,14 +55,34 @@
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="DBImpl.java" pinned="false" current-in-tab="true">
+      <file leaf-file-name="ConcurrencyHashTable.java" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/src/main/java/com/alibabacloud/polar_race/engine/common/utils/ConcurrencyHashTable.java">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="805">
+              <caret line="57" column="16" lean-forward="false" selection-start-line="57" selection-start-column="16" selection-end-line="57" selection-end-column="16" />
+              <folding />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="DBImpl.java" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/main/java/com/alibabacloud/polar_race/engine/common/impl/DBImpl.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="99">
-              <caret line="100" column="24" lean-forward="false" selection-start-line="100" selection-start-column="24" selection-end-line="100" selection-end-column="24" />
+            <state relative-caret-position="327">
+              <caret line="48" column="51" lean-forward="false" selection-start-line="48" selection-start-column="51" selection-end-line="48" selection-end-column="51" />
               <folding>
                 <element signature="imports" expanded="true" />
               </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="jvm_parameters" pinned="false" current-in-tab="true">
+        <entry file="file://$PROJECT_DIR$/jvm_parameters">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="0">
+              <caret line="0" column="26" lean-forward="false" selection-start-line="0" selection-start-column="26" selection-end-line="0" selection-end-column="26" />
+              <folding />
             </state>
           </provider>
         </entry>
@@ -86,19 +119,19 @@
         <option value="$PROJECT_DIR$/src/main/java/com/alibabacloud/polar_race/engine/common/utils/LinearProbeHashTable.java" />
         <option value="$PROJECT_DIR$/src/main/java/com/alibabacloud/polar_race/engine/common/utils/LinearProbeHashMap.java" />
         <option value="$PROJECT_DIR$/src/main/java/com/alibabacloud/polar_race/engine/common/EngineRace.java" />
-        <option value="$PROJECT_DIR$/jvm_parameters" />
         <option value="$PROJECT_DIR$/src/main/java/com/alibabacloud/polar_race/engine/common/utils/PutMessageReentrantLock.java" />
         <option value="$PROJECT_DIR$/src/main/java/com/alibabacloud/polar_race/engine/common/utils/PutHashLock.java" />
         <option value="$PROJECT_DIR$/src/main/java/com/alibabacloud/polar_race/engine/common/utils/PutHashSpinLock.java" />
         <option value="$PROJECT_DIR$/src/main/java/com/alibabacloud/polar_race/engine/common/utils/PutMessageSpinLock.java" />
         <option value="$PROJECT_DIR$/src/main/java/com/alibabacloud/polar_race/engine/common/utils/PutMessageLock.java" />
         <option value="$PROJECT_DIR$/src/main/java/com/alibabacloud/polar_race/engine/common/config/GlobalConfig.java" />
-        <option value="$PROJECT_DIR$/src/main/java/com/alibabacloud/polar_race/engine/common/utils/ConcurrencyHashTable.java" />
         <option value="$PROJECT_DIR$/src/main/java/com/alibabacloud/polar_race/engine/common/utils/RBTree.java" />
-        <option value="$PROJECT_DIR$/src/test/java/DemoTest.java" />
         <option value="$PROJECT_DIR$/src/main/java/com/alibabacloud/polar_race/engine/common/impl/KeyLog.java" />
+        <option value="$PROJECT_DIR$/src/test/java/DemoTest.java" />
         <option value="$PROJECT_DIR$/src/main/java/com/alibabacloud/polar_race/engine/common/impl/ValueLog.java" />
+        <option value="$PROJECT_DIR$/src/main/java/com/alibabacloud/polar_race/engine/common/utils/ConcurrencyHashTable.java" />
         <option value="$PROJECT_DIR$/src/main/java/com/alibabacloud/polar_race/engine/common/impl/DBImpl.java" />
+        <option value="$PROJECT_DIR$/jvm_parameters" />
       </list>
     </option>
   </component>
@@ -438,39 +471,39 @@
     <servers />
   </component>
   <component name="TestHistory">
-    <history-entry file="DemoTest_testRandomRead - 2018.10.29 at 09h 42m 09s.xml">
+    <history-entry file="DemoTest_testRandomRead - 2018.10.29 at 11h 29m 03s.xml">
       <configuration name="DemoTest.testRandomRead" configurationId="JUnit" />
     </history-entry>
-    <history-entry file="DemoTest_testRandomRead - 2018.10.29 at 09h 46m 41s.xml">
+    <history-entry file="DemoTest_testRandomRead - 2018.10.29 at 11h 31m 31s.xml">
       <configuration name="DemoTest.testRandomRead" configurationId="JUnit" />
     </history-entry>
-    <history-entry file="DemoTest_testRandomRead - 2018.10.29 at 11h 00m 08s.xml">
+    <history-entry file="DemoTest_testRandomRead - 2018.10.29 at 11h 32m 21s.xml">
       <configuration name="DemoTest.testRandomRead" configurationId="JUnit" />
     </history-entry>
-    <history-entry file="DemoTest_testWrite - 2018.10.29 at 09h 41m 23s.xml">
+    <history-entry file="DemoTest_testRandomRead - 2018.10.29 at 11h 34m 41s.xml">
+      <configuration name="DemoTest.testRandomRead" configurationId="JUnit" />
+    </history-entry>
+    <history-entry file="DemoTest_testRandomRead - 2018.10.29 at 11h 36m 54s.xml">
+      <configuration name="DemoTest.testRandomRead" configurationId="JUnit" />
+    </history-entry>
+    <history-entry file="DemoTest_testWrite - 2018.10.29 at 11h 30m 22s.xml">
       <configuration name="DemoTest.testWrite" configurationId="JUnit" />
     </history-entry>
-    <history-entry file="DemoTest_testWrite - 2018.10.29 at 09h 41m 47s.xml">
+    <history-entry file="DemoTest_testWrite - 2018.10.29 at 11h 33m 46s.xml">
       <configuration name="DemoTest.testWrite" configurationId="JUnit" />
     </history-entry>
-    <history-entry file="DemoTest_testWrite - 2018.10.29 at 09h 45m 54s.xml">
+    <history-entry file="DemoTest_testWrite - 2018.10.29 at 11h 34m 20s.xml">
       <configuration name="DemoTest.testWrite" configurationId="JUnit" />
     </history-entry>
-    <history-entry file="DemoTest_testWrite - 2018.10.29 at 09h 46m 19s.xml">
+    <history-entry file="DemoTest_testWrite - 2018.10.29 at 11h 36m 08s.xml">
       <configuration name="DemoTest.testWrite" configurationId="JUnit" />
     </history-entry>
-    <history-entry file="DemoTest_testWrite - 2018.10.29 at 10h 58m 54s.xml">
-      <configuration name="DemoTest.testWrite" configurationId="JUnit" />
-    </history-entry>
-    <history-entry file="DemoTest_testWrite - 2018.10.29 at 10h 59m 20s.xml">
-      <configuration name="DemoTest.testWrite" configurationId="JUnit" />
-    </history-entry>
-    <history-entry file="DemoTest_testWrite - 2018.10.29 at 10h 59m 46s.xml">
+    <history-entry file="DemoTest_testWrite - 2018.10.29 at 11h 36m 31s.xml">
       <configuration name="DemoTest.testWrite" configurationId="JUnit" />
     </history-entry>
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="69153000" />
+    <option name="totallyTimeSpent" value="70821000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="0" y="23" width="1440" height="799" extended-state="0" />
@@ -758,14 +791,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/jvm_parameters">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="0">
-          <caret line="0" column="71" lean-forward="false" selection-start-line="0" selection-start-column="71" selection-end-line="0" selection-end-column="71" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/src/main/java/com/alibabacloud/polar_race/engine/common/AbstractVisitor.java">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="34">
@@ -814,14 +839,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/main/java/com/alibabacloud/polar_race/engine/common/EngineRace.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="119">
-          <caret line="7" column="32" lean-forward="false" selection-start-line="7" selection-start-column="32" selection-end-line="7" selection-end-column="32" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/src/main/java/com/alibabacloud/polar_race/engine/common/utils/ListDB.java">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="653">
@@ -830,17 +847,19 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/main/java/com/alibabacloud/polar_race/engine/common/utils/ConcurrencyHashTable.java">
+    <entry file="file://$PROJECT_DIR$/src/main/java/com/alibabacloud/polar_race/engine/common/impl/ValueLog.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="1190">
-          <caret line="75" column="48" lean-forward="true" selection-start-line="75" selection-start-column="48" selection-end-line="75" selection-end-column="48" />
-          <folding />
+        <state relative-caret-position="525">
+          <caret line="115" column="20" lean-forward="false" selection-start-line="115" selection-start-column="20" selection-end-line="116" selection-end-column="21" />
+          <folding>
+            <element signature="imports" expanded="true" />
+          </folding>
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/src/main/java/com/alibabacloud/polar_race/engine/common/impl/KeyLog.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="1165">
+        <state relative-caret-position="95">
           <caret line="90" column="9" lean-forward="false" selection-start-line="90" selection-start-column="9" selection-end-line="90" selection-end-column="9" />
           <folding>
             <element signature="e#2604#2605#0" expanded="true" />
@@ -849,30 +868,46 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/main/java/com/alibabacloud/polar_race/engine/common/impl/ValueLog.java">
+    <entry file="file://$PROJECT_DIR$/src/main/java/com/alibabacloud/polar_race/engine/common/EngineRace.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-806">
-          <caret line="24" column="4" lean-forward="false" selection-start-line="24" selection-start-column="4" selection-end-line="24" selection-end-column="46" />
+        <state relative-caret-position="289">
+          <caret line="17" column="19" lean-forward="false" selection-start-line="17" selection-start-column="19" selection-end-line="17" selection-end-column="19" />
           <folding>
             <element signature="imports" expanded="true" />
           </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/main/java/com/alibabacloud/polar_race/engine/common/utils/ConcurrencyHashTable.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="805">
+          <caret line="57" column="16" lean-forward="false" selection-start-line="57" selection-start-column="16" selection-end-line="57" selection-end-column="16" />
+          <folding />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/src/main/java/com/alibabacloud/polar_race/engine/common/impl/DBImpl.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="99">
-          <caret line="100" column="24" lean-forward="false" selection-start-line="100" selection-start-column="24" selection-end-line="100" selection-end-column="24" />
+        <state relative-caret-position="327">
+          <caret line="48" column="51" lean-forward="false" selection-start-line="48" selection-start-column="51" selection-end-line="48" selection-end-column="51" />
           <folding>
             <element signature="imports" expanded="true" />
           </folding>
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/jvm_parameters">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="0">
+          <caret line="0" column="26" lean-forward="false" selection-start-line="0" selection-start-column="26" selection-end-line="0" selection-end-column="26" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/src/test/java/DemoTest.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="320">
-          <caret line="55" column="19" lean-forward="false" selection-start-line="55" selection-start-column="16" selection-end-line="55" selection-end-column="30" />
+        <state relative-caret-position="387">
+          <caret line="55" column="26" lean-forward="false" selection-start-line="55" selection-start-column="16" selection-end-line="55" selection-end-column="30" />
           <folding />
         </state>
       </provider>

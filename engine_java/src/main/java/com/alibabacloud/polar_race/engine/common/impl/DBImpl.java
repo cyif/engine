@@ -46,7 +46,7 @@ public class DBImpl {
         File dir = new File(path, "key");
         if (dir.exists()){
             System.out.println("---------------Start read or write append---------------");
-            this.map = new ConcurrencyHashTable(1024*1024, 0);
+            this.map = new ConcurrencyHashTable(256*1024, 0);
             keyLog = new KeyLog(GlobalConfig.KeyFileSize, path);//keylog恢复
             recoverHashtable();//hashtable恢复和wroteposition恢复
             System.out.println("Recover finished");
@@ -114,5 +114,9 @@ public class DBImpl {
         long value_file_wrotePosition = (long)currentPos * 4096;
 
         return valueLog.getMessage(value_file_wrotePosition);
+//        lock.lock();
+//        byte[] bytes = valueLog.getMessageDirect(value_file_wrotePosition);
+//        lock.unlock();
+//        return bytes;
     }
 }

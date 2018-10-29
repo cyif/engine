@@ -102,4 +102,18 @@ public class ValueLog {
         byteBuffer.get(bytes);
         return bytes;
     }
+
+    byte[] getMessageDirect(long offset) {
+        this.byteBuffer.clear();
+        try {
+            fileChannel.read(this.byteBuffer, offset);
+        } catch (IOException e){
+            e.printStackTrace();
+        }
+
+        byte[] bytes = new byte[4096];
+        byteBuffer.flip();
+        byteBuffer.get(bytes);
+        return bytes;
+    }
 }
