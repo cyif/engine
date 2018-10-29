@@ -2,10 +2,11 @@ package com.alibabacloud.polar_race.engine.common.impl;
 import com.alibabacloud.polar_race.engine.common.config.GlobalConfig;
 import com.alibabacloud.polar_race.engine.common.exceptions.EngineException;
 import com.alibabacloud.polar_race.engine.common.exceptions.RetCodeEnum;
+import com.alibabacloud.polar_race.engine.common.utils.ByteToInt;
 import com.alibabacloud.polar_race.engine.common.utils.ConcurrencyHashTable;
 import com.alibabacloud.polar_race.engine.common.utils.PutMessageLock;
 import com.alibabacloud.polar_race.engine.common.utils.PutMessageReentrantLock;
-
+import gnu.trove.map.hash.TLongIntHashMap;
 
 
 import java.io.File;
@@ -27,9 +28,10 @@ public class DBImpl {
     private ValueLog valueLog;
     private KeyLog keyLog;
     private int wrotePosition;
-    private ConcurrencyHashTable map;
+//    private ConcurrencyHashTable map;
     private PutMessageLock lock;
 
+    private TLongIntHashMap tmap;
 
     public DBImpl(String path){
 
@@ -46,7 +48,10 @@ public class DBImpl {
         File dir = new File(path, "key");
         if (dir.exists()){
             System.out.println("---------------Start read or write append---------------");
-            this.map = new ConcurrencyHashTable(1024*1024, 0);
+//            this.map = new ConcurrencyHashTable(1024*1024, 0);
+            tmap = new TLongIntHashMap(100*1024*1024, 1F);
+
+
             keyLog = new KeyLog(GlobalConfig.KeyFileSize, path);//keylog恢复
             recoverHashtable();//hashtable恢复和wroteposition恢复
             System.out.println("Recover finished");
@@ -87,8 +92,8 @@ public class DBImpl {
 
             byte[] key = new byte[8];
             byteBuffer.get(key, 0, 8);
-            map.put(key, byteBuffer.getInt());
-
+//            map.put(key, byteBuffer.getInt());
+            tmap.put(ByteToInt.byteArrayToLong(key), byteBuffer.getInt());
             size--;
         }
     }
@@ -107,7 +112,10 @@ public class DBImpl {
     }
 
     public byte[] read(byte[] key) throws EngineException{
-        int currentPos =  map.get(key);
+
+//        int currentPos =  map.get(key);
+        int currentPos = tmap.get(ByteToInt.byteArrayToLong(key));
+
         if (currentPos==-1)
             throw new EngineException(RetCodeEnum.NOT_FOUND, "not found this key");
 
@@ -118,5 +126,10 @@ public class DBImpl {
 //        byte[] bytes = valueLog.getMessageDirect(value_file_wrotePosition);
 //        lock.unlock();
 //        return bytes;
+    }
+
+    public void close(){
+        if (tmap!=null)
+            tmap.clear();
     }
 }
