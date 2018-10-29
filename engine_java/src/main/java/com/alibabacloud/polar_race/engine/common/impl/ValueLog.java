@@ -26,6 +26,8 @@ public class ValueLog {
     //直接内存
     private ByteBuffer byteBuffer;
 
+    private ThreadLocal<ByteBuffer> threadLocal = new ThreadLocal<ByteBuffer>();
+
 
     public ValueLog(String storePath) {
         this.byteBuffer = ByteBuffer.allocateDirect(4096);
@@ -104,9 +106,12 @@ public class ValueLog {
     }
 
     byte[] getMessageDirect(long offset) {
-        this.byteBuffer.clear();
+        if (threadLocal.get()==null)
+            threadLocal.set(ByteBuffer.allocateDirect(4096));
+        ByteBuffer byteBuffer = threadLocal.get();
+        byteBuffer.clear();
         try {
-            fileChannel.read(this.byteBuffer, offset);
+            fileChannel.read(byteBuffer, offset);
         } catch (IOException e){
             e.printStackTrace();
         }

@@ -120,7 +120,7 @@ public class DBImpl {
 
         long value_file_wrotePosition = (long)currentPos * 4096;
 
-        return valueLog.getMessage(value_file_wrotePosition);
+        return valueLog.getMessageDirect(value_file_wrotePosition);
 //        lock.lock();
 //        byte[] bytes = valueLog.getMessageDirect(value_file_wrotePosition);
 //        lock.unlock();
