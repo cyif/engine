@@ -97,13 +97,13 @@ public class DBImpl {
     public void write(byte[] key, byte[] value){
         lock.lock();
         valueLog.putMessage(value);
-        keyLog.putKey(key, wrotePosition);
-        wrotePosition++;
-//        int num = wrotePosition++;
+//        keyLog.putKey(key, wrotePosition);
+//        wrotePosition++;
+        int num = wrotePosition++;
 
         lock.unlock();
 
-//        keyLog.putKey(key, num, num*12);
+        keyLog.putKey(key, num, num*12);
     }
 
     public byte[] read(byte[] key) throws EngineException{
