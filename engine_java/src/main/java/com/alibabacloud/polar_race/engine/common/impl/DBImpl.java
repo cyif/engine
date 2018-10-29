@@ -49,7 +49,7 @@ public class DBImpl {
         if (dir.exists()){
             System.out.println("---------------Start read or write append---------------");
 //            this.map = new ConcurrencyHashTable(1024*1024, 0);
-            tmap = new TLongIntHashMap(100*1024*1024, 1F);
+            tmap = new TLongIntHashMap();
 
 
             keyLog = new KeyLog(GlobalConfig.KeyFileSize, path);//keylog恢复
