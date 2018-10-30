@@ -1,7 +1,7 @@
 package com.alibabacloud.polar_race.engine.common.impl;
 
-
-
+import com.alibabacloud.polar_race.engine.common.utils.PutMessageLock;
+import com.alibabacloud.polar_race.engine.common.utils.PutMessageReentrantLock;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -24,13 +24,11 @@ public class ValueLog {
 
     private RandomAccessFile randomAccessFile;
     //直接内存
-    private ByteBuffer byteBuffer;
+    private ThreadLocal<ByteBuffer> threadLocal = ThreadLocal.withInitial(()->ByteBuffer.allocateDirect(4096));
 
-    private ThreadLocal<ByteBuffer> threadLocal = new ThreadLocal<ByteBuffer>();
-
-
+    private PutMessageLock putMessageLock = new PutMessageReentrantLock();
+//    private ThreadLocal<ByteBuffer> threadLocal = new ThreadLocal<>();
     public ValueLog(String storePath) {
-        this.byteBuffer = ByteBuffer.allocateDirect(4096);
         /*打开文件*/
         try {
             File file = new File(storePath, "value");
@@ -60,15 +58,28 @@ public class ValueLog {
     }
 
 
-    void putMessage(byte[] value, long wrotePosition) {
-        this.byteBuffer.clear();
-        this.byteBuffer.put(value);
-        this.byteBuffer.flip();
+    //返回第几个数据
+    int putMessageDirect(byte[] value) {
+//        if (threadLocal.get()==null)
+//            threadLocal.set(ByteBuffer.allocateDirect(4096));
+        ByteBuffer byteBuffer = threadLocal.get();
+        byteBuffer.clear();
+        byteBuffer.put(value);
+        byteBuffer.flip();
+        return channelWrite(byteBuffer);
+    }
+
+    private int channelWrite(ByteBuffer byteBuffer){
+        long position = 0;
+        putMessageLock.lock();
         try {
-            this.fileChannel.write(this.byteBuffer, wrotePosition);
+            position = this.fileChannel.position();
+            this.fileChannel.write(byteBuffer);
         } catch (IOException e){
             e.printStackTrace();
         }
+        putMessageLock.unlock();
+        return (int) (position / 4096);
     }
 
     void setWrotePosition(long wrotePosition){
@@ -79,35 +90,10 @@ public class ValueLog {
             e.printStackTrace();
         }
     }
-    void putMessage(byte[] value) {
-        this.byteBuffer.clear();
-        this.byteBuffer.put(value);
-        this.byteBuffer.flip();
-        try {
-            this.fileChannel.write(this.byteBuffer);
-        } catch (IOException e){
-            e.printStackTrace();
-        }
-    }
-
-
-    byte[] getMessage(long offset) {
-        ByteBuffer byteBuffer = ByteBuffer.allocate(4096);
-        try {
-            fileChannel.read(byteBuffer, offset);
-        } catch (IOException e){
-            e.printStackTrace();
-        }
-
-        byte[] bytes = new byte[4096];
-        byteBuffer.flip();
-        byteBuffer.get(bytes);
-        return bytes;
-    }
 
     byte[] getMessageDirect(long offset) {
-        if (threadLocal.get()==null)
-            threadLocal.set(ByteBuffer.allocateDirect(4096));
+//        if (threadLocal.get()==null)
+//            threadLocal.set(ByteBuffer.allocateDirect(4096));
         ByteBuffer byteBuffer = threadLocal.get();
         byteBuffer.clear();
         try {
@@ -115,7 +101,6 @@ public class ValueLog {
         } catch (IOException e){
             e.printStackTrace();
         }
-
         byte[] bytes = new byte[4096];
         byteBuffer.flip();
         byteBuffer.get(bytes);

@@ -53,39 +53,11 @@ public class KeyLog {
         }
     }
 
-//    //获得文件写到哪里的长度,用于recover...不好使啊
-//    public int getFileLength(){
-//        int ans = 0;
-//        try {
-//            ans = (int) this.randomAccessFile.length();
-//        }
-//        catch (IOException e){
-//            log.error("get file length Failed. ", e);
-//        }
-//        return ans;
-//    }
-
-
-    public static void ensureDirOK(final String dirName) {
-        if (dirName != null) {
-            File f = new File(dirName);
-            if (!f.exists()) {
-                boolean result = f.mkdirs();
-                System.out.println(dirName + " mkdir " + (result ? "OK" : "Failed"));
-            }
-        }
-    }
-
-
     void putKey(byte[] key,int offset, int wrotePosition) {
         ByteBuffer byteBuffer = mappedByteBuffer.slice();
         byteBuffer.position(wrotePosition);
         byteBuffer.put(key);
         byteBuffer.putInt(offset);
-
-//        mappedByteBuffer.position(wrotePosition);
-//        mappedByteBuffer.put(key);
-//        mappedByteBuffer.putInt(offset);
     }
 
     void setWrotePosition(int wrotePosition){
@@ -96,8 +68,6 @@ public class KeyLog {
         mappedByteBuffer.put(key);
         mappedByteBuffer.putInt(offset);
     }
-
-
 
     //mappedbytebuffer读取数据,用于恢复hash
     ByteBuffer getKeyBuffer() {
