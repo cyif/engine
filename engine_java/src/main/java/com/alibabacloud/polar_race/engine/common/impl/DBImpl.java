@@ -49,7 +49,7 @@ public class DBImpl {
         if (dir.exists()){
             System.out.println("---------------Start read or write append---------------");
 //            this.map = new ConcurrencyHashTable(1024*1024, 0);
-            tmap = new TLongIntHashMap(72*1024*1024, 1.0F);
+            tmap = new TLongIntHashMap(64*1024*1024, 1.0F);
 
             keyLog = new KeyLog(GlobalConfig.KeyFileSize, path);//keylog恢复
             recoverHashtable();//hashtable恢复和wroteposition恢复
@@ -101,13 +101,13 @@ public class DBImpl {
     public void write(byte[] key, byte[] value){
         lock.lock();
         valueLog.putMessage(value);
-//        keyLog.putKey(key, wrotePosition);
-//        wrotePosition++;
-        int num = wrotePosition++;
+        keyLog.putKey(key, wrotePosition);
+        wrotePosition++;
+//        int num = wrotePosition++;
 
         lock.unlock();
 
-        keyLog.putKey(key, num, num*12);
+//        keyLog.putKey(key, num, num*12);
     }
 
     public byte[] read(byte[] key) throws EngineException{
