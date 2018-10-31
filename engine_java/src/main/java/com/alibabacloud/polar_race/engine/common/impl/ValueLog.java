@@ -2,13 +2,13 @@ package com.alibabacloud.polar_race.engine.common.impl;
 
 import com.alibabacloud.polar_race.engine.common.utils.PutMessageLock;
 import com.alibabacloud.polar_race.engine.common.utils.PutMessageReentrantLock;
-
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
+import java.util.function.Supplier;
 
 
 /**
@@ -24,16 +24,16 @@ public class ValueLog {
 
     private RandomAccessFile randomAccessFile;
     //直接内存
-    private ThreadLocal<ByteBuffer> threadLocal = ThreadLocal.withInitial(()->ByteBuffer.allocateDirect(4096));
+//    private ThreadLocal<ByteBuffer> threadLocal = ThreadLocal.withInitial(()->ByteBuffer.allocateDirect(4096));
 
-//    private ThreadLocal<ByteBuffer> threadLocal = ThreadLocal.withInitial((new Supplier<ByteBuffer>() {
-//        @Override
-//        public ByteBuffer get() {
-//            return ByteBuffer.allocateDirect(4096);
-//        }
-//    }));
+    private static final ThreadLocal<ByteBuffer> threadLocal = ThreadLocal.withInitial((new Supplier<ByteBuffer>() {
+        @Override
+        public ByteBuffer get() {
+            return ByteBuffer.allocateDirect(4096);
+        }
+    }));
 
-    private PutMessageLock putMessageLock = new PutMessageReentrantLock();
+    private PutMessageLock putMessageLock;
 //    private ThreadLocal<ByteBuffer> threadLocal = new ThreadLocal<>();
     public ValueLog(String storePath) {
         /*打开文件*/
@@ -53,6 +53,8 @@ public class ValueLog {
         } catch (FileNotFoundException e) {
             System.out.println("create file channel " + "valueLog" + " Failed. ");
         }
+
+        this.putMessageLock = new PutMessageReentrantLock();
     }
 
     public long getFileLength(){

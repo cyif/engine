@@ -94,8 +94,9 @@ public class DBImpl {
     }
 
     public void close(){
-        if (tmap!=null)
-            tmap.clear();
+        keyLog.clean();
+        keyLog = null;
+        valueLog = null;
         tmap = null;
     }
 }
