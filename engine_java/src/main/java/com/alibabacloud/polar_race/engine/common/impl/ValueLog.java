@@ -101,8 +101,8 @@ public class ValueLog {
         putMessageLock.lock();
         try {
             int position = (int) (this.fileChannel.position() / 4096);
+            keyLog.putKey(key, position);
             this.fileChannel.write(byteBuffer);
-            keyLog.putKey(key, position, position*12);
         } catch (IOException e){
             e.printStackTrace();
         }

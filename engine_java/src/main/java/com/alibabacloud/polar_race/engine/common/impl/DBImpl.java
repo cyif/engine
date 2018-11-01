@@ -61,6 +61,7 @@ public class DBImpl {
 
         this.valueLog.setWrotePosition(this.valueLog.getFileLength());
         int wrotePosition = (int) (this.valueLog.getFileLength() / 4096);
+        this.keyLog.setWrotePosition(wrotePosition * 12);
 
         System.out.println(wrotePosition);
 
