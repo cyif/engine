@@ -59,20 +59,21 @@ public class DBImpl {
         ByteBuffer byteBuffer = keyLog.getKeyBuffer();
         byteBuffer.position(0);
         int wrotePosition = (int) (this.valueLog.getFileLength() / 4096);
+        System.out.println(this.valueLog.getFileLength());
         System.out.println(wrotePosition);
         int size = wrotePosition;
-
+        byte[] key = new byte[8];
         while (size > 0){
 //            if (size % (1024*256) == 0)
 //                System.out.println("recover   " + size);
 
-            byte[] key = new byte[8];
-            byteBuffer.get(key, 0, 8);
+
+            byteBuffer.get(key);
 
             tmap.put(ByteBuffer.wrap(key).getLong(), byteBuffer.getInt());
             size--;
         }
-        this.valueLog.setWrotePosition(this.valueLog.getFileLength());
+        this.valueLog.setWrotePosition(((long)wrotePosition)*4096);
         this.keyLog.setWrotePosition(wrotePosition * 12);
     }
 
