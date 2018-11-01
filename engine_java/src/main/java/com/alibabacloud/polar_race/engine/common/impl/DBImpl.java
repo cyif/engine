@@ -67,8 +67,8 @@ public class DBImpl {
         int size = wrotePosition;
 
         while (size > 0){
-            if (size % (1024*256) == 0)
-                System.out.println("recover   " + size);
+//            if (size % (1024*256) == 0)
+//                System.out.println("recover   " + size);
 
             byte[] key = new byte[8];
             byteBuffer.get(key, 0, 8);
