@@ -73,19 +73,23 @@ public class DBImpl {
             byte[] key = new byte[8];
             byteBuffer.get(key, 0, 8);
 
-            tmap.put(ByteToInt.byteArrayToLong(key), byteBuffer.getInt());
+            tmap.put(ByteBuffer.wrap(key).getLong(), byteBuffer.getInt());
             size--;
         }
     }
 
 
+//    public void write(byte[] key, byte[] value){
+//        int position = valueLog.putMessageDirect(value);
+//        keyLog.putKey(key, position, position*12);
+//    }
+
     public void write(byte[] key, byte[] value){
-        int position = valueLog.putMessageDirect(value);
-        keyLog.putKey(key, position, position*12);
+        valueLog.putMessageDirect(key, value, this.keyLog);
     }
 
     public byte[] read(byte[] key) throws EngineException{
-        int currentPos = tmap.get(ByteToInt.byteArrayToLong(key));
+        int currentPos = tmap.get(ByteBuffer.wrap(key).getLong());
 
         if (currentPos<0)
             throw new EngineException(RetCodeEnum.NOT_FOUND, "not found this key");

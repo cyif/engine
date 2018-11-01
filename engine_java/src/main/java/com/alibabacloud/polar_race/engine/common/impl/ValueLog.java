@@ -67,7 +67,7 @@ public class ValueLog {
     }
 
 
-    //返回第几个数据
+//    返回第几个数据
     int putMessageDirect(byte[] value) {
 //        if (threadLocal.get()==null)
 //            threadLocal.set(ByteBuffer.allocateDirect(4096));
@@ -91,6 +91,25 @@ public class ValueLog {
         return (int) (position / 4096);
     }
 
+    void putMessageDirect(byte[] key, byte[] value, KeyLog keyLog) {
+//        if (threadLocal.get()==null)
+//            threadLocal.set(ByteBuffer.allocateDirect(4096));
+        ByteBuffer byteBuffer = threadLocal.get();
+        byteBuffer.clear();
+        byteBuffer.put(value);
+        byteBuffer.flip();
+        putMessageLock.lock();
+        try {
+            int position = (int) (this.fileChannel.position() / 4096);
+            this.fileChannel.write(byteBuffer);
+            keyLog.putKey(key, position, position*12);
+        } catch (IOException e){
+            e.printStackTrace();
+        }
+        putMessageLock.unlock();
+    }
+
+
     void setWrotePosition(long wrotePosition){
         try {
             this.fileChannel.position(wrotePosition);
@@ -101,8 +120,8 @@ public class ValueLog {
     }
 
     byte[] getMessageDirect(long offset) {
-//        if (threadLocal.get()==null)
-//            threadLocal.set(ByteBuffer.allocateDirect(4096));
+        if (threadLocal.get()==null)
+            threadLocal.set(ByteBuffer.allocateDirect(4096));
         ByteBuffer byteBuffer = threadLocal.get();
         byteBuffer.clear();
         try {
