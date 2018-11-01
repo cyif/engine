@@ -36,7 +36,7 @@ public class DBImpl {
         File dir = new File(path, "key");
         if (dir.exists()){
             System.out.println("---------------Start read or write append---------------");
-            tmap = new TLongIntHashMap(64000000, 1.0F, 0L, -1);
+            tmap = new TLongIntHashMap(64000000, 1.0F, -1L, -1);
             keyLog = new KeyLog(GlobalConfig.KeyFileSize, path);//keylog恢复
             recoverHashtable();//hashtable恢复和wroteposition恢复
             System.out.println("Recover finished");
@@ -58,13 +58,8 @@ public class DBImpl {
     private void recoverHashtable(){
         ByteBuffer byteBuffer = keyLog.getKeyBuffer();
         byteBuffer.position(0);
-
-        this.valueLog.setWrotePosition(this.valueLog.getFileLength());
         int wrotePosition = (int) (this.valueLog.getFileLength() / 4096);
-        this.keyLog.setWrotePosition(wrotePosition * 12);
-
         System.out.println(wrotePosition);
-
         int size = wrotePosition;
 
         while (size > 0){
@@ -77,6 +72,8 @@ public class DBImpl {
             tmap.put(ByteBuffer.wrap(key).getLong(), byteBuffer.getInt());
             size--;
         }
+        this.valueLog.setWrotePosition(this.valueLog.getFileLength());
+        this.keyLog.setWrotePosition(wrotePosition * 12);
     }
 
 
@@ -92,9 +89,9 @@ public class DBImpl {
     public byte[] read(byte[] key) throws EngineException{
         int currentPos = tmap.get(ByteBuffer.wrap(key).getLong());
 
-        if (currentPos<0)
+        if (currentPos==-1)
             throw new EngineException(RetCodeEnum.NOT_FOUND, "not found this key");
-        long value_file_wrotePosition = (long)currentPos * 4096;
+        long value_file_wrotePosition = ((long)currentPos) * 4096;
         return valueLog.getMessageDirect(value_file_wrotePosition);
     }
 

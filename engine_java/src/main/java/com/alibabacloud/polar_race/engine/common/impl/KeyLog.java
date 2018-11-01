@@ -64,12 +64,12 @@ public class KeyLog {
     }
 
     void setWrotePosition(int wrotePosition){
-        mappedByteBuffer.position(wrotePosition);
+        this.mappedByteBuffer.position(wrotePosition);
     }
 
     void putKey(byte[] key,int offset) {
-        mappedByteBuffer.put(key);
-        mappedByteBuffer.putInt(offset);
+        this.mappedByteBuffer.put(key);
+        this.mappedByteBuffer.putInt(offset);
     }
 
     //mappedbytebuffer读取数据,用于恢复hash

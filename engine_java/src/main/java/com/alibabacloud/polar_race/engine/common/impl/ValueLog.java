@@ -120,8 +120,8 @@ public class ValueLog {
     }
 
     byte[] getMessageDirect(long offset) {
-        if (threadLocal.get()==null)
-            threadLocal.set(ByteBuffer.allocateDirect(4096));
+//        if (threadLocal.get()==null)
+//            threadLocal.set(ByteBuffer.allocateDirect(4096));
         ByteBuffer byteBuffer = threadLocal.get();
         byteBuffer.clear();
         try {
