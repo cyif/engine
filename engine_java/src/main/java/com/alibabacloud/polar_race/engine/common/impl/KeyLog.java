@@ -77,6 +77,16 @@ public class KeyLog {
         return this.mappedByteBuffer.slice();
     }
 
+    public void close(){
+        try {
+            this.fileChannel.close();
+        }
+        catch (IOException e){
+            e.printStackTrace();
+        }
+        clean();
+    }
+
     //清理mappedbuffer
     public void clean() {
 

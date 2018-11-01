@@ -117,4 +117,12 @@ public class ValueLog {
     }
 
 
+    public void close(){
+        try {
+            this.fileChannel.close();
+        }
+        catch (IOException e){
+            e.printStackTrace();
+        }
+    }
 }
