@@ -95,7 +95,7 @@ public class DBImpl {
         int currentPos = tmap.get(ByteBuffer.wrap(key).getLong());
 
         int now = readNum.getAndAdd(1);
-        if (now % 64000 == 0)
+        if (now % 320000 == 0)
             System.out.println(now);
 
         if (currentPos<0){
