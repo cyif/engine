@@ -25,7 +25,7 @@ public class DBImpl {
     private KeyLog keyLog;
     private TLongIntHashMap tmap;
 
-    private AtomicInteger readNum = new AtomicInteger(0);
+//    private AtomicInteger readNum = new AtomicInteger(0);
 
     public DBImpl(String path){
         try {
@@ -94,14 +94,14 @@ public class DBImpl {
     public byte[] read(byte[] key) throws EngineException{
         int currentPos = tmap.get(ByteBuffer.wrap(key).getLong());
 
-        int now = readNum.getAndAdd(1);
-        if (now % 320000 == 0)
-            System.out.println(now);
+//        int now = readNum.getAndAdd(1);
+//        if (now % 320000 == 0)
+//            System.out.println(now);
 
         if (currentPos<0){
 
-            System.out.println("==========not found===========");
-            System.out.println(currentPos);
+//            System.out.println("==========not found===========");
+//            System.out.println(currentPos);
             throw new EngineException(RetCodeEnum.NOT_FOUND, "not found this key");
         }
 
