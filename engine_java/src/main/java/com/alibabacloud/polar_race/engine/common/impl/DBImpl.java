@@ -10,6 +10,8 @@ import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 
 /**
@@ -22,6 +24,8 @@ public class DBImpl {
     private ValueLog valueLog;
     private KeyLog keyLog;
     private TLongIntHashMap tmap;
+
+    private AtomicInteger readNum = new AtomicInteger(0);
 
     public DBImpl(String path){
         try {
@@ -90,8 +94,17 @@ public class DBImpl {
     public byte[] read(byte[] key) throws EngineException{
         int currentPos = tmap.get(ByteBuffer.wrap(key).getLong());
 
-        if (currentPos==-1)
+        int now = readNum.getAndAdd(1);
+        if (now % 64000 == 0)
+            System.out.println(now);
+
+        if (currentPos<0){
+
+            System.out.println("==========not found===========");
+            System.out.println(currentPos);
             throw new EngineException(RetCodeEnum.NOT_FOUND, "not found this key");
+        }
+
         long value_file_wrotePosition = ((long)currentPos) * 4096;
         return valueLog.getMessageDirect(value_file_wrotePosition);
     }
