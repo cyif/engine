@@ -24,14 +24,14 @@ public class ValueLog {
 
     private RandomAccessFile randomAccessFile;
     //直接内存
-//    private ThreadLocal<ByteBuffer> threadLocal = ThreadLocal.withInitial(()->ByteBuffer.allocateDirect(4096));
-
-    private static final ThreadLocal<ByteBuffer> threadLocal = ThreadLocal.withInitial((new Supplier<ByteBuffer>() {
-        @Override
-        public ByteBuffer get() {
-            return ByteBuffer.allocateDirect(4096);
-        }
-    }));
+    private ThreadLocal<ByteBuffer> threadLocal = ThreadLocal.withInitial(()->ByteBuffer.allocateDirect(4096));
+    private ThreadLocal<byte[]> threadLocalBytes = ThreadLocal.withInitial(()->new byte[4096]);
+//    private static final ThreadLocal<ByteBuffer> threadLocal = ThreadLocal.withInitial((new Supplier<ByteBuffer>() {
+//        @Override
+//        public ByteBuffer get() {
+//            return ByteBuffer.allocateDirect(4096);
+//        }
+//    }));
 
     private PutMessageLock putMessageLock;
 //    private ThreadLocal<ByteBuffer> threadLocal = new ThreadLocal<>();
@@ -129,7 +129,7 @@ public class ValueLog {
         } catch (IOException e){
             e.printStackTrace();
         }
-        byte[] bytes = new byte[4096];
+        byte[] bytes = threadLocalBytes.get();
         byteBuffer.flip();
         byteBuffer.get(bytes);
         return bytes;
