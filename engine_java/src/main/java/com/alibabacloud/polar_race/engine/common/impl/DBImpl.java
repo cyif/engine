@@ -61,7 +61,7 @@ public class DBImpl {
 //            System.out.println("---------------Start read or write append---------------");
             //如果找不到key就会返回-1
 //            tmap = new TLongIntHashMap(64 * 1024 * 1024, 1.0F, 0L, -1);
-            hmap = new LongIntHashMap(64 * 1024 * 1024, 0.99);
+            hmap = new LongIntHashMap(64 * 1000 * 1000, 0.99);
             keyLog = new KeyLog(12 * 64 * 1024 * 1024, path);//keylog恢复
             recoverHashtable();//hashtable恢复和wroteposition恢复
 //            System.out.println("Recover finished");
