@@ -12,9 +12,9 @@ public class EngineRace extends AbstractEngine {
 
 	@Override
 	public void open(String path) throws EngineException {
-		System.out.println("=======================db open=========================");
-		SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");//设置日期格式
-		System.out.println(df.format(new Date()));// new Date()为获取当前系统时间
+//		System.out.println("=======================db open=========================");
+//		SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");//设置日期格式
+//		System.out.println(df.format(new Date()));// new Date()为获取当前系统时间
 		db = new DBImpl(path);
 	}
 	
@@ -35,9 +35,9 @@ public class EngineRace extends AbstractEngine {
 
 	@Override
 	public void close() {
-	    System.out.println("=======================db close======================");
-		SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");//设置日期格式
-		System.out.println(df.format(new Date()));// new Date()为获取当前系统时间
+//	    System.out.println("=======================db close======================");
+//		SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");//设置日期格式
+//		System.out.println(df.format(new Date()));// new Date()为获取当前系统时间
 		db.close();
 		db = null;
 		System.gc();
