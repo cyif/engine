@@ -8,7 +8,6 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
-import java.util.function.Supplier;
 
 
 /**
@@ -23,14 +22,9 @@ public class ValueLog {
     private FileChannel fileChannel;
 
     private RandomAccessFile randomAccessFile;
-    //直接内存
-//    private ThreadLocal<ByteBuffer> threadLocal = ThreadLocal.withInitial(()->ByteBuffer.allocateDirect(4096));
-//    private ThreadLocal<byte[]> threadLocalBytes = ThreadLocal.withInitial(()->new byte[4096]);
 
     private ByteBuffer directWriteBuffer;
 
-    private PutMessageLock putMessageLock;
-//    private ThreadLocal<ByteBuffer> threadLocal = new ThreadLocal<>();
     public ValueLog(String storePath, int filename) {
         /*打开文件*/
         try {
@@ -51,7 +45,6 @@ public class ValueLog {
         }
 
         this.directWriteBuffer = ByteBuffer.allocateDirect(4096);
-        this.putMessageLock = new PutMessageReentrantLock();
     }
 
     public long getFileLength(){
@@ -94,7 +87,6 @@ public class ValueLog {
     }
 
     byte[] getMessageDirect(long offset, ByteBuffer byteBuffer, byte[] bytes) {
-
         byteBuffer.clear();
         try {
             fileChannel.read(byteBuffer, offset);
@@ -108,6 +100,7 @@ public class ValueLog {
 
 
     public void close(){
+        directWriteBuffer = null;
         try {
             this.fileChannel.close();
         }

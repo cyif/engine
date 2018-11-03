@@ -1,6 +1,5 @@
 package com.alibabacloud.polar_race.engine.common.impl;
 
-import javax.print.DocFlavor;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -21,20 +20,12 @@ import java.security.PrivilegedAction;
  */
 
 public class KeyLog {
-    /*文件的大小,1024*1024*64*12 就够。1个g足够*/
-//    private final int FileSize;
-
     /*映射的fileChannel对象*/
     private FileChannel fileChannel;
-
     /*映射的内存对象*/
     private MappedByteBuffer mappedByteBuffer;
 
-
     public KeyLog(int FileSize, String storePath) {
-//        this.FileSize = FileSize;
-        /*检查文件夹是否存在*/
-//        ensureDirOK(storePath);
         /*打开文件，并将文件映射到内存*/
         try {
             File file = new File(storePath, "key");
@@ -49,7 +40,6 @@ public class KeyLog {
             }
             this.fileChannel = new RandomAccessFile(file, "rw").getChannel();
             this.mappedByteBuffer = this.fileChannel.map(FileChannel.MapMode.READ_WRITE, 0, FileSize);
-
         } catch (FileNotFoundException e) {
             System.out.println("create file channel " + "key" + " Failed. ");
         } catch (IOException e) {
@@ -59,11 +49,6 @@ public class KeyLog {
 
     void setWrotePosition(int wrotePosition){
         this.mappedByteBuffer.position(wrotePosition);
-    }
-
-    void putKey(byte[] key,int offset) {
-        this.mappedByteBuffer.put(key);
-        this.mappedByteBuffer.putInt(offset);
     }
 
     void putKey(byte[] key,int offset, int wrotePosition) {

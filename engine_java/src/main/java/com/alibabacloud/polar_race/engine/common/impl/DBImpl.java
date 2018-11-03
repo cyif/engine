@@ -1,8 +1,6 @@
 package com.alibabacloud.polar_race.engine.common.impl;
-import com.alibabacloud.polar_race.engine.common.config.GlobalConfig;
 import com.alibabacloud.polar_race.engine.common.exceptions.EngineException;
 import com.alibabacloud.polar_race.engine.common.exceptions.RetCodeEnum;
-import com.alibabacloud.polar_race.engine.common.utils.ByteToInt;
 import gnu.trove.map.hash.TLongIntHashMap;
 import java.io.File;
 import java.io.IOException;
@@ -12,7 +10,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 
 
 /**
@@ -22,16 +19,22 @@ import java.util.concurrent.atomic.AtomicLong;
  * Time: 下午3:14
  */
 public class DBImpl {
+
+    /*  每个线程对应一个valuelog文件  */
     private ValueLog valueLog[];
-    //线程号与哪个value的对应
+    //线程号与valuelog文件的对应
     private ConcurrentHashMap<Long, Integer> threadValueLog;
     private AtomicInteger whichValueLog = new AtomicInteger(0);
 
+    /*  仅用一个keylog文件  */
     private KeyLog keyLog;
+    //因为只用了一个keylog文件，记录位置
     private AtomicInteger kelogWrotePosition = new AtomicInteger(0);
 
+    /*  内存恢复hash   */
     private TLongIntHashMap tmap;
 
+    /*  用于读，增加读取并发性，减小gc    */
     private ThreadLocal<ByteBuffer> threadLocalReadBuffer = ThreadLocal.withInitial(()->ByteBuffer.allocateDirect(4096));
     private ThreadLocal<byte[]> threadLocalReadBytes = ThreadLocal.withInitial(()->new byte[4096]);
 
@@ -49,15 +52,13 @@ public class DBImpl {
         for (int i=0; i<64; i++){
             valueLog[i] = new ValueLog(path, i);
         }
-
-
-
-        //判断KeyLog文件是否存在,如果存在，进行内存恢复
+        //判断KeyLog文件是否存在,如果存在，说明之前写过数据，进行内存恢复
         File dir = new File(path, "key");
         if (dir.exists()){
             System.out.println("---------------Start read or write append---------------");
+            //如果找不到key就会返回-1
             tmap = new TLongIntHashMap(32000000, 1.0F, -1L, -1);
-            keyLog = new KeyLog(GlobalConfig.KeyFileSize, path);//keylog恢复
+            keyLog = new KeyLog(12 * 64 * 1024 * 1024, path);//keylog恢复
             recoverHashtable();//hashtable恢复和wroteposition恢复
             System.out.println("Recover finished");
         }
@@ -65,11 +66,11 @@ public class DBImpl {
         //如果不存在，说明是第一次open
         else {
             System.out.println("---------------Start first write---------------");
-            keyLog = new KeyLog(GlobalConfig.KeyFileSize, path);
+            keyLog = new KeyLog(12 * 64 * 1024 * 1024, path);
         }
     }
 
-    public static void createDBPath(String dbPath) throws IOException {
+    private void createDBPath(String dbPath) throws IOException {
         Path path = Paths.get(dbPath);
         if (!Files.exists(path))
             Files.createDirectory(path);
@@ -78,8 +79,8 @@ public class DBImpl {
     private void recoverHashtable(){
         ByteBuffer byteBuffer = keyLog.getKeyBuffer();
         byteBuffer.position(0);
-        int sum = 0;
-        int[] valueLogWroteposition = new int[64];
+        int sum = 0;//总共写入了多少个数据
+        int[] valueLogWroteposition = new int[64];//每个valuelog文件写入了多少个数据
         for (int i=0; i<64; i++){
             valueLogWroteposition[i] = (int)(valueLog[i].getFileLength() / 4096);
             sum += valueLogWroteposition[i];
@@ -87,12 +88,12 @@ public class DBImpl {
         System.out.println(sum);
         byte[] key = new byte[8];
         while (sum > 0){
-
             byteBuffer.get(key);
-
             tmap.put(ByteBuffer.wrap(key).getLong(), byteBuffer.getInt());
             sum--;
         }
+
+        //恢复valuelog以及keylog写的位置，恢复到末尾
         for (int i=0; i<64; i++){
             valueLog[i].setWrotePosition(((long)valueLogWroteposition[i])*4096);
         }
@@ -103,7 +104,6 @@ public class DBImpl {
     public void write(byte[] key, byte[] value){
 
         long id = Thread.currentThread().getId();
-
         if (!threadValueLog.containsKey(id))
             threadValueLog.put(id, whichValueLog.getAndAdd(1));
         int valueLogNo = threadValueLog.get(id);
@@ -121,14 +121,13 @@ public class DBImpl {
 
     public byte[] read(byte[] key) throws EngineException{
         int currentPos = tmap.get(ByteBuffer.wrap(key).getLong());
-        if (currentPos<0){
+        if (currentPos==-1){
             throw new EngineException(RetCodeEnum.NOT_FOUND, "not found this key");
         }
-        int valueLogNo = currentPos >> 24;
-        int num = (currentPos << 8) >> 8;
-
-        long value_file_wrotePosition = ((long)num) * 4096;
-        return valueLog[valueLogNo].getMessageDirect(value_file_wrotePosition, threadLocalReadBuffer.get(), threadLocalReadBytes.get());
+//        int valueLogNo = currentPos >> 24;
+//        int num = currentPos & 0x00FFFFFF;
+//        long value_file_wrotePosition = ((long)num) * 4096;
+        return valueLog[currentPos >> 24].getMessageDirect(((long)(currentPos & 0x00FFFFFF)) * 4096, threadLocalReadBuffer.get(), threadLocalReadBytes.get());
     }
 
     public void close(){
@@ -139,5 +138,8 @@ public class DBImpl {
         keyLog = null;
         valueLog = null;
         tmap = null;
+        threadLocalReadBuffer = null;
+        threadLocalReadBytes = null;
+        threadValueLog = null;
     }
 }
