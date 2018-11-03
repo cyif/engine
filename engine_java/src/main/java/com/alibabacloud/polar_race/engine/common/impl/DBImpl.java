@@ -46,7 +46,7 @@ public class DBImpl {
             e.printStackTrace();
         }
 
-        this.threadValueLog = new ConcurrentHashMap<>(64);
+        this.threadValueLog = new ConcurrentHashMap<>(128);
         //创建64个value文件，分别命名value0--63
         this.valueLog = new ValueLog[64];
         for (int i=0; i<64; i++){
@@ -55,17 +55,17 @@ public class DBImpl {
         //判断KeyLog文件是否存在,如果存在，说明之前写过数据，进行内存恢复
         File dir = new File(path, "key");
         if (dir.exists()){
-            System.out.println("---------------Start read or write append---------------");
+//            System.out.println("---------------Start read or write append---------------");
             //如果找不到key就会返回-1
             tmap = new TLongIntHashMap(32000000, 1.0F, -1L, -1);
             keyLog = new KeyLog(12 * 64 * 1024 * 1024, path);//keylog恢复
             recoverHashtable();//hashtable恢复和wroteposition恢复
-            System.out.println("Recover finished");
+//            System.out.println("Recover finished");
         }
 
         //如果不存在，说明是第一次open
         else {
-            System.out.println("---------------Start first write---------------");
+//            System.out.println("---------------Start first write---------------");
             keyLog = new KeyLog(12 * 64 * 1024 * 1024, path);
         }
     }
@@ -85,7 +85,7 @@ public class DBImpl {
             valueLogWroteposition[i] = (int)(valueLog[i].getFileLength() / 4096);
             sum += valueLogWroteposition[i];
         }
-        System.out.println(sum);
+//        System.out.println(sum);
         byte[] key = new byte[8];
         while (sum > 0){
             byteBuffer.get(key);

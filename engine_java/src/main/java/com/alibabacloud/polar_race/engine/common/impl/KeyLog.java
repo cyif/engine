@@ -65,20 +65,17 @@ public class KeyLog {
     }
 
     public void close(){
+        clean();
         try {
             this.fileChannel.close();
         }
         catch (IOException e){
             e.printStackTrace();
         }
-        clean();
     }
 
     //清理mappedbuffer
     public void clean() {
-
-        System.out.println("===============unmap================");
-
         ByteBuffer buffer = this.mappedByteBuffer;
         if (buffer == null || !buffer.isDirect() || buffer.capacity() == 0)
             return;
