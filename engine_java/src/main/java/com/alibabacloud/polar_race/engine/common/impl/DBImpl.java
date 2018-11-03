@@ -57,8 +57,8 @@ public class DBImpl {
         if (dir.exists()){
 //            System.out.println("---------------Start read or write append---------------");
             //如果找不到key就会返回-1
-            tmap = new TLongIntHashMap(32000000, 1.0F, -1L, -1);
-            keyLog = new KeyLog(12 * 64 * 1024 * 1024, path);//keylog恢复
+            tmap = new TLongIntHashMap(64000000, 1.0F, -1L, -1);
+            keyLog = new KeyLog(12 * 64 * 1000 * 1000, path);//keylog恢复
             recoverHashtable();//hashtable恢复和wroteposition恢复
 //            System.out.println("Recover finished");
         }
