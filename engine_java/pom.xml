@@ -64,7 +64,12 @@
           <artifactId>trove4j</artifactId>
           <version>3.0.3</version>
       </dependency>
-    
+
+      <dependency>
+          <groupId>com.carrotsearch</groupId>
+          <artifactId>hppc</artifactId>
+          <version>0.7.2</version>
+      </dependency>
   </dependencies>
 
 </project>

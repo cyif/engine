@@ -2,6 +2,7 @@ package com.alibabacloud.polar_race.engine.common.impl;
 import com.alibabacloud.polar_race.engine.common.exceptions.EngineException;
 import com.alibabacloud.polar_race.engine.common.exceptions.RetCodeEnum;
 import com.alibabacloud.polar_race.engine.common.utils.ByteToLong;
+import com.carrotsearch.hppc.LongIntHashMap;
 import gnu.trove.map.hash.TLongIntHashMap;
 import java.io.File;
 import java.io.IOException;
@@ -33,7 +34,8 @@ public class DBImpl {
     private AtomicInteger kelogWrotePosition = new AtomicInteger(0);
 
     /*  内存恢复hash   */
-    private TLongIntHashMap tmap;
+//    private TLongIntHashMap tmap;
+    private LongIntHashMap hmap;
 
     /*  用于读，增加读取并发性，减小gc    */
     private ThreadLocal<ByteBuffer> threadLocalReadBuffer = ThreadLocal.withInitial(()->ByteBuffer.allocateDirect(4096));
@@ -58,7 +60,8 @@ public class DBImpl {
         if (dir.exists()){
 //            System.out.println("---------------Start read or write append---------------");
             //如果找不到key就会返回-1
-            tmap = new TLongIntHashMap(64 * 1024 * 1024, 1.0F, 0L, -1);
+//            tmap = new TLongIntHashMap(64 * 1024 * 1024, 1.0F, 0L, -1);
+            hmap = new LongIntHashMap(64 * 1024 * 1024, 0.99);
             keyLog = new KeyLog(12 * 64 * 1024 * 1024, path);//keylog恢复
             recoverHashtable();//hashtable恢复和wroteposition恢复
 //            System.out.println("Recover finished");
@@ -90,7 +93,8 @@ public class DBImpl {
         byte[] key = new byte[8];
         while (sum > 0){
             byteBuffer.get(key);
-            tmap.put(ByteToLong.byteArrayToLong(key), byteBuffer.getInt());
+//            tmap.put(ByteToLong.byteArrayToLong(key), byteBuffer.getInt());
+            hmap.put(ByteToLong.byteArrayToLong(key), byteBuffer.getInt());
             sum--;
         }
 
@@ -121,10 +125,14 @@ public class DBImpl {
     }
 
     public byte[] read(byte[] key) throws EngineException{
-        int currentPos = tmap.get(ByteToLong.byteArrayToLong(key));
-        if (currentPos==-1){
+//        int currentPos = tmap.get(ByteToLong.byteArrayToLong(key));
+//        if (currentPos==-1){
+//            throw new EngineException(RetCodeEnum.NOT_FOUND, "not found this key");
+//        }
+        if (!hmap.containsKey(ByteToLong.byteArrayToLong(key)))
             throw new EngineException(RetCodeEnum.NOT_FOUND, "not found this key");
-        }
+        int currentPos = hmap.get(ByteToLong.byteArrayToLong(key));
+
 //        int valueLogNo = currentPos >> 24;
 //        int num = currentPos & 0x00FFFFFF;
 //        long value_file_wrotePosition = ((long)num) * 4096;
@@ -138,7 +146,8 @@ public class DBImpl {
         }
         keyLog = null;
         valueLog = null;
-        tmap = null;
+//        tmap = null;
+        hmap = null;
         threadLocalReadBuffer = null;
         threadLocalReadBytes = null;
         threadValueLog = null;
