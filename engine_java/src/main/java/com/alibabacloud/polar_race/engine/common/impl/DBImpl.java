@@ -40,7 +40,7 @@ public class DBImpl {
         File dir = new File(path, "key");
         if (dir.exists()){
             System.out.println("---------------Start read or write append---------------");
-            tmap = new TLongIntHashMap(64000000, 1.0F, -1L, -1);
+            tmap = new TLongIntHashMap(32000000, 1.0F, -1L, -1);
             keyLog = new KeyLog(GlobalConfig.KeyFileSize, path);//keylog恢复
             recoverHashtable();//hashtable恢复和wroteposition恢复
             System.out.println("Recover finished");
