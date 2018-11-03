@@ -82,14 +82,14 @@ public class DBImpl {
     }
 
 
-//    public void write(byte[] key, byte[] value){
-//        int position = valueLog.putMessageDirect(value);
-//        keyLog.putKey(key, position, position*12);
-//    }
-
     public void write(byte[] key, byte[] value){
-        valueLog.putMessageDirect(key, value, this.keyLog);
+        int position = valueLog.putMessageDirect(value);
+        keyLog.putKey(key, position, position*12);
     }
+
+//    public void write(byte[] key, byte[] value){
+//        valueLog.putMessageDirect(key, value, this.keyLog);
+//    }
 
     public byte[] read(byte[] key) throws EngineException{
         int currentPos = tmap.get(ByteBuffer.wrap(key).getLong());
