@@ -1,6 +1,7 @@
 package com.alibabacloud.polar_race.engine.common.impl;
 import com.alibabacloud.polar_race.engine.common.exceptions.EngineException;
 import com.alibabacloud.polar_race.engine.common.exceptions.RetCodeEnum;
+import com.alibabacloud.polar_race.engine.common.utils.ByteToLong;
 import gnu.trove.map.hash.TLongIntHashMap;
 import java.io.File;
 import java.io.IOException;
@@ -89,7 +90,7 @@ public class DBImpl {
         byte[] key = new byte[8];
         while (sum > 0){
             byteBuffer.get(key);
-            tmap.put(ByteBuffer.wrap(key).getLong(), byteBuffer.getInt());
+            tmap.put(ByteToLong.byteArrayToLong(key), byteBuffer.getInt());
             sum--;
         }
 
@@ -120,7 +121,7 @@ public class DBImpl {
     }
 
     public byte[] read(byte[] key) throws EngineException{
-        int currentPos = tmap.get(ByteBuffer.wrap(key).getLong());
+        int currentPos = tmap.get(ByteToLong.byteArrayToLong(key));
         if (currentPos==-1){
             throw new EngineException(RetCodeEnum.NOT_FOUND, "not found this key");
         }
