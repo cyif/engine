@@ -126,13 +126,11 @@ public class DBImpl {
 
     public byte[] read(byte[] key) throws EngineException{
 //        int currentPos = tmap.get(ByteToLong.byteArrayToLong(key));
-//        if (currentPos==-1){
-//            throw new EngineException(RetCodeEnum.NOT_FOUND, "not found this key");
-//        }
-        if (!hmap.containsKey(ByteToLong.byteArrayToLong(key)))
-            throw new EngineException(RetCodeEnum.NOT_FOUND, "not found this key");
-        int currentPos = hmap.get(ByteToLong.byteArrayToLong(key));
 
+        int currentPos = hmap.getOrDefault(ByteToLong.byteArrayToLong(key), -1);
+        if (currentPos==-1){
+            throw new EngineException(RetCodeEnum.NOT_FOUND, "not found this key");
+        }
 //        int valueLogNo = currentPos >> 24;
 //        int num = currentPos & 0x00FFFFFF;
 //        long value_file_wrotePosition = ((long)num) * 4096;
