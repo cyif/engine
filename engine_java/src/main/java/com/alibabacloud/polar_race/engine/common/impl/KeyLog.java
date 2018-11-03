@@ -1,5 +1,6 @@
 package com.alibabacloud.polar_race.engine.common.impl;
 
+import javax.print.DocFlavor;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -56,13 +57,6 @@ public class KeyLog {
         }
     }
 
-    void putKey(byte[] key,int offset, int wrotePosition) {
-        ByteBuffer byteBuffer = mappedByteBuffer.slice();
-        byteBuffer.position(wrotePosition);
-        byteBuffer.put(key);
-        byteBuffer.putInt(offset);
-    }
-
     void setWrotePosition(int wrotePosition){
         this.mappedByteBuffer.position(wrotePosition);
     }
@@ -71,6 +65,14 @@ public class KeyLog {
         this.mappedByteBuffer.put(key);
         this.mappedByteBuffer.putInt(offset);
     }
+
+    void putKey(byte[] key,int offset, int wrotePosition) {
+        ByteBuffer byteBuffer = mappedByteBuffer.slice();
+        byteBuffer.position(wrotePosition);
+        byteBuffer.put(key);
+        byteBuffer.putInt(offset);
+    }
+
 
     //mappedbytebuffer读取数据,用于恢复hash
     ByteBuffer getKeyBuffer() {

@@ -10,6 +10,7 @@ import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -21,11 +22,18 @@ import java.util.concurrent.atomic.AtomicLong;
  * Time: 下午3:14
  */
 public class DBImpl {
-    private ValueLog valueLog;
+    private ValueLog valueLog[];
+    //线程号与哪个value的对应
+    private ConcurrentHashMap<Long, Integer> threadValueLog;
+    private AtomicInteger whichValueLog = new AtomicInteger(0);
+
     private KeyLog keyLog;
+    private AtomicInteger kelogWrotePosition = new AtomicInteger(0);
+
     private TLongIntHashMap tmap;
 
-//    private AtomicInteger readNum = new AtomicInteger(0);
+    private ThreadLocal<ByteBuffer> threadLocalReadBuffer = ThreadLocal.withInitial(()->ByteBuffer.allocateDirect(4096));
+    private ThreadLocal<byte[]> threadLocalReadBytes = ThreadLocal.withInitial(()->new byte[4096]);
 
     public DBImpl(String path){
         try {
@@ -34,7 +42,15 @@ public class DBImpl {
             System.out.println("create path error");
             e.printStackTrace();
         }
-        this.valueLog = new ValueLog(path);
+
+        this.threadValueLog = new ConcurrentHashMap<>(64);
+        //创建64个value文件，分别命名value0--63
+        this.valueLog = new ValueLog[64];
+        for (int i=0; i<64; i++){
+            valueLog[i] = new ValueLog(path, i);
+        }
+
+
 
         //判断KeyLog文件是否存在,如果存在，进行内存恢复
         File dir = new File(path, "key");
@@ -62,56 +78,64 @@ public class DBImpl {
     private void recoverHashtable(){
         ByteBuffer byteBuffer = keyLog.getKeyBuffer();
         byteBuffer.position(0);
-        int wrotePosition = (int) (this.valueLog.getFileLength() / 4096);
-        System.out.println(this.valueLog.getFileLength());
-        System.out.println(wrotePosition);
-        int size = wrotePosition;
+        int sum = 0;
+        int[] valueLogWroteposition = new int[64];
+        for (int i=0; i<64; i++){
+            valueLogWroteposition[i] = (int)(valueLog[i].getFileLength() / 4096);
+            sum += valueLogWroteposition[i];
+        }
+        System.out.println(sum);
         byte[] key = new byte[8];
-        while (size > 0){
-//            if (size % (1024*256) == 0)
-//                System.out.println("recover   " + size);
-
+        while (sum > 0){
 
             byteBuffer.get(key);
 
             tmap.put(ByteBuffer.wrap(key).getLong(), byteBuffer.getInt());
-            size--;
+            sum--;
         }
-        this.valueLog.setWrotePosition(((long)wrotePosition)*4096);
-        this.keyLog.setWrotePosition(wrotePosition * 12);
+        for (int i=0; i<64; i++){
+            valueLog[i].setWrotePosition(((long)valueLogWroteposition[i])*4096);
+        }
+        this.keyLog.setWrotePosition(sum * 12);
     }
 
 
     public void write(byte[] key, byte[] value){
-        int position = valueLog.putMessageDirect(value);
-        keyLog.putKey(key, position, position*12);
-    }
 
-//    public void write(byte[] key, byte[] value){
-//        valueLog.putMessageDirect(key, value, this.keyLog);
-//    }
+        long id = Thread.currentThread().getId();
+
+        if (!threadValueLog.containsKey(id))
+            threadValueLog.put(id, whichValueLog.getAndAdd(1));
+        int valueLogNo = threadValueLog.get(id);
+
+        //每个valuelog100w个数据，这个只占三个字节，表示该valuelog第几个数据
+        int num = (int)(valueLog[valueLogNo].getWrotePosition() / 4096);
+        //offset 第一个字节 表示这个key对应的存在哪个valuelog中，后三个字节表示这个value是该valuelog的第几个数据
+        int offset = num | (valueLogNo<<24);
+
+        //因为只用一个keylog，所以要有个原子量记录写在keylog中的位置
+        keyLog.putKey(key, offset, kelogWrotePosition.getAndAdd(12));
+
+        valueLog[valueLogNo].putMessageDirect(value);
+    }
 
     public byte[] read(byte[] key) throws EngineException{
         int currentPos = tmap.get(ByteBuffer.wrap(key).getLong());
-
-//        int now = readNum.getAndAdd(1);
-//        if (now % 320000 == 0)
-//            System.out.println(now);
-
         if (currentPos<0){
-
-//            System.out.println("==========not found===========");
-//            System.out.println(currentPos);
             throw new EngineException(RetCodeEnum.NOT_FOUND, "not found this key");
         }
+        int valueLogNo = currentPos >> 24;
+        int num = (currentPos << 8) >> 8;
 
-        long value_file_wrotePosition = ((long)currentPos) * 4096;
-        return valueLog.getMessageDirect(value_file_wrotePosition);
+        long value_file_wrotePosition = ((long)num) * 4096;
+        return valueLog[valueLogNo].getMessageDirect(value_file_wrotePosition, threadLocalReadBuffer.get(), threadLocalReadBytes.get());
     }
 
     public void close(){
         keyLog.close();
-        valueLog.close();
+        for (ValueLog V : valueLog){
+            V.close();
+        }
         keyLog = null;
         valueLog = null;
         tmap = null;

@@ -24,27 +24,23 @@ public class ValueLog {
 
     private RandomAccessFile randomAccessFile;
     //直接内存
-    private ThreadLocal<ByteBuffer> threadLocal = ThreadLocal.withInitial(()->ByteBuffer.allocateDirect(4096));
-    private ThreadLocal<byte[]> threadLocalBytes = ThreadLocal.withInitial(()->new byte[4096]);
-//    private static final ThreadLocal<ByteBuffer> threadLocal = ThreadLocal.withInitial((new Supplier<ByteBuffer>() {
-//        @Override
-//        public ByteBuffer get() {
-//            return ByteBuffer.allocateDirect(4096);
-//        }
-//    }));
+//    private ThreadLocal<ByteBuffer> threadLocal = ThreadLocal.withInitial(()->ByteBuffer.allocateDirect(4096));
+//    private ThreadLocal<byte[]> threadLocalBytes = ThreadLocal.withInitial(()->new byte[4096]);
+
+    private ByteBuffer directWriteBuffer;
 
     private PutMessageLock putMessageLock;
 //    private ThreadLocal<ByteBuffer> threadLocal = new ThreadLocal<>();
-    public ValueLog(String storePath) {
+    public ValueLog(String storePath, int filename) {
         /*打开文件*/
         try {
-            File file = new File(storePath, "value");
+            File file = new File(storePath, "value"+filename);
             if (!file.exists()){
                 try {
                     file.createNewFile();
                 }
                 catch (IOException e){
-                    System.out.println("Create file" + "valueLog" + "failed");
+                    System.out.println("Create file" + "valueLog" + filename + "failed");
                     e.printStackTrace();
                 }
             }
@@ -54,6 +50,7 @@ public class ValueLog {
             System.out.println("create file channel " + "valueLog" + " Failed. ");
         }
 
+        this.directWriteBuffer = ByteBuffer.allocateDirect(4096);
         this.putMessageLock = new PutMessageReentrantLock();
     }
 
@@ -66,49 +63,26 @@ public class ValueLog {
         return -1;
     }
 
-
-//    返回第几个数据
-    int putMessageDirect(byte[] value) {
-//        if (threadLocal.get()==null)
-//            threadLocal.set(ByteBuffer.allocateDirect(4096));
-        ByteBuffer byteBuffer = threadLocal.get();
-        byteBuffer.clear();
-        byteBuffer.put(value);
-        byteBuffer.flip();
-        return channelWrite(byteBuffer);
-    }
-
-    private int channelWrite(ByteBuffer byteBuffer){
-        long position = 0;
-        putMessageLock.lock();
+    public void putMessageDirect(byte[] value) {
+        this.directWriteBuffer.clear();
+        this.directWriteBuffer.put(value);
+        this.directWriteBuffer.flip();
         try {
-            position = this.fileChannel.position();
-            this.fileChannel.write(byteBuffer);
+            this.fileChannel.write(this.directWriteBuffer);
         } catch (IOException e){
             e.printStackTrace();
         }
-        putMessageLock.unlock();
-        return (int) (position / 4096);
     }
 
-    void putMessageDirect(byte[] key, byte[] value, KeyLog keyLog) {
-//        if (threadLocal.get()==null)
-//            threadLocal.set(ByteBuffer.allocateDirect(4096));
-        ByteBuffer byteBuffer = threadLocal.get();
-        byteBuffer.clear();
-        byteBuffer.put(value);
-        byteBuffer.flip();
-        putMessageLock.lock();
+    public long getWrotePosition(){
         try {
-            int position = (int) (this.fileChannel.position() / 4096);
-            keyLog.putKey(key, position);
-            this.fileChannel.write(byteBuffer);
-        } catch (IOException e){
+            return this.fileChannel.position();
+        }
+        catch (IOException e){
             e.printStackTrace();
         }
-        putMessageLock.unlock();
+        return -1;
     }
-
 
     void setWrotePosition(long wrotePosition){
         try {
@@ -119,17 +93,14 @@ public class ValueLog {
         }
     }
 
-    byte[] getMessageDirect(long offset) {
-//        if (threadLocal.get()==null)
-//            threadLocal.set(ByteBuffer.allocateDirect(4096));
-        ByteBuffer byteBuffer = threadLocal.get();
+    byte[] getMessageDirect(long offset, ByteBuffer byteBuffer, byte[] bytes) {
+
         byteBuffer.clear();
         try {
             fileChannel.read(byteBuffer, offset);
         } catch (IOException e){
             e.printStackTrace();
         }
-        byte[] bytes = threadLocalBytes.get();
         byteBuffer.flip();
         byteBuffer.get(bytes);
         return bytes;
