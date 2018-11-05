@@ -122,12 +122,14 @@ public class DBImpl {
 //            threadValueLog.put(id, whichValueLog.getAndAdd(1));
 //        int valueLogNo = threadValueLog.get(id);
 
-        if (!threadValueLog.containsKey(id)){
+        int valueLogNo = threadValueLog.getOrDefault(id, (byte)-1);
+        if (valueLogNo < 0){
             putMessageLock.lock();
             threadValueLog.put(id, whichValuelog++);
             putMessageLock.unlock();
+            valueLogNo = threadValueLog.get(id);
         }
-        int valueLogNo = threadValueLog.get(id);
+        
 
         //每个valuelog100w个数据，这个只占三个字节，表示该valuelog第几个数据
 //        int num = (int)(valueLog[valueLogNo].getWrotePosition() / 4096);
