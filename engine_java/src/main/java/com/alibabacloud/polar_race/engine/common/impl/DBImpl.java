@@ -6,14 +6,12 @@ import com.alibabacloud.polar_race.engine.common.utils.PutMessageLock;
 import com.alibabacloud.polar_race.engine.common.utils.PutMessageSpinLock;
 import com.carrotsearch.hppc.LongByteHashMap;
 import com.carrotsearch.hppc.LongIntHashMap;
-import gnu.trove.map.hash.TLongIntHashMap;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 
@@ -95,7 +93,8 @@ public class DBImpl {
         int sum = 0;//总共写入了多少个数据
         int[] valueLogWroteposition = new int[64];//每个valuelog文件写入了多少个数据
         for (int i=0; i<64; i++){
-            valueLogWroteposition[i] = (int)(valueLog[i].getFileLength() / 4096);
+//            valueLogWroteposition[i] = (int)(valueLog[i].getFileLength() / 4096);
+            valueLogWroteposition[i] = (int)(valueLog[i].getFileLength() >> 12);
             sum += valueLogWroteposition[i];
         }
 //        System.out.println(sum);
@@ -109,7 +108,8 @@ public class DBImpl {
 
         //恢复valuelog以及keylog写的位置，恢复到末尾
         for (int i=0; i<64; i++){
-            valueLog[i].setWrotePosition(((long)valueLogWroteposition[i])*4096);
+//            valueLog[i].setWrotePosition(((long)valueLogWroteposition[i])*4096);
+            valueLog[i].setWrotePosition(((long)valueLogWroteposition[i]) << 12);
         }
         this.keyLog.setWrotePosition(sum * 12);
     }
@@ -130,7 +130,8 @@ public class DBImpl {
         int valueLogNo = threadValueLog.get(id);
 
         //每个valuelog100w个数据，这个只占三个字节，表示该valuelog第几个数据
-        int num = (int)(valueLog[valueLogNo].getWrotePosition() / 4096);
+//        int num = (int)(valueLog[valueLogNo].getWrotePosition() / 4096);
+        int num = (int)(valueLog[valueLogNo].getWrotePosition() >> 12);
         //offset 第一个字节 表示这个key对应的存在哪个valuelog中，后三个字节表示这个value是该valuelog的第几个数据
         int offset = num | (valueLogNo<<24);
 
@@ -150,7 +151,8 @@ public class DBImpl {
 //        int valueLogNo = currentPos >> 24;
 //        int num = currentPos & 0x00FFFFFF;
 //        long value_file_wrotePosition = ((long)num) * 4096;
-        return valueLog[currentPos >> 24].getMessageDirect(((long)(currentPos & 0x00FFFFFF)) * 4096, threadLocalReadBuffer.get(), threadLocalReadBytes.get());
+//        return valueLog[currentPos >> 24].getMessageDirect(((long)(currentPos & 0x00FFFFFF)) * 4096, threadLocalReadBuffer.get(), threadLocalReadBytes.get());
+        return valueLog[currentPos >> 24].getMessageDirect(((long)(currentPos & 0x00FFFFFF)) << 12, threadLocalReadBuffer.get(), threadLocalReadBytes.get());
     }
 
     public void close(){
