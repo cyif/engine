@@ -68,7 +68,7 @@ public class DBImpl {
 //            System.out.println("---------------Start read or write append---------------");
             //如果找不到key就会返回-1
 //            tmap = new TLongIntHashMap(64 * 1024 * 1024, 1.0F, 0L, -1);
-            hmap = new LongIntHashMap(64 * 1000 * 1000, 0.99);
+            hmap = new LongIntHashMap(64000000, 0.99);
             keyLog = new KeyLog(12 * 64 * 1024 * 1024, path);//keylog恢复
             recoverHashtable();//hashtable恢复和wroteposition恢复
 //            System.out.println("Recover finished");
@@ -91,11 +91,13 @@ public class DBImpl {
         ByteBuffer byteBuffer = keyLog.getKeyBuffer();
         byteBuffer.position(0);
         int sum = 0;//总共写入了多少个数据
-        int[] valueLogWroteposition = new int[64];//每个valuelog文件写入了多少个数据
+//        int[] valueLogWroteposition = new int[64];//每个valuelog文件写入了多少个数据
         for (int i=0; i<64; i++){
+            valueLog[i].setNum((int)(valueLog[i].getFileLength() >> 12));
+            sum += valueLog[i].getNum();
 //            valueLogWroteposition[i] = (int)(valueLog[i].getFileLength() / 4096);
-            valueLogWroteposition[i] = (int)(valueLog[i].getFileLength() >> 12);
-            sum += valueLogWroteposition[i];
+//            valueLogWroteposition[i] = (int)(valueLog[i].getFileLength() >> 12);
+//            sum += valueLogWroteposition[i];
         }
 //        System.out.println(sum);
         byte[] key = new byte[8];
@@ -109,7 +111,8 @@ public class DBImpl {
         //恢复valuelog以及keylog写的位置，恢复到末尾
         for (int i=0; i<64; i++){
 //            valueLog[i].setWrotePosition(((long)valueLogWroteposition[i])*4096);
-            valueLog[i].setWrotePosition(((long)valueLogWroteposition[i]) << 12);
+//            valueLog[i].setWrotePosition(((long)valueLogWroteposition[i]) << 12);
+            valueLog[i].setWrotePosition(((long)valueLog[i].getNum()) << 12);
         }
         this.keyLog.setWrotePosition(sum * 12);
     }
@@ -129,13 +132,13 @@ public class DBImpl {
             putMessageLock.unlock();
             valueLogNo = threadValueLog.get(id);
         }
-        
+
 
         //每个valuelog100w个数据，这个只占三个字节，表示该valuelog第几个数据
 //        int num = (int)(valueLog[valueLogNo].getWrotePosition() / 4096);
-        int num = (int)(valueLog[valueLogNo].getWrotePosition() >> 12);
+//        int num = valueLog[valueLogNo].getNum();
         //offset 第一个字节 表示这个key对应的存在哪个valuelog中，后三个字节表示这个value是该valuelog的第几个数据
-        int offset = num | (valueLogNo<<24);
+        int offset = valueLog[valueLogNo].getNum() | (valueLogNo<<24);
 
         //因为只用一个keylog，所以要有个原子量记录写在keylog中的位置
         keyLog.putKey(key, offset, kelogWrotePosition.getAndAdd(12));
@@ -152,7 +155,8 @@ public class DBImpl {
         }
 //        int valueLogNo = currentPos >> 24;
 //        int num = currentPos & 0x00FFFFFF;
-//        long value_file_wrotePosition = ((long)num) * 4096;
+//        long value_file_wrotePosition = ((long)num) << 12;
+//        return valueLog[valueLogNo].getMessageDirect(value_file_wrotePosition, threadLocalReadBuffer.get(), threadLocalReadBytes.get());
 //        return valueLog[currentPos >> 24].getMessageDirect(((long)(currentPos & 0x00FFFFFF)) * 4096, threadLocalReadBuffer.get(), threadLocalReadBytes.get());
         return valueLog[currentPos >> 24].getMessageDirect(((long)(currentPos & 0x00FFFFFF)) << 12, threadLocalReadBuffer.get(), threadLocalReadBytes.get());
     }
@@ -164,10 +168,9 @@ public class DBImpl {
         }
         keyLog = null;
         valueLog = null;
-//        tmap = null;
         hmap = null;
+        threadValueLog = null;
         threadLocalReadBuffer = null;
         threadLocalReadBytes = null;
-        threadValueLog = null;
     }
 }

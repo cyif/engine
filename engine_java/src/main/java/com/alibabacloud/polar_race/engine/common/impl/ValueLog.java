@@ -23,6 +23,8 @@ public class ValueLog {
 
     private ByteBuffer directWriteBuffer;
 
+    private int num;
+
     public ValueLog(String storePath, int filename) {
         /*打开文件*/
         try {
@@ -38,11 +40,20 @@ public class ValueLog {
             }
             this.randomAccessFile = new RandomAccessFile(file, "rw");
             this.fileChannel = this.randomAccessFile.getChannel();
+            this.num = 0;
         } catch (FileNotFoundException e) {
             System.out.println("create file channel " + "valueLog" + " Failed. ");
         }
 
         this.directWriteBuffer = ByteBuffer.allocateDirect(4096);
+    }
+
+    public int getNum() {
+        return num;
+    }
+
+    public void setNum(int num) {
+        this.num = num;
     }
 
     public long getFileLength(){
@@ -63,17 +74,18 @@ public class ValueLog {
         } catch (IOException e){
             e.printStackTrace();
         }
+        num++;
     }
 
-    public long getWrotePosition(){
-        try {
-            return this.fileChannel.position();
-        }
-        catch (IOException e){
-            e.printStackTrace();
-        }
-        return -1;
-    }
+//    public long getWrotePosition(){
+//        try {
+//            return this.fileChannel.position();
+//        }
+//        catch (IOException e){
+//            e.printStackTrace();
+//        }
+//        return -1;
+//    }
 
     void setWrotePosition(long wrotePosition){
         try {
