@@ -2,6 +2,9 @@ package com.alibabacloud.polar_race.engine.common.impl;
 import com.alibabacloud.polar_race.engine.common.exceptions.EngineException;
 import com.alibabacloud.polar_race.engine.common.exceptions.RetCodeEnum;
 import com.alibabacloud.polar_race.engine.common.utils.ByteToLong;
+import com.alibabacloud.polar_race.engine.common.utils.PutMessageLock;
+import com.alibabacloud.polar_race.engine.common.utils.PutMessageSpinLock;
+import com.carrotsearch.hppc.LongByteHashMap;
 import com.carrotsearch.hppc.LongIntHashMap;
 import gnu.trove.map.hash.TLongIntHashMap;
 import java.io.File;
@@ -25,8 +28,11 @@ public class DBImpl {
     /*  每个线程对应一个valuelog文件  */
     private ValueLog valueLog[];
     //线程号与valuelog文件的对应
-    private ConcurrentHashMap<Long, Integer> threadValueLog;
-    private AtomicInteger whichValueLog = new AtomicInteger(0);
+//    private ConcurrentHashMap<Long, Integer> threadValueLog;
+//    private AtomicInteger whichValueLog = new AtomicInteger(0);
+    private LongByteHashMap threadValueLog;
+    private PutMessageLock putMessageLock;
+    private Byte whichValuelog;
 
     /*  仅用一个keylog文件  */
     private KeyLog keyLog;
@@ -49,7 +55,10 @@ public class DBImpl {
             e.printStackTrace();
         }
 
-        this.threadValueLog = new ConcurrentHashMap<>(128);
+//        this.threadValueLog = new ConcurrentHashMap<>(128);
+        this.threadValueLog = new LongByteHashMap(128, 0.99);
+        this.putMessageLock = new PutMessageSpinLock();
+        this.whichValuelog = 0;
         //创建64个value文件，分别命名value0--63
         this.valueLog = new ValueLog[64];
         for (int i=0; i<64; i++){
@@ -109,8 +118,15 @@ public class DBImpl {
     public void write(byte[] key, byte[] value){
 
         long id = Thread.currentThread().getId();
-        if (!threadValueLog.containsKey(id))
-            threadValueLog.put(id, whichValueLog.getAndAdd(1));
+//        if (!threadValueLog.containsKey(id))
+//            threadValueLog.put(id, whichValueLog.getAndAdd(1));
+//        int valueLogNo = threadValueLog.get(id);
+
+        if (!threadValueLog.containsKey(id)){
+            putMessageLock.lock();
+            threadValueLog.put(id, whichValuelog++);
+            putMessageLock.unlock();
+        }
         int valueLogNo = threadValueLog.get(id);
 
         //每个valuelog100w个数据，这个只占三个字节，表示该valuelog第几个数据
