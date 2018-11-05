@@ -6,6 +6,9 @@ import com.alibabacloud.polar_race.engine.common.utils.PutMessageLock;
 import com.alibabacloud.polar_race.engine.common.utils.PutMessageSpinLock;
 import com.carrotsearch.hppc.LongByteHashMap;
 import com.carrotsearch.hppc.LongIntHashMap;
+import gnu.trove.map.hash.TLongByteHashMap;
+import gnu.trove.map.hash.TLongIntHashMap;
+
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -28,7 +31,7 @@ public class DBImpl {
     //线程号与valuelog文件的对应
 //    private ConcurrentHashMap<Long, Integer> threadValueLog;
 //    private AtomicInteger whichValueLog = new AtomicInteger(0);
-    private LongByteHashMap threadValueLog;
+    private TLongIntHashMap threadValueLog;
     private PutMessageLock putMessageLock;
     private Byte whichValuelog;
 
@@ -54,7 +57,7 @@ public class DBImpl {
         }
 
 //        this.threadValueLog = new ConcurrentHashMap<>(128);
-        this.threadValueLog = new LongByteHashMap(128, 0.99);
+        this.threadValueLog = new TLongIntHashMap(128, 1F, 0L, -1);
         this.putMessageLock = new PutMessageSpinLock();
         this.whichValuelog = 0;
         //创建64个value文件，分别命名value0--63
@@ -125,7 +128,7 @@ public class DBImpl {
 //            threadValueLog.put(id, whichValueLog.getAndAdd(1));
 //        int valueLogNo = threadValueLog.get(id);
 
-        int valueLogNo = threadValueLog.getOrDefault(id, (byte)-1);
+        int valueLogNo = threadValueLog.get(id);
         if (valueLogNo < 0){
             putMessageLock.lock();
             threadValueLog.put(id, whichValuelog++);
