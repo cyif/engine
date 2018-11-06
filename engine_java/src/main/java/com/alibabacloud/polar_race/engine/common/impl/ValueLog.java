@@ -74,7 +74,6 @@ public class ValueLog {
 //        this.directWriteBuffer.flip();
         UNSAFE.copyMemory(value, 16, null, address, 4096);
         directWriteBuffer.position(0);
-        directWriteBuffer.limit(4096);
 
         try {
             this.fileChannel.write(this.directWriteBuffer);
