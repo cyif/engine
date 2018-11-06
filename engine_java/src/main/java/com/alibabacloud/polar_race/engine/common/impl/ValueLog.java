@@ -1,12 +1,14 @@
 package com.alibabacloud.polar_race.engine.common.impl;
 
+import sun.nio.ch.DirectBuffer;
+
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
-
+import static com.alibabacloud.polar_race.engine.common.utils.UnsafeUtil.UNSAFE;
 
 /**
  * Created by IntelliJ IDEA.
@@ -22,6 +24,7 @@ public class ValueLog {
     private RandomAccessFile randomAccessFile;
 
     private ByteBuffer directWriteBuffer;
+    private final long address;
 
     private int num;
 
@@ -46,6 +49,7 @@ public class ValueLog {
         }
 
         this.directWriteBuffer = ByteBuffer.allocateDirect(4096);
+        this.address = ((DirectBuffer) directWriteBuffer).address();
     }
 
     public int getNum() {
@@ -66,9 +70,16 @@ public class ValueLog {
     }
 
     public void putMessageDirect(byte[] value) {
-        this.directWriteBuffer.clear();
-        this.directWriteBuffer.put(value);
-        this.directWriteBuffer.flip();
+//        this.directWriteBuffer.clear();
+//        this.directWriteBuffer.put(value);
+//        this.directWriteBuffer.flip();
+
+        for (int i = 0; i < value.length; i++) {
+            UNSAFE.putByte(address + i, value[i]);
+        }
+        this.directWriteBuffer.position(0);
+        this.directWriteBuffer.limit(4096);
+
         try {
             this.fileChannel.write(this.directWriteBuffer);
         } catch (IOException e){
@@ -103,8 +114,14 @@ public class ValueLog {
         } catch (IOException e){
             e.printStackTrace();
         }
-        byteBuffer.flip();
-        byteBuffer.get(bytes);
+//        byteBuffer.flip();
+//        byteBuffer.get(bytes);
+
+        long address = ((DirectBuffer) byteBuffer).address();
+        for (int i = 0; i < 4096; i++) {
+            bytes[i] = UNSAFE.getByte(address + i);
+        }
+
         return bytes;
     }
 
