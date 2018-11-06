@@ -4,11 +4,8 @@ import com.alibabacloud.polar_race.engine.common.exceptions.RetCodeEnum;
 import com.alibabacloud.polar_race.engine.common.utils.ByteToLong;
 import com.alibabacloud.polar_race.engine.common.utils.PutMessageLock;
 import com.alibabacloud.polar_race.engine.common.utils.PutMessageSpinLock;
-import com.carrotsearch.hppc.LongByteHashMap;
 import com.carrotsearch.hppc.LongIntHashMap;
-import gnu.trove.map.hash.TLongByteHashMap;
 import gnu.trove.map.hash.TLongIntHashMap;
-
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -39,6 +36,8 @@ public class DBImpl {
     private KeyLog keyLog;
     //因为只用了一个keylog文件，记录位置
     private AtomicInteger kelogWrotePosition = new AtomicInteger(0);
+
+    private EngineException engineException;
 
     /*  内存恢复hash   */
 //    private TLongIntHashMap tmap;
@@ -71,8 +70,9 @@ public class DBImpl {
 //            System.out.println("---------------Start read or write append---------------");
             //如果找不到key就会返回-1
 //            tmap = new TLongIntHashMap(64 * 1024 * 1024, 1.0F, 0L, -1);
-            hmap = new LongIntHashMap(64000000, 0.99);
+            hmap = new LongIntHashMap(65000000, 0.99);
             keyLog = new KeyLog(12 * 64 * 1024 * 1024, path);//keylog恢复
+            this.engineException = new EngineException(RetCodeEnum.NOT_FOUND, "not found this key");
             recoverHashtable();//hashtable恢复和wroteposition恢复
 //            System.out.println("Recover finished");
         }
@@ -154,7 +154,8 @@ public class DBImpl {
 
         int currentPos = hmap.getOrDefault(ByteToLong.byteArrayToLong(key), -1);
         if (currentPos==-1){
-            throw new EngineException(RetCodeEnum.NOT_FOUND, "not found this key");
+//            throw new EngineException(RetCodeEnum.NOT_FOUND, "not found this key");
+            throw this.engineException;
         }
 //        int valueLogNo = currentPos >> 24;
 //        int num = currentPos & 0x00FFFFFF;
