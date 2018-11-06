@@ -11,6 +11,8 @@ import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 
@@ -48,6 +50,7 @@ public class DBImpl {
     /*  用于读，增加读取并发性，减小gc    */
     private ThreadLocal<ByteBuffer> threadLocalReadBuffer = ThreadLocal.withInitial(()->ByteBuffer.allocateDirect(4096));
     private ThreadLocal<byte[]> threadLocalReadBytes = ThreadLocal.withInitial(()->new byte[4096]);
+    private Set<byte[]> set;
 
     public DBImpl(String path){
         try {
@@ -72,6 +75,7 @@ public class DBImpl {
             hmap = new LongIntHashMap(64000000, 0.99);
             keyLog = new KeyLog(12 * 64 * 1024 * 1024, path);//keylog恢复
             this.engineException = new EngineException(RetCodeEnum.NOT_FOUND, "not found this key");
+            this.set = ConcurrentHashMap.<byte[]> newKeySet();
             recoverHashtable();//hashtable恢复和wroteposition恢复
 //            System.out.println("Recover finished");
         }
@@ -136,8 +140,14 @@ public class DBImpl {
     }
 
     public byte[] read(byte[] key) throws EngineException{
+
+        if (set.contains(key)){
+            throw this.engineException;
+        }
+
         int currentPos = hmap.getOrDefault(ByteToLong.byteArrayToLong(key), -1);
         if (currentPos==-1){
+            set.add(key);
             throw this.engineException;
         }
         return valueLog[currentPos >> 24].getMessageDirect(((long)(currentPos & 0x00FFFFFF)) << 12, threadLocalReadBuffer.get(), threadLocalReadBytes.get());
