@@ -26,22 +26,25 @@ public class DBImpl {
     /*  每个线程对应一个valuelog文件  */
     private ValueLog valueLog[];
     //线程号与valuelog文件的对应
-//    private ConcurrentHashMap<Long, Integer> threadValueLog;
-//    private AtomicInteger whichValueLog = new AtomicInteger(0);
     private TLongIntHashMap threadValueLog;
     private PutMessageLock putMessageLock;
     private Byte whichValuelog;
+
 
     /*  仅用一个keylog文件  */
     private KeyLog keyLog;
     //因为只用了一个keylog文件，记录位置
     private AtomicInteger kelogWrotePosition = new AtomicInteger(0);
 
+
+    /*  仅new一次异常  */
     private EngineException engineException;
 
+
     /*  内存恢复hash   */
-//    private TLongIntHashMap tmap;
     private LongIntHashMap hmap;
+
+
 
     /*  用于读，增加读取并发性，减小gc    */
     private ThreadLocal<ByteBuffer> threadLocalReadBuffer = ThreadLocal.withInitial(()->ByteBuffer.allocateDirect(4096));
@@ -55,7 +58,6 @@ public class DBImpl {
             e.printStackTrace();
         }
 
-//        this.threadValueLog = new ConcurrentHashMap<>(128);
         this.threadValueLog = new TLongIntHashMap(128, 1F, 0L, -1);
         this.putMessageLock = new PutMessageSpinLock();
         this.whichValuelog = 0;
@@ -68,9 +70,7 @@ public class DBImpl {
         File dir = new File(path, "key");
         if (dir.exists()){
 //            System.out.println("---------------Start read or write append---------------");
-            //如果找不到key就会返回-1
-//            tmap = new TLongIntHashMap(64 * 1024 * 1024, 1.0F, 0L, -1);
-            hmap = new LongIntHashMap(65000000, 0.99);
+            hmap = new LongIntHashMap(64000000, 0.99);
             keyLog = new KeyLog(12 * 64 * 1024 * 1024, path);//keylog恢复
             this.engineException = new EngineException(RetCodeEnum.NOT_FOUND, "not found this key");
             recoverHashtable();//hashtable恢复和wroteposition恢复
@@ -94,27 +94,20 @@ public class DBImpl {
         ByteBuffer byteBuffer = keyLog.getKeyBuffer();
         byteBuffer.position(0);
         int sum = 0;//总共写入了多少个数据
-//        int[] valueLogWroteposition = new int[64];//每个valuelog文件写入了多少个数据
         for (int i=0; i<64; i++){
             valueLog[i].setNum((int)(valueLog[i].getFileLength() >> 12));
             sum += valueLog[i].getNum();
-//            valueLogWroteposition[i] = (int)(valueLog[i].getFileLength() / 4096);
-//            valueLogWroteposition[i] = (int)(valueLog[i].getFileLength() >> 12);
-//            sum += valueLogWroteposition[i];
         }
-//        System.out.println(sum);
+
         byte[] key = new byte[8];
         while (sum > 0){
             byteBuffer.get(key);
-//            tmap.put(ByteToLong.byteArrayToLong(key), byteBuffer.getInt());
             hmap.put(ByteToLong.byteArrayToLong(key), byteBuffer.getInt());
             sum--;
         }
 
         //恢复valuelog以及keylog写的位置，恢复到末尾
         for (int i=0; i<64; i++){
-//            valueLog[i].setWrotePosition(((long)valueLogWroteposition[i])*4096);
-//            valueLog[i].setWrotePosition(((long)valueLogWroteposition[i]) << 12);
             valueLog[i].setWrotePosition(((long)valueLog[i].getNum()) << 12);
         }
         this.keyLog.setWrotePosition(sum * 12);
@@ -124,10 +117,6 @@ public class DBImpl {
     public void write(byte[] key, byte[] value){
 
         long id = Thread.currentThread().getId();
-//        if (!threadValueLog.containsKey(id))
-//            threadValueLog.put(id, whichValueLog.getAndAdd(1));
-//        int valueLogNo = threadValueLog.get(id);
-
         int valueLogNo = threadValueLog.get(id);
         if (valueLogNo < 0){
             putMessageLock.lock();
@@ -138,8 +127,6 @@ public class DBImpl {
 
 
         //每个valuelog100w个数据，这个只占三个字节，表示该valuelog第几个数据
-//        int num = (int)(valueLog[valueLogNo].getWrotePosition() / 4096);
-//        int num = valueLog[valueLogNo].getNum();
         //offset 第一个字节 表示这个key对应的存在哪个valuelog中，后三个字节表示这个value是该valuelog的第几个数据
         int offset = valueLog[valueLogNo].getNum() | (valueLogNo<<24);
 
@@ -150,18 +137,10 @@ public class DBImpl {
     }
 
     public byte[] read(byte[] key) throws EngineException{
-//        int currentPos = tmap.get(ByteToLong.byteArrayToLong(key));
-
         int currentPos = hmap.getOrDefault(ByteToLong.byteArrayToLong(key), -1);
         if (currentPos==-1){
-//            throw new EngineException(RetCodeEnum.NOT_FOUND, "not found this key");
             throw this.engineException;
         }
-//        int valueLogNo = currentPos >> 24;
-//        int num = currentPos & 0x00FFFFFF;
-//        long value_file_wrotePosition = ((long)num) << 12;
-//        return valueLog[valueLogNo].getMessageDirect(value_file_wrotePosition, threadLocalReadBuffer.get(), threadLocalReadBytes.get());
-//        return valueLog[currentPos >> 24].getMessageDirect(((long)(currentPos & 0x00FFFFFF)) * 4096, threadLocalReadBuffer.get(), threadLocalReadBytes.get());
         return valueLog[currentPos >> 24].getMessageDirect(((long)(currentPos & 0x00FFFFFF)) << 12, threadLocalReadBuffer.get(), threadLocalReadBytes.get());
     }
 
