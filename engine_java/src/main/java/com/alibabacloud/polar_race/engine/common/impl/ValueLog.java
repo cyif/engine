@@ -1,4 +1,6 @@
 package com.alibabacloud.polar_race.engine.common.impl;
+import com.alibabacloud.polar_race.engine.common.utils.PutMessageLock;
+import com.alibabacloud.polar_race.engine.common.utils.PutMessageReentrantLock;
 import sun.nio.ch.DirectBuffer;
 
 import java.io.File;
@@ -27,7 +29,10 @@ public class ValueLog {
     private ByteBuffer directWriteBuffer;
     private long address;
 
+    //记录这个valuelog中写了多少个value
     private int num;
+
+    private PutMessageLock putMessageLock;
 
     public ValueLog(String storePath, int filename) {
         /*打开文件*/
@@ -45,16 +50,13 @@ public class ValueLog {
             this.randomAccessFile = new RandomAccessFile(file, "rw");
             this.fileChannel = this.randomAccessFile.getChannel();
             this.num = 0;
+            this.putMessageLock = new PutMessageReentrantLock();
         } catch (FileNotFoundException e) {
             System.out.println("create file channel " + "valueLog" + " Failed. ");
         }
 
         this.directWriteBuffer = ByteBuffer.allocateDirect(4096);
         this.address = ((DirectBuffer) directWriteBuffer).address();
-    }
-
-    public int getNum() {
-        return num;
     }
 
     public void setNum(int num) {
@@ -74,18 +76,20 @@ public class ValueLog {
 //        this.directWriteBuffer.clear();
 //        this.directWriteBuffer.put(value);
 //        this.directWriteBuffer.flip();
-        synchronized (this){
-            UNSAFE.copyMemory(value, 16, null, address, 4096);
-            directWriteBuffer.position(0);
+        putMessageLock.lock();
 
-            keyLog.putKey(key, num);
-            try {
-                this.fileChannel.write(this.directWriteBuffer);
-            } catch (IOException e){
-                e.printStackTrace();
-            }
-            num++;
+        UNSAFE.copyMemory(value, 16, null, address, 4096);
+        directWriteBuffer.position(0);
+
+        keyLog.putKey(key, num);
+        try {
+            this.fileChannel.write(this.directWriteBuffer);
+        } catch (IOException e){
+            e.printStackTrace();
         }
+        num++;
+
+        putMessageLock.unlock();
 
     }
 
