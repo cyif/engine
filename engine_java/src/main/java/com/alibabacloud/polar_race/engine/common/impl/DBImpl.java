@@ -146,7 +146,7 @@ public class DBImpl {
         }
 
         int logNum = key[0]&0xff;
-        int currentPos = hmap[logNum].getOrDefault(ByteToLong.byteArrayToLong_seven(key), -1);
+        int currentPos = hmap[logNum].getOrDefault(ByteToLong.byteArrayToLong(key), -1);
         if (currentPos==-1){
             set.add(key);
             throw this.engineException;
