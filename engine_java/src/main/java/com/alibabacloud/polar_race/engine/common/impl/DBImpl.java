@@ -64,7 +64,7 @@ public class DBImpl {
             hmap = new LongIntHashMap[256];
             for (int i=0; i<256; i++){
                 //这个值是250000/0.99的最小整数
-                hmap[i] = new LongIntHashMap(250000, 0.99);
+                hmap[i] = new LongIntHashMap(252000, 0.99);
             }
 
             keyLog = new KeyLog[256];
@@ -116,7 +116,7 @@ public class DBImpl {
                         byte[] key = new byte[8];
                         for (int currentNum = 0; currentNum < sum; currentNum++) {
                             byteBuffer.get(key);
-                            hmapi.put(ByteToLong.byteArrayToLong(key), byteBuffer.getInt());
+                            hmapi.put(ByteToLong.byteArrayToLong_seven(key), byteBuffer.getInt());
                         }
 
                         valueLogi.setNum(sum);
@@ -151,7 +151,7 @@ public class DBImpl {
         }
 
         int logNum = (int)(key[0]&0xff);
-        int currentPos = hmap[logNum].getOrDefault(ByteToLong.byteArrayToLong(key), -1);
+        int currentPos = hmap[logNum].getOrDefault(ByteToLong.byteArrayToLong_seven(key), -1);
         if (currentPos==-1){
             set.add(key);
             throw this.engineException;
