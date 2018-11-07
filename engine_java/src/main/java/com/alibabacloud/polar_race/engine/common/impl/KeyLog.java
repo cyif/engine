@@ -10,6 +10,7 @@ import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+import java.util.concurrent.atomic.AtomicInteger;
 
 
 /**
@@ -25,11 +26,13 @@ public class KeyLog {
     /*映射的内存对象*/
     private MappedByteBuffer mappedByteBuffer;
 
-    public KeyLog(int FileSize, String storePath) {
+    private AtomicInteger kelogWrotePosition = new AtomicInteger(0);
+
+    public KeyLog(int FileSize, String storePath, int fileName) {
         /*打开文件，并将文件映射到内存*/
         try {
             ensureDirOK(storePath);
-            File file = new File(storePath, "key");
+            File file = new File(storePath, "key" + fileName);
             if (!file.exists()){
                 try {
                     file.createNewFile();
@@ -56,12 +59,13 @@ public class KeyLog {
         }
     }
     void setWrotePosition(int wrotePosition){
-        this.mappedByteBuffer.position(wrotePosition);
+//        this.mappedByteBuffer.position(wrotePosition);
+        kelogWrotePosition.set(wrotePosition);
     }
 
-    void putKey(byte[] key,int offset, int wrotePosition) {
+    void putKey(byte[] key,int offset) {
         ByteBuffer byteBuffer = mappedByteBuffer.slice();
-        byteBuffer.position(wrotePosition);
+        byteBuffer.position(kelogWrotePosition.getAndAdd(12));
         byteBuffer.put(key);
         byteBuffer.putInt(offset);
     }

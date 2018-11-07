@@ -29,9 +29,8 @@ public class DBImpl {
 
 
     /*  仅用一个keylog文件  */
-    private KeyLog keyLog;
+    private KeyLog keyLog[];
     //因为只用了一个keylog文件，记录位置
-    private AtomicInteger kelogWrotePosition = new AtomicInteger(0);
 
 
     /*  仅new一次异常  */
@@ -70,7 +69,12 @@ public class DBImpl {
             for (int i=0; i<256; i++){
                 hmap[i] = new LongIntHashMap(250000, 0.99);
             }
-            keyLog = new KeyLog(12 * 64 * 1024 * 1024, path + File.separator + "key");//keylog恢复
+
+            keyLog = new KeyLog[256];
+            for (int i=0; i<256; i++){
+                keyLog[i] = new KeyLog(12*64*1024*1024/256, path + File.separator + "key", i);
+            }
+
             this.engineException = new EngineException(RetCodeEnum.NOT_FOUND, "not found this key");
             this.set = ConcurrentHashMap.<byte[]> newKeySet();
             recoverHashtable();//hashtable恢复和wroteposition恢复
@@ -80,7 +84,10 @@ public class DBImpl {
         //如果不存在，说明是第一次open
         else {
             System.out.println("---------------Start first write---------------");
-            keyLog = new KeyLog(12 * 64 * 1024 * 1024, path + File.separator + "key");
+            keyLog = new KeyLog[256];
+            for (int i=0; i<256; i++){
+                keyLog[i] = new KeyLog(12*64*1024*1024/200, path + File.separator + "key", i);
+            }
         }
     }
 
@@ -91,32 +98,74 @@ public class DBImpl {
     }
 
     private void recoverHashtable(){
-        ByteBuffer byteBuffer = keyLog.getKeyBuffer();
-        byteBuffer.position(0);
-        int sum = 0;//总共写入了多少个数据
-        for (int i=0; i<256; i++){
-            valueLog[i].setNum((int)(valueLog[i].getFileLength() >> 12));
-            sum += valueLog[i].getNum();
+
+        AtomicInteger keylogRecoverNum = new AtomicInteger(0);
+        Thread[] threads = new Thread[256];
+        for (int i = 0; i < 256; i++) {
+            threads[i] = new Thread(
+                    () -> {
+                        int logNum = keylogRecoverNum.getAndIncrement();
+//
+                        KeyLog keyLogi = keyLog[logNum];
+                        ValueLog valueLogi = valueLog[logNum];
+                        LongIntHashMap hmapi = hmap[logNum];
+
+                        ByteBuffer byteBuffer = keyLogi.getKeyBuffer();
+                        byteBuffer.position(0);
+
+                        int sum = (int) (valueLogi.getFileLength() >> 12);
+
+                        byte[] key = new byte[8];
+                        for (int currentNum = 0; currentNum < sum; currentNum++) {
+                            byteBuffer.get(key);
+                            hmapi.put(ByteToLong.byteArrayToLong(key), byteBuffer.getInt());
+                        }
+
+                        System.out.println("第一个字节"+logNum+"    总数"+sum);
+                        valueLogi.setNum(sum);
+                        valueLogi.setWrotePosition(((long) sum) << 12);
+                        keyLogi.setWrotePosition(sum * 12);
+
+                    }
+            );
+        }
+        for (int i = 0; i < 256; i++) {
+            threads[i].start();
+        }
+        for (int i = 0; i < 256; i++) {
+            try {
+                threads[i].join();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
         }
 
-        byte[] key = new byte[8];
-        while (sum > 0){
-            byteBuffer.get(key);
-            hmap[(int)(key[0]&0xff)].put(ByteToLong.byteArrayToLong(key), byteBuffer.getInt());
-//            hmap.put(ByteToLong.byteArrayToLong(key), byteBuffer.getInt());
-            sum--;
-        }
-
-        //恢复valuelog以及keylog写的位置，恢复到末尾
-        for (int i=0; i<256; i++){
-            valueLog[i].setWrotePosition(((long)valueLog[i].getNum()) << 12);
-        }
-        this.keyLog.setWrotePosition(sum * 12);
+//        for (int logNum = 0; logNum < 256; logNum++) {
+//
+//            KeyLog keyLogi = keyLog[logNum];
+//            ValueLog valueLogi = valueLog[logNum];
+//            LongIntHashMap hmapi = hmap[logNum];
+//
+//            ByteBuffer byteBuffer = keyLogi.getKeyBuffer();
+//            byteBuffer.position(0);
+//
+//            int sum = (int) (valueLogi.getFileLength() >> 12);
+//
+//            byte[] key = new byte[8];
+//            for (int currentNum = 0; currentNum < sum; currentNum++){
+//                byteBuffer.get(key);
+//                hmapi.put(ByteToLong.byteArrayToLong(key), byteBuffer.getInt());
+//            }
+//
+//            valueLogi.setNum(sum);
+//            valueLogi.setWrotePosition(((long) sum) << 12);
+//            keyLogi.setWrotePosition(sum * 12);
+//        }
     }
 
 
     public void write(byte[] key, byte[] value){
-        valueLog[(int)(key[0]&0xff)].putMessageDirect(value , keyLog, key, kelogWrotePosition);
+        valueLog[(int)(key[0]&0xff)].putMessageDirect(value , keyLog[(int)(key[0]&0xff)], key);
     }
 
     public byte[] read(byte[] key) throws EngineException{
@@ -134,7 +183,10 @@ public class DBImpl {
     }
 
     public void close(){
-        keyLog.close();
+        for (KeyLog K : keyLog){
+            K.close();
+        }
+
         for (ValueLog V : valueLog){
             V.close();
         }

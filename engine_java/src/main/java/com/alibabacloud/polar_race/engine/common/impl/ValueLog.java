@@ -70,7 +70,7 @@ public class ValueLog {
         return -1;
     }
 
-    public void putMessageDirect(byte[] value, KeyLog keyLog, byte[] key, AtomicInteger kelogWrotePosition) {
+    public void putMessageDirect(byte[] value, KeyLog keyLog, byte[] key) {
 //        this.directWriteBuffer.clear();
 //        this.directWriteBuffer.put(value);
 //        this.directWriteBuffer.flip();
@@ -78,7 +78,7 @@ public class ValueLog {
             UNSAFE.copyMemory(value, 16, null, address, 4096);
             directWriteBuffer.position(0);
 
-            keyLog.putKey(key, num, kelogWrotePosition.getAndAdd(12));
+            keyLog.putKey(key, num);
             try {
                 this.fileChannel.write(this.directWriteBuffer);
             } catch (IOException e){
