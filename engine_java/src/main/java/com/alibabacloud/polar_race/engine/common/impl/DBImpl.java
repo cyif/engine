@@ -25,32 +25,24 @@ public class DBImpl {
     /*  根据key的第一位划分valuelog  */
     private ValueLog valueLog[];
 
-
     /*  根据key的第一位划分keylog  */
     private KeyLog keyLog[];
-
 
     /*  仅new一次异常  */
     private EngineException engineException;
 
-
     /*  根据key的第一位划分，内存恢复hash   */
     private LongIntHashMap hmap[];
-
 
     /*  用于读，增加读取并发性，减小gc    */
     private ThreadLocal<ByteBuffer> threadLocalReadBuffer = ThreadLocal.withInitial(()->ByteBuffer.allocateDirect(4096));
     private ThreadLocal<byte[]> threadLocalReadBytes = ThreadLocal.withInitial(()->new byte[4096]);
-    //直接过滤掉不存在的key
+    /*  用于读，直接过滤掉不存在的key    */
     private Set<byte[]> set;
 
     public DBImpl(String path){
-        try {
-            createDBPath(path);
-        }catch (IOException e){
-            System.out.println("create path error");
-            e.printStackTrace();
-        }
+
+        ensureDirOK(path);
 
         //创建256个value文件，分别命名value0--256
         this.valueLog = new ValueLog[256];
@@ -64,18 +56,16 @@ public class DBImpl {
             hmap = new LongIntHashMap[256];
             for (int i=0; i<256; i++){
                 //这个值是250000/0.99的最小整数
-                hmap[i] = new LongIntHashMap(253003, 0.99);
+                hmap[i] = new LongIntHashMap(260000, 0.99);
             }
-
             keyLog = new KeyLog[256];
             for (int i=0; i<256; i++){
                 //根据日志，基本上每个都25w多一点点
                 keyLog[i] = new KeyLog(12*252000, path + File.separator + "key", i);
             }
-
             this.engineException = new EngineException(RetCodeEnum.NOT_FOUND, "not found this key");
             this.set = ConcurrentHashMap.<byte[]> newKeySet();
-            recoverHashtable();//hashtable恢复和wroteposition恢复
+            recoverHashtable();
         }
 
         //如果不存在，说明是第一次open
@@ -89,25 +79,25 @@ public class DBImpl {
         }
     }
 
-    private void createDBPath(String dbPath) throws IOException {
-        Path path = Paths.get(dbPath);
-        if (!Files.exists(path))
-            Files.createDirectory(path);
+    private static void ensureDirOK(final String dirName) {
+        if (dirName != null) {
+            File f = new File(dirName);
+            if (!f.exists()) {
+                boolean result = f.mkdirs();
+            }
+        }
     }
 
     private void recoverHashtable(){
-
         AtomicInteger keylogRecoverNum = new AtomicInteger(0);
         Thread[] threads = new Thread[256];
         for (int i = 0; i < 256; i++) {
             threads[i] = new Thread(
                     () -> {
                         int logNum = keylogRecoverNum.getAndIncrement();
-//
                         KeyLog keyLogi = keyLog[logNum];
                         ValueLog valueLogi = valueLog[logNum];
                         LongIntHashMap hmapi = hmap[logNum];
-
                         ByteBuffer byteBuffer = keyLogi.getKeyBuffer();
                         byteBuffer.position(0);
 
@@ -116,13 +106,14 @@ public class DBImpl {
                         byte[] key = new byte[8];
                         for (int currentNum = 0; currentNum < sum; currentNum++) {
                             byteBuffer.get(key);
-                            hmapi.put(ByteToLong.byteArrayToLong_seven(key), byteBuffer.getInt());
+                            hmapi.put(ByteToLong.byteArrayToLong(key), byteBuffer.getInt());
                         }
 
                         valueLogi.setNum(sum);
                         valueLogi.setWrotePosition(((long) sum) << 12);
                         keyLogi.setWrotePosition(sum * 12);
 
+                        //判断如果是第二阶段的读阶段了，恢复完hash就可以释放keylog了
                         if (sum>240000){
                             keyLogi.close();
                         }
@@ -144,7 +135,7 @@ public class DBImpl {
 
 
     public void write(byte[] key, byte[] value){
-        int logNum = (int)(key[0]&0xff);
+        int logNum = key[0]&0xff;
         valueLog[logNum].putMessageDirect(value , keyLog[logNum], key);
     }
 
@@ -154,7 +145,7 @@ public class DBImpl {
             throw this.engineException;
         }
 
-        int logNum = (int)(key[0]&0xff);
+        int logNum = key[0]&0xff;
         int currentPos = hmap[logNum].getOrDefault(ByteToLong.byteArrayToLong_seven(key), -1);
         if (currentPos==-1){
             set.add(key);
