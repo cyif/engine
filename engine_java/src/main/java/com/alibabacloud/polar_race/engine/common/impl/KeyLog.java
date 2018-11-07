@@ -28,6 +28,7 @@ public class KeyLog {
     public KeyLog(int FileSize, String storePath) {
         /*打开文件，并将文件映射到内存*/
         try {
+            ensureDirOK(storePath);
             File file = new File(storePath, "key");
             if (!file.exists()){
                 try {
@@ -46,7 +47,14 @@ public class KeyLog {
             System.out.println("map file " + "key" + " Failed. ");
         }
     }
-
+    public static void ensureDirOK(final String dirName) {
+        if (dirName != null) {
+            File f = new File(dirName);
+            if (!f.exists()) {
+                boolean result = f.mkdirs();
+            }
+        }
+    }
     void setWrotePosition(int wrotePosition){
         this.mappedByteBuffer.position(wrotePosition);
     }

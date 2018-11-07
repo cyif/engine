@@ -64,13 +64,13 @@ public class DBImpl {
         //判断KeyLog文件是否存在,如果存在，说明之前写过数据，进行内存恢复
         File dir = new File(path, "key");
         if (dir.exists()){
-//            System.out.println("---------------Start read or write append---------------");
+            System.out.println("---------------Start read or write append---------------");
 //            hmap = new LongIntHashMap(64000000, 0.99);
             hmap = new LongIntHashMap[256];
             for (int i=0; i<256; i++){
                 hmap[i] = new LongIntHashMap(250000, 0.99);
             }
-            keyLog = new KeyLog(12 * 64 * 1024 * 1024, path);//keylog恢复
+            keyLog = new KeyLog(12 * 64 * 1024 * 1024, path + File.separator + "key");//keylog恢复
             this.engineException = new EngineException(RetCodeEnum.NOT_FOUND, "not found this key");
             this.set = ConcurrentHashMap.<byte[]> newKeySet();
             recoverHashtable();//hashtable恢复和wroteposition恢复
@@ -79,8 +79,8 @@ public class DBImpl {
 
         //如果不存在，说明是第一次open
         else {
-//            System.out.println("---------------Start first write---------------");
-            keyLog = new KeyLog(12 * 64 * 1024 * 1024, path);
+            System.out.println("---------------Start first write---------------");
+            keyLog = new KeyLog(12 * 64 * 1024 * 1024, path + File.separator + "key");
         }
     }
 
