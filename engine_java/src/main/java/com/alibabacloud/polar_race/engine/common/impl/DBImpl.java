@@ -56,7 +56,7 @@ public class DBImpl {
             hmap = new LongIntHashMap[256];
             for (int i=0; i<256; i++){
                 //这个值是250000/0.99的最小整数
-                hmap[i] = new LongIntHashMap(250000, 0.99);
+                hmap[i] = new LongIntHashMap(253003, 0.99);
             }
             keyLog = new KeyLog[256];
             for (int i=0; i<256; i++){
