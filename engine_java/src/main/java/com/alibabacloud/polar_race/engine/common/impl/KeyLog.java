@@ -26,7 +26,7 @@ public class KeyLog {
     /*映射的内存对象*/
     private MappedByteBuffer mappedByteBuffer;
 
-    private static final AtomicInteger kelogWrotePosition = new AtomicInteger(0);
+    private AtomicInteger kelogWrotePosition = new AtomicInteger(0);
 
     public KeyLog(int FileSize, String storePath, int fileName) {
         /*打开文件，并将文件映射到内存*/
