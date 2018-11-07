@@ -39,7 +39,7 @@ public class DBImpl {
 
 
     /*  内存恢复hash   */
-    private LongIntHashMap hmap;
+    private LongIntHashMap hmap[];
 
 
 
@@ -65,7 +65,11 @@ public class DBImpl {
         File dir = new File(path, "key");
         if (dir.exists()){
 //            System.out.println("---------------Start read or write append---------------");
-            hmap = new LongIntHashMap(64000000, 0.99);
+//            hmap = new LongIntHashMap(64000000, 0.99);
+            hmap = new LongIntHashMap[256];
+            for (int i=0; i<256; i++){
+                hmap[i] = new LongIntHashMap(250000, 0.99);
+            }
             keyLog = new KeyLog(12 * 64 * 1024 * 1024, path);//keylog恢复
             this.engineException = new EngineException(RetCodeEnum.NOT_FOUND, "not found this key");
             this.set = ConcurrentHashMap.<byte[]> newKeySet();
@@ -98,7 +102,8 @@ public class DBImpl {
         byte[] key = new byte[8];
         while (sum > 0){
             byteBuffer.get(key);
-            hmap.put(ByteToLong.byteArrayToLong(key), byteBuffer.getInt());
+            hmap[(int)(key[0]&0xff)].put(ByteToLong.byteArrayToLong(key), byteBuffer.getInt());
+//            hmap.put(ByteToLong.byteArrayToLong(key), byteBuffer.getInt());
             sum--;
         }
 
@@ -120,7 +125,7 @@ public class DBImpl {
             throw this.engineException;
         }
 
-        int currentPos = hmap.getOrDefault(ByteToLong.byteArrayToLong(key), -1);
+        int currentPos = hmap[(int)(key[0]&0xff)].getOrDefault(ByteToLong.byteArrayToLong(key), -1);
         if (currentPos==-1){
             set.add(key);
             throw this.engineException;
