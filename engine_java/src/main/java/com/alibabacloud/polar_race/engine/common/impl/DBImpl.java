@@ -24,12 +24,8 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class DBImpl {
 
-    /*  每个线程对应一个valuelog文件  */
+    /*  根据key的第一位划分valuelog  */
     private ValueLog valueLog[];
-    //线程号与valuelog文件的对应
-    private LongIntHashMap threadValueLog;
-    private PutMessageLock putMessageLock;
-    private int whichValuelog;
 
 
     /*  仅用一个keylog文件  */
@@ -60,12 +56,9 @@ public class DBImpl {
             e.printStackTrace();
         }
 
-        this.threadValueLog = new LongIntHashMap(128, 0.99);
-        this.putMessageLock = new PutMessageSpinLock();
-        this.whichValuelog = 0;
         //创建64个value文件，分别命名value0--63
-        this.valueLog = new ValueLog[64];
-        for (int i=0; i<64; i++){
+        this.valueLog = new ValueLog[256];
+        for (int i=0; i<256; i++){
             valueLog[i] = new ValueLog(path, i);
         }
         //判断KeyLog文件是否存在,如果存在，说明之前写过数据，进行内存恢复
@@ -97,7 +90,7 @@ public class DBImpl {
         ByteBuffer byteBuffer = keyLog.getKeyBuffer();
         byteBuffer.position(0);
         int sum = 0;//总共写入了多少个数据
-        for (int i=0; i<64; i++){
+        for (int i=0; i<256; i++){
             valueLog[i].setNum((int)(valueLog[i].getFileLength() >> 12));
             sum += valueLog[i].getNum();
         }
@@ -110,7 +103,7 @@ public class DBImpl {
         }
 
         //恢复valuelog以及keylog写的位置，恢复到末尾
-        for (int i=0; i<64; i++){
+        for (int i=0; i<256; i++){
             valueLog[i].setWrotePosition(((long)valueLog[i].getNum()) << 12);
         }
         this.keyLog.setWrotePosition(sum * 12);
@@ -118,25 +111,7 @@ public class DBImpl {
 
 
     public void write(byte[] key, byte[] value){
-
-        long id = Thread.currentThread().getId();
-        int valueLogNo = threadValueLog.getOrDefault(id, -1);
-        if (valueLogNo < 0){
-            putMessageLock.lock();
-            threadValueLog.put(id, whichValuelog++);
-            putMessageLock.unlock();
-            valueLogNo = threadValueLog.get(id);
-        }
-
-
-        //每个valuelog100w个数据，这个只占三个字节，表示该valuelog第几个数据
-        //offset 第一个字节 表示这个key对应的存在哪个valuelog中，后三个字节表示这个value是该valuelog的第几个数据
-        int offset = valueLog[valueLogNo].getNum() | (valueLogNo<<24);
-
-        //因为只用一个keylog，所以要有个原子量记录写在keylog中的位置
-        keyLog.putKey(key, offset, kelogWrotePosition.getAndAdd(12));
-
-        valueLog[valueLogNo].putMessageDirect(value);
+        valueLog[(int)(key[0]&0xff)].putMessageDirect(value , keyLog, key, kelogWrotePosition);
     }
 
     public byte[] read(byte[] key) throws EngineException{
@@ -150,7 +125,7 @@ public class DBImpl {
             set.add(key);
             throw this.engineException;
         }
-        return valueLog[currentPos >> 24].getMessageDirect(((long)(currentPos & 0x00FFFFFF)) << 12, threadLocalReadBuffer.get(), threadLocalReadBytes.get());
+        return valueLog[(int)(key[0]&0xff)].getMessageDirect(((long)currentPos) << 12, threadLocalReadBuffer.get(), threadLocalReadBytes.get());
     }
 
     public void close(){
@@ -161,7 +136,6 @@ public class DBImpl {
         keyLog = null;
         valueLog = null;
         hmap = null;
-        threadValueLog = null;
         threadLocalReadBuffer = null;
         threadLocalReadBytes = null;
     }

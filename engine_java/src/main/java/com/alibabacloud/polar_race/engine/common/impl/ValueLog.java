@@ -7,6 +7,8 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
+import java.util.concurrent.atomic.AtomicInteger;
+
 import static com.alibabacloud.polar_race.engine.common.utils.UnsafeUtil.UNSAFE;
 
 /**
@@ -68,19 +70,23 @@ public class ValueLog {
         return -1;
     }
 
-    public void putMessageDirect(byte[] value) {
+    public void putMessageDirect(byte[] value, KeyLog keyLog, byte[] key, AtomicInteger kelogWrotePosition) {
 //        this.directWriteBuffer.clear();
 //        this.directWriteBuffer.put(value);
 //        this.directWriteBuffer.flip();
-        UNSAFE.copyMemory(value, 16, null, address, 4096);
-        directWriteBuffer.position(0);
+        synchronized (this){
+            UNSAFE.copyMemory(value, 16, null, address, 4096);
+            directWriteBuffer.position(0);
 
-        try {
-            this.fileChannel.write(this.directWriteBuffer);
-        } catch (IOException e){
-            e.printStackTrace();
+            keyLog.putKey(key, num, kelogWrotePosition.getAndAdd(12));
+            try {
+                this.fileChannel.write(this.directWriteBuffer);
+            } catch (IOException e){
+                e.printStackTrace();
+            }
+            num++;
         }
-        num++;
+
     }
 
 
