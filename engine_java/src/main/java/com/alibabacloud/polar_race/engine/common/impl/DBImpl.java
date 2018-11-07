@@ -60,7 +60,7 @@ public class DBImpl {
         //判断Key文件夹是否存在,如果存在，说明之前写过数据，进行内存恢复
         File dir = new File(path, "key");
         if (dir.exists()){
-            System.out.println("---------------Start read or write append---------------");
+//            System.out.println("---------------Start read or write append---------------");
             hmap = new LongIntHashMap[256];
             for (int i=0; i<256; i++){
                 //这个值是250000/0.99的最小整数
@@ -80,7 +80,7 @@ public class DBImpl {
 
         //如果不存在，说明是第一次open
         else {
-            System.out.println("---------------Start first write---------------");
+//            System.out.println("---------------Start first write---------------");
             keyLog = new KeyLog[256];
             for (int i=0; i<256; i++){
                 //根据日志，基本上每个都25w多一点点
@@ -122,6 +122,10 @@ public class DBImpl {
                         valueLogi.setNum(sum);
                         valueLogi.setWrotePosition(((long) sum) << 12);
                         keyLogi.setWrotePosition(sum * 12);
+
+                        if (sum>240000){
+                            keyLogi.close();
+                        }
 
                     }
             );
