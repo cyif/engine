@@ -15,7 +15,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * Date: 2018/10/16
  * Time: 上午10:35
  */
-public class PutMessageSpinLock implements PutMessageLock{
+public class PutMessageSpinLock implements PutMessageLock {
     private AtomicBoolean putMessageSpinLock = new AtomicBoolean(true);
 
     public void lock() {

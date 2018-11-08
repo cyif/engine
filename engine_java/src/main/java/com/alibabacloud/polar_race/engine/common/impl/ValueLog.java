@@ -1,16 +1,14 @@
 package com.alibabacloud.polar_race.engine.common.impl;
+
 import com.alibabacloud.polar_race.engine.common.utils.PutMessageLock;
 import com.alibabacloud.polar_race.engine.common.utils.PutMessageReentrantLock;
 import sun.nio.ch.DirectBuffer;
-
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
-import java.util.concurrent.atomic.AtomicInteger;
-
 import static com.alibabacloud.polar_race.engine.common.utils.UnsafeUtil.UNSAFE;
 
 /**
@@ -37,12 +35,11 @@ public class ValueLog {
     public ValueLog(String storePath, int filename) {
         /*打开文件*/
         try {
-            File file = new File(storePath, "value"+filename);
-            if (!file.exists()){
+            File file = new File(storePath, "value" + filename);
+            if (!file.exists()) {
                 try {
                     file.createNewFile();
-                }
-                catch (IOException e){
+                } catch (IOException e) {
                     System.out.println("Create file" + "valueLog" + filename + "failed");
                     e.printStackTrace();
                 }
@@ -63,10 +60,10 @@ public class ValueLog {
         this.num = num;
     }
 
-    public long getFileLength(){
+    public long getFileLength() {
         try {
             return this.randomAccessFile.length();
-        } catch (IOException e){
+        } catch (IOException e) {
             e.printStackTrace();
         }
         return -1;
@@ -84,7 +81,7 @@ public class ValueLog {
         keyLog.putKey(key, num);
         try {
             this.fileChannel.write(this.directWriteBuffer);
-        } catch (IOException e){
+        } catch (IOException e) {
             e.printStackTrace();
         }
         num++;
@@ -94,11 +91,10 @@ public class ValueLog {
     }
 
 
-    void setWrotePosition(long wrotePosition){
+    void setWrotePosition(long wrotePosition) {
         try {
             this.fileChannel.position(wrotePosition);
-        }
-        catch (IOException e){
+        } catch (IOException e) {
             e.printStackTrace();
         }
     }
@@ -107,22 +103,21 @@ public class ValueLog {
         byteBuffer.clear();
         try {
             fileChannel.read(byteBuffer, offset);
-        } catch (IOException e){
+        } catch (IOException e) {
             e.printStackTrace();
         }
 //        byteBuffer.flip();
 //        byteBuffer.get(bytes);
-        UNSAFE.copyMemory(null, ((DirectBuffer)byteBuffer).address(), bytes, 16, 4096);
+        UNSAFE.copyMemory(null, ((DirectBuffer) byteBuffer).address(), bytes, 16, 4096);
         return bytes;
     }
 
 
-    public void close(){
+    public void close() {
         directWriteBuffer = null;
         try {
             this.fileChannel.close();
-        }
-        catch (IOException e){
+        } catch (IOException e) {
             e.printStackTrace();
         }
     }

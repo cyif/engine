@@ -33,11 +33,10 @@ public class KeyLog {
         try {
             ensureDirOK(storePath);
             File file = new File(storePath, "key" + fileName);
-            if (!file.exists()){
+            if (!file.exists()) {
                 try {
                     file.createNewFile();
-                }
-                catch (IOException e){
+                } catch (IOException e) {
                     System.out.println("Create file" + "key" + "failed");
                     e.printStackTrace();
                 }
@@ -50,6 +49,7 @@ public class KeyLog {
             System.out.println("map file " + "key" + " Failed. ");
         }
     }
+
     public static void ensureDirOK(final String dirName) {
         if (dirName != null) {
             File f = new File(dirName);
@@ -59,11 +59,11 @@ public class KeyLog {
         }
     }
 
-    void setWrotePosition(int wrotePosition){
+    void setWrotePosition(int wrotePosition) {
         kelogWrotePosition.set(wrotePosition);
     }
 
-    void putKey(byte[] key,int offset) {
+    void putKey(byte[] key, int offset) {
         ByteBuffer byteBuffer = mappedByteBuffer.slice();
         byteBuffer.position(kelogWrotePosition.getAndAdd(12));
         byteBuffer.put(key);
@@ -76,12 +76,11 @@ public class KeyLog {
         return this.mappedByteBuffer.slice();
     }
 
-    public void close(){
+    public void close() {
         clean();
         try {
             this.fileChannel.close();
-        }
-        catch (IOException e){
+        } catch (IOException e) {
             e.printStackTrace();
         }
     }
@@ -93,6 +92,7 @@ public class KeyLog {
             return;
         invoke(invoke(viewed(buffer), "cleaner"), "clean");
     }
+
     private static Object invoke(final Object target, final String methodName, final Class<?>... args) {
         return AccessController.doPrivileged(new PrivilegedAction<Object>() {
             public Object run() {
