@@ -26,7 +26,7 @@ public class SortLog {
     private int size;
     private long[] keyArray;
     private int[] offsetArray;
-    private BloomFilter<Long> bloomFilter;
+//    private BloomFilter<Long> bloomFilter;
 
     private static final int MAX_SIZE = 252000;
 
@@ -35,9 +35,9 @@ public class SortLog {
         this.size = 0;
         this.keyArray = new long[MAX_SIZE];
         this.offsetArray = new int[MAX_SIZE];
-        double falsePositiveProbability = 0.2;
+//        double falsePositiveProbability = 0.2;
         int expectedSize = MAX_SIZE;
-        this.bloomFilter = new BloomFilter<>(falsePositiveProbability, expectedSize);
+//        this.bloomFilter = new BloomFilter<>(falsePositiveProbability, expectedSize);
     }
 
 //    public SortLog(int FileSize, String storePath, int fileName) {
@@ -83,27 +83,30 @@ public class SortLog {
     public void insert(long key, int offset) {
 //        putMessageLock.lock();
 //        putMessageLock.unlock();
-        if (bloomFilter.contains(key)) {
-            boolean flag = false;
-            for (int i = 0; i < size; i++)
-                if (keyArray[i] == key) {
-                    offsetArray[i] = offset;
-                    flag = true;
-                    break;
-                }
-            if (!flag) {
-                keyArray[size] = key;
-                offsetArray[size] = offset;
-                size++;
-                bloomFilter.add(key);
-            }
-
-        } else {
-            keyArray[size] = key;
-            offsetArray[size] = offset;
-            size++;
-            bloomFilter.add(key);
-        }
+//        if (bloomFilter.contains(key)) {
+//            boolean flag = false;
+//            for (int i = 0; i < size; i++)
+//                if (keyArray[i] == key) {
+//                    offsetArray[i] = offset;
+//                    flag = true;
+//                    break;
+//                }
+//            if (!flag) {
+//                keyArray[size] = key;
+//                offsetArray[size] = offset;
+//                size++;
+//                bloomFilter.add(key);
+//            }
+//
+//        } else {
+//            keyArray[size] = key;
+//            offsetArray[size] = offset;
+//            size++;
+//            bloomFilter.add(key);
+//        }
+        keyArray[size] = key;
+        offsetArray[size] = offset;
+        size++;
     }
 
     public void quicksort() {

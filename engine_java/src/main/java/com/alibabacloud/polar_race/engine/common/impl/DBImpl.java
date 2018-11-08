@@ -3,6 +3,8 @@ import com.alibabacloud.polar_race.engine.common.exceptions.EngineException;
 import com.alibabacloud.polar_race.engine.common.exceptions.RetCodeEnum;
 import com.alibabacloud.polar_race.engine.common.utils.ByteToLong;
 import com.carrotsearch.hppc.LongIntHashMap;
+import com.carrotsearch.hppc.cursors.LongIntCursor;
+
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -104,7 +106,6 @@ public class DBImpl {
                         int logNum = keylogRecoverNum.getAndIncrement();
                         KeyLog keyLogi = keyLog[logNum];
                         ValueLog valueLogi = valueLog[logNum];
-//                        LongIntHashMap hmapi = hmap[logNum];
                         SortLog sortLogi = sortLog[logNum];
 
                         ByteBuffer byteBuffer = keyLogi.getKeyBuffer();
@@ -113,12 +114,20 @@ public class DBImpl {
                         int sum = (int) (valueLogi.getFileLength() >> 12);
 
                         byte[] key = new byte[8];
+
+                        LongIntHashMap hmapi = new LongIntHashMap(250000, 0.99);
+
                         for (int currentNum = 0; currentNum < sum; currentNum++) {
                             byteBuffer.get(key);
-//                            hmapi.put(ByteToLong.byteArrayToLong(key), byteBuffer.getInt());
-                            sortLogi.insert(ByteToLong.byteArrayToLong_seven(key), byteBuffer.getInt());
+                            hmapi.put(ByteToLong.byteArrayToLong_seven(key), byteBuffer.getInt());
+
 
                         }
+
+                        for (LongIntCursor c : hmapi){
+                            sortLogi.insert(c.key, c.value);
+                        }
+                        hmapi = null;
 
                         sortLogi.quicksort();
 
