@@ -172,7 +172,7 @@ public class DBImpl {
         int logNum = key[0]&0xff;
 //        int currentPos = hmap[logNum].getOrDefault(ByteToLong.byteArrayToLong(key), -1);
 
-        int index = (key[1] >>> 6) & 0xff;
+        int index = (key[1] >>> 4) & 0xff;
 
         int currentPos = sortLog[logNum].find(ByteToLong.byteArrayToLong_seven(key), index);
 
