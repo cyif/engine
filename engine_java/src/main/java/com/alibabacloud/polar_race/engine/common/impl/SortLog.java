@@ -180,6 +180,21 @@ public class SortLog {
             }
         }
 
+        left = 0;
+        right = size - 1;
+
+        while (left <= right) {
+            middle = left + (right - left) / 2;
+            if (keyArray[middle] == key) {
+                return offsetArray[middle];
+//                return middle;
+            } else if (key < keyArray[middle]) {
+                right = middle - 1;
+            } else { // if numbers[middle] < find
+                left = middle + 1;
+            }
+        }
+
         return -1;
     }
 
