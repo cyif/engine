@@ -158,11 +158,11 @@ public class SortLog {
     //index相当于0-3
     public int find(long key, int index) {
 
-        int left = (int)((size-1)/16 * index * 0.8);
+        int left = (int)((size-1)/256 * index * 0.5);
         if (left < 0)
             left = 0;
 
-        int right = (int)((size - 1) / 16 * (index+1) * 1.2);
+        int right = (int)((size - 1) / 256 * (index+1) * 2);
         if (right > size-1)
             right = size - 1;
 
