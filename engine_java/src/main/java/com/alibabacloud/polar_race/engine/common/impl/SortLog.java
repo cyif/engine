@@ -35,7 +35,7 @@ public class SortLog {
         this.size = 0;
         this.keyArray = new long[MAX_SIZE];
         this.offsetArray = new int[MAX_SIZE];
-        double falsePositiveProbability = 0.01;
+        double falsePositiveProbability = 0.2;
         int expectedSize = MAX_SIZE;
         this.bloomFilter = new BloomFilter<>(falsePositiveProbability, expectedSize);
     }
@@ -85,7 +85,7 @@ public class SortLog {
 //        putMessageLock.unlock();
         if (bloomFilter.contains(key)) {
             boolean flag = false;
-            for (int i = size-1; i >= 0; i--)
+            for (int i = 0; i < size; i++)
                 if (keyArray[i] == key) {
                     offsetArray[i] = offset;
                     flag = true;
