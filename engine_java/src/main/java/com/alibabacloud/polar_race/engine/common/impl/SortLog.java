@@ -154,10 +154,18 @@ public class SortLog {
     }
 
     //二分查找,查找key所在位置，找不到返回-1
-    public int find(long key) {
 
-        int left = 0;
-        int right = size - 1;
+    //index相当于0-3
+    public int find(long key, int index) {
+
+        int left = (int)((size-1)/4 * index * 0.8);
+        if (left < 0)
+            left = 0;
+
+        int right = (int)((size - 1) / 4 * (index+1) * 1.2);
+        if (right > size-1)
+            right = size - 1;
+
         int middle;
 
         while (left <= right) {

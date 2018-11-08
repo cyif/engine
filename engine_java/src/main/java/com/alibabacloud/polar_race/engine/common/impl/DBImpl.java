@@ -103,7 +103,9 @@ public class DBImpl {
         for (int i = 0; i < 256; i++) {
             threads[i] = new Thread(
                     () -> {
+
                         int logNum = keylogRecoverNum.getAndIncrement();
+
                         KeyLog keyLogi = keyLog[logNum];
                         ValueLog valueLogi = valueLog[logNum];
                         SortLog sortLogi = sortLog[logNum];
@@ -170,7 +172,9 @@ public class DBImpl {
         int logNum = key[0]&0xff;
 //        int currentPos = hmap[logNum].getOrDefault(ByteToLong.byteArrayToLong(key), -1);
 
-        int currentPos = sortLog[logNum].find(ByteToLong.byteArrayToLong_seven(key));
+        int index = (key[1] >>> 6) & 0xff;
+
+        int currentPos = sortLog[logNum].find(ByteToLong.byteArrayToLong_seven(key), index);
 
         if (currentPos==-1){
             set.add(key);
