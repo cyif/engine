@@ -112,6 +112,7 @@ public class SortLog {
 
     //快排
     private void quicksort(int pLeft, int pRight) {
+
         if (pLeft < pRight) {
             int storeIndex = partition(pLeft, pRight);
             quicksort(pLeft, storeIndex - 1);
@@ -120,6 +121,10 @@ public class SortLog {
     }
 
     private int partition(int pLeft, int pRight) {
+
+        swap(pRight, (pLeft + pRight) / 2);
+
+
         long pivotValue = keyArray[pRight];
         int storeIndex = pLeft;
         for (int i = pLeft; i < pRight; i++) {
