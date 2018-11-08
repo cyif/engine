@@ -32,7 +32,8 @@ public class DBImpl {
     private EngineException engineException;
 
     /*  根据key的第一位划分，内存恢复hash   */
-    private LongIntHashMap hmap[];
+//    private LongIntHashMap hmap[];
+    private SortLog sortLog[];
 
     /*  用于读，增加读取并发性，减小gc    */
     private ThreadLocal<ByteBuffer> threadLocalReadBuffer = ThreadLocal.withInitial(()->ByteBuffer.allocateDirect(4096));
@@ -53,11 +54,17 @@ public class DBImpl {
         File dir = new File(path, "key");
         if (dir.exists()){
 //            System.out.println("---------------Start read or write append---------------");
-            hmap = new LongIntHashMap[256];
+//            hmap = new LongIntHashMap[256];
+//            for (int i=0; i<256; i++){
+//                //这个值是250000/0.99的最小整数
+//                hmap[i] = new LongIntHashMap(250000, 0.99);
+//            }
+
+            sortLog = new SortLog[256];
             for (int i=0; i<256; i++){
-                //这个值是250000/0.99的最小整数
-                hmap[i] = new LongIntHashMap(250000, 0.99);
+                sortLog[i] = new SortLog();
             }
+
             keyLog = new KeyLog[256];
             for (int i=0; i<256; i++){
                 //根据日志，基本上每个都25w多一点点
@@ -97,7 +104,9 @@ public class DBImpl {
                         int logNum = keylogRecoverNum.getAndIncrement();
                         KeyLog keyLogi = keyLog[logNum];
                         ValueLog valueLogi = valueLog[logNum];
-                        LongIntHashMap hmapi = hmap[logNum];
+//                        LongIntHashMap hmapi = hmap[logNum];
+                        SortLog sortLogi = sortLog[logNum];
+
                         ByteBuffer byteBuffer = keyLogi.getKeyBuffer();
                         byteBuffer.position(0);
 
@@ -106,8 +115,12 @@ public class DBImpl {
                         byte[] key = new byte[8];
                         for (int currentNum = 0; currentNum < sum; currentNum++) {
                             byteBuffer.get(key);
-                            hmapi.put(ByteToLong.byteArrayToLong(key), byteBuffer.getInt());
+//                            hmapi.put(ByteToLong.byteArrayToLong(key), byteBuffer.getInt());
+                            sortLogi.insert(ByteToLong.byteArrayToLong_seven(key), byteBuffer.getInt());
+
                         }
+
+                        sortLogi.quicksort();
 
                         valueLogi.setNum(sum);
                         valueLogi.setWrotePosition(((long) sum) << 12);
@@ -146,7 +159,10 @@ public class DBImpl {
         }
 
         int logNum = key[0]&0xff;
-        int currentPos = hmap[logNum].getOrDefault(ByteToLong.byteArrayToLong(key), -1);
+//        int currentPos = hmap[logNum].getOrDefault(ByteToLong.byteArrayToLong(key), -1);
+
+        int currentPos = sortLog[logNum].find(ByteToLong.byteArrayToLong_seven(key));
+
         if (currentPos==-1){
             set.add(key);
             throw this.engineException;
@@ -164,7 +180,7 @@ public class DBImpl {
         }
         keyLog = null;
         valueLog = null;
-        hmap = null;
+//        hmap = null;
         threadLocalReadBuffer = null;
         threadLocalReadBytes = null;
     }
