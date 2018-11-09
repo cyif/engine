@@ -95,10 +95,10 @@ public class SortLog {
     //index相当于0-255
     public int find(long key, int index) {
 
-        int left = (int)(((size-1)>>>8) * index * 0.5);
+        int left = (int)(((size-1)>>>8) * index * 0.9);
         if (left < 0)
             left = 0;
-        int right = (int)(((size-1)>>>8) * (index+1) * 2);
+        int right = (int)(((size-1)>>>8) * (index+1) * 1.1);
         if (right > size-1)
             right = size - 1;
 
@@ -106,33 +106,43 @@ public class SortLog {
         while (left <= right) {
             middle = left + (right - left) / 2;
             if (keyArray[middle] == key) {
-
-                System.out.println("f");
-
                 return offsetArray[middle];
             } else if (key < keyArray[middle]) {
                 right = middle - 1;
-            } else { // if numbers[middle] < find
+            } else {
                 left = middle + 1;
             }
         }
 
 
-        left = 0;
-        right = size - 1;
 
-        //针对阶段一
-        while (left <= right) {
-            middle = left + (right - left) / 2;
+        int left1 = 0;
+        int right1 = left;
+        while (left1 <= right1) {
+            middle = left1 + (right1 - left1) / 2;
             if (keyArray[middle] == key) {
                 return offsetArray[middle];
-//                return middle;
             } else if (key < keyArray[middle]) {
-                right = middle - 1;
-            } else { // if numbers[middle] < find
-                left = middle + 1;
+                right1 = middle - 1;
+            } else {
+                left1 = middle + 1;
             }
         }
+
+
+        left1 = right;
+        right1 = size - 1;
+        while (left1 <= right1) {
+            middle = left1 + (right1 - left1) / 2;
+            if (keyArray[middle] == key) {
+                return offsetArray[middle];
+            } else if (key < keyArray[middle]) {
+                right1 = middle - 1;
+            } else {
+                left1 = middle + 1;
+            }
+        }
+
 
         return -1;
     }
