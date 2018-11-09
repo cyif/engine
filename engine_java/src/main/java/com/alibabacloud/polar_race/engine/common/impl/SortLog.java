@@ -103,46 +103,49 @@ public class SortLog {
             right = size - 1;
 
         int middle;
-        while (left <= right) {
-            middle = left + (right - left) / 2;
-            if (keyArray[middle] == key) {
-                return offsetArray[middle];
-            } else if (key < keyArray[middle]) {
-                right = middle - 1;
-            } else {
-                left = middle + 1;
+
+        if (key>=keyArray[left] && key<=keyArray[right]){
+            while (left <= right) {
+                middle = left + (right - left) / 2;
+                if (keyArray[middle] == key) {
+                    return offsetArray[middle];
+                } else if (key < keyArray[middle]) {
+                    right = middle - 1;
+                } else {
+                    left = middle + 1;
+                }
             }
         }
 
-
-
-        int left1 = 0;
-        int right1 = left;
-        while (left1 <= right1) {
-            middle = left1 + (right1 - left1) / 2;
-            if (keyArray[middle] == key) {
-                return offsetArray[middle];
-            } else if (key < keyArray[middle]) {
-                right1 = middle - 1;
-            } else {
-                left1 = middle + 1;
+        else if (key<=keyArray[left]){
+            int left1 = 0;
+            int right1 = left;
+            while (left1 <= right1) {
+                middle = left1 + (right1 - left1) / 2;
+                if (keyArray[middle] == key) {
+                    return offsetArray[middle];
+                } else if (key < keyArray[middle]) {
+                    right1 = middle - 1;
+                } else {
+                    left1 = middle + 1;
+                }
             }
         }
 
-
-        left1 = right;
-        right1 = size - 1;
-        while (left1 <= right1) {
-            middle = left1 + (right1 - left1) / 2;
-            if (keyArray[middle] == key) {
-                return offsetArray[middle];
-            } else if (key < keyArray[middle]) {
-                right1 = middle - 1;
-            } else {
-                left1 = middle + 1;
+        else if (key>=keyArray[right]){
+            int left1 = right;
+            int right1 = size - 1;
+            while (left1 <= right1) {
+                middle = left1 + (right1 - left1) / 2;
+                if (keyArray[middle] == key) {
+                    return offsetArray[middle];
+                } else if (key < keyArray[middle]) {
+                    right1 = middle - 1;
+                } else {
+                    left1 = middle + 1;
+                }
             }
         }
-
 
         return -1;
     }
