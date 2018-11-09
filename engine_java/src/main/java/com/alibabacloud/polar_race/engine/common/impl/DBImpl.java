@@ -91,56 +91,59 @@ public class DBImpl {
 
     private void recoverSort() {
         AtomicInteger keylogRecoverNum = new AtomicInteger(0);
-        Thread[] threads = new Thread[256];
-        for (int i = 0; i < 256; i++) {
+        Thread[] threads = new Thread[64];
+        for (int i = 0; i < 64; i++) {
             threads[i] = new Thread(
                     () -> {
 
-                        int logNum = keylogRecoverNum.getAndIncrement();
+                        int j = keylogRecoverNum.getAndIncrement();
 
-                        KeyLog keyLogi = keyLog[logNum];
-                        ValueLog valueLogi = valueLog[logNum];
-                        SortLog sortLogi = sortLog[logNum];
+                        for (int logNum = j * 4; logNum < (j + 1) * 4; logNum++ ){
+                            KeyLog keyLogi = keyLog[logNum];
+                            ValueLog valueLogi = valueLog[logNum];
+                            SortLog sortLogi = sortLog[logNum];
 
-                        ByteBuffer byteBuffer = keyLogi.getKeyBuffer();
-                        byteBuffer.position(0);
+                            ByteBuffer byteBuffer = keyLogi.getKeyBuffer();
+                            byteBuffer.position(0);
 
-                        int sum = (int) (valueLogi.getFileLength() >> 12);
+                            int sum = (int) (valueLogi.getFileLength() >> 12);
 
-                        byte[] key = new byte[8];
+                            byte[] key = new byte[8];
 
-                        LongIntHashMap hmapi = new LongIntHashMap(sortSize, 0.99);
+                            LongIntHashMap hmapi = new LongIntHashMap(sortSize, 0.99);
 
-                        for (int currentNum = 0; currentNum < sum; currentNum++) {
-                            byteBuffer.get(key);
-                            hmapi.put(ByteToLong.byteArrayToLong_seven(key), byteBuffer.getInt());
+                            for (int currentNum = 0; currentNum < sum; currentNum++) {
+                                byteBuffer.get(key);
+                                hmapi.put(ByteToLong.byteArrayToLong_seven(key), byteBuffer.getInt());
+                            }
+
+
+                            //判断如果是第二阶段的读阶段了，恢复完hash就可以释放keylog了
+                            if (sum > 240000) {
+                                keyLogi.close();
+                            }
+
+                            //hashmap过滤完相同的key然后输入进去排序
+                            for (LongIntCursor c : hmapi) {
+                                sortLogi.insert(c.key, c.value);
+                            }
+
+                            hmapi = null;
+
+                            sortLogi.quicksort();
+
+                            valueLogi.setNum(sum);
+                            valueLogi.setWrotePosition(((long) sum) << 12);
+                            keyLogi.setWrotePosition(sum * 12);
+
                         }
-
-                        //hashmap过滤完相同的key然后输入进去排序
-                        for (LongIntCursor c : hmapi) {
-                            sortLogi.insert(c.key, c.value);
-                        }
-
-                        hmapi = null;
-
-                        sortLogi.quicksort();
-
-                        valueLogi.setNum(sum);
-                        valueLogi.setWrotePosition(((long) sum) << 12);
-                        keyLogi.setWrotePosition(sum * 12);
-
-                        //判断如果是第二阶段的读阶段了，恢复完hash就可以释放keylog了
-                        if (sum > 240000) {
-                            keyLogi.close();
-                        }
-
                     }
             );
         }
-        for (int i = 0; i < 256; i++) {
+        for (int i = 0; i < 64; i++) {
             threads[i].start();
         }
-        for (int i = 0; i < 256; i++) {
+        for (int i = 0; i < 64; i++) {
             try {
                 threads[i].join();
             } catch (InterruptedException e) {
@@ -162,7 +165,7 @@ public class DBImpl {
         }
 
         int logNum = key[0] & 0xff;
-        int index = ((key[1] & 0xff) << 8) | (key[2] & 0xff);
+        int index = key[1] & 0xff;
         int currentPos = sortLog[logNum].find(ByteToLong.byteArrayToLong_seven(key), index);
         if (currentPos == -1) {
             set.add(key);
