@@ -163,9 +163,9 @@ public class DBImpl {
 
         int logNum = key[0] & 0xff;
 
-//        int index = (key[1]) & 0xff;
+        int index = (((key[1]) & 0xff) << 8) | (key[2] & 0xff);
 
-        int currentPos = sortLog[logNum].find(ByteToLong.byteArrayToLong_seven(key));
+        int currentPos = sortLog[logNum].find(ByteToLong.byteArrayToLong_seven(key), index);
         if (currentPos == -1) {
             set.add(key);
             throw this.engineException;
