@@ -95,10 +95,10 @@ public class SortLog {
     //index相当于0-255
     public int find(long key, int index) {
 
-        int left = (int)(((size-1)>>>16) * index * 0.5);
+        int left = (int)(((size-1)>>>8) * index * 0.5);
         if (left < 0)
             left = 0;
-        int right = (int)(((size-1)>>>16) * (index+1) * 2);
+        int right = (int)(((size-1)>>>8) * (index+1) * 2);
         if (right > size-1)
             right = size - 1;
 
@@ -106,6 +106,9 @@ public class SortLog {
         while (left <= right) {
             middle = left + (right - left) / 2;
             if (keyArray[middle] == key) {
+
+                System.out.println("f");
+
                 return offsetArray[middle];
             } else if (key < keyArray[middle]) {
                 right = middle - 1;
