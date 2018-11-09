@@ -95,10 +95,10 @@ public class SortLog {
     //index相当于0-255
     public int find(long key, int index) {
 
-        int left = (int)(((size-1)>>>8) * index * 0.9);
+        int left = (int)(((size-1)>>>16) * index * 0.9);
         if (left < 0)
             left = 0;
-        int right = (int)(((size-1)>>>8) * (index+1) * 1.1);
+        int right = (int)(((size-1)>>>16) * (index+1) * 1.1);
         if (right > size-1)
             right = size - 1;
 
