@@ -175,7 +175,7 @@ public class DBImpl {
 
         return valueLog[logNum].getMessageDirect(((long) currentPos) << 12, threadLocalReadBytes.get());
     }
-    
+
 
     public void close() {
         for (KeyLog K : keyLog) {
