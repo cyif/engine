@@ -3,7 +3,6 @@ package com.alibabacloud.polar_race.engine.common.impl;
 import com.alibabacloud.polar_race.engine.common.utils.PutMessageLock;
 import com.alibabacloud.polar_race.engine.common.utils.PutMessageReentrantLock;
 import net.smacke.jaydio.DirectIoLib;
-import net.smacke.jaydio.DirectRandomAccessFile;
 import net.smacke.jaydio.buffer.AlignedDirectByteBuffer;
 import sun.nio.ch.DirectBuffer;
 import java.io.File;
@@ -35,11 +34,9 @@ public class ValueLog {
 
     private PutMessageLock putMessageLock;
 
+    //使用JNA用于读
     private DirectIoLib directIoLib;
-//    private AlignedDirectByteBuffer alignedDirectByteBuffer;
     private int fd;
-
-//    private DirectRandomAccessFile directRandomAccessFile;
 
     public ValueLog(String storePath, int filename) {
         /*打开文件*/
@@ -55,20 +52,14 @@ public class ValueLog {
             }
             this.randomAccessFile = new RandomAccessFile(file, "rw");
             this.fileChannel = this.randomAccessFile.getChannel();
-
-
+            //使用JNA用于读
             this.directIoLib = DirectIoLib.getLibForPath(storePath);
-//            this.alignedDirectByteBuffer = AlignedDirectByteBuffer.allocate(directIoLib, 4096);
             this.fd = directIoLib.oDirectOpen(file.toString(), true);
-
-
-//            this.directRandomAccessFile = new DirectRandomAccessFile(file, "r");
         } catch (FileNotFoundException e) {
             System.out.println("create file channel " + "valueLog" + " Failed. ");
         } catch (IOException e){
             e.printStackTrace();
         }
-
 
         this.num = 0;
         this.putMessageLock = new PutMessageReentrantLock();
@@ -133,17 +124,11 @@ public class ValueLog {
     }
 
 
+    //使用JNA的方式读
     byte[] getMessageDirect(long offset, byte[] bytes, AlignedDirectByteBuffer byteBuffer) {
         try {
-//            putMessageLock.lock();
-//            this.directRandomAccessFile.seek(offset);
-//            this.directRandomAccessFile.read(bytes);
-
             this.directIoLib.pread(fd, byteBuffer, offset);
             byteBuffer.get(bytes);
-
-//            putMessageLock.unlock();
-
         } catch (IOException e) {
             e.printStackTrace();
         }

@@ -3,17 +3,16 @@ package com.alibabacloud.polar_race.engine.common.impl;
 import com.alibabacloud.polar_race.engine.common.exceptions.EngineException;
 import com.alibabacloud.polar_race.engine.common.exceptions.RetCodeEnum;
 import com.alibabacloud.polar_race.engine.common.utils.ByteToLong;
+import com.alibabacloud.polar_race.engine.common.utils.ReadBuffer;
 import com.carrotsearch.hppc.LongIntHashMap;
 import com.carrotsearch.hppc.cursors.LongIntCursor;
 import net.smacke.jaydio.DirectIoLib;
-import net.smacke.jaydio.buffer.AlignedDirectByteBuffer;
-
 import java.io.File;
 import java.nio.ByteBuffer;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Supplier;
+
 
 
 /**
@@ -39,14 +38,8 @@ public class DBImpl {
     private final static int sortSize = 252000;
     private SortLog sortLog[];
 
-
-    private DirectIoLib directIoLib;
-
-
     /*  用于读，增加读取并发性，减小gc    */
-//    private ThreadLocal<ByteBuffer> threadLocalReadBuffer = ThreadLocal.withInitial(() -> ByteBuffer.allocateDirect(4096));
-    private ThreadLocal<AlignedDirectByteBuffer> threadLocalReadBuffer;
-    private ThreadLocal<byte[]> threadLocalReadBytes = ThreadLocal.withInitial(() -> new byte[4096]);
+    private ThreadLocal<ReadBuffer> threadLocalReadBuffer;
     /*  用于读，直接过滤掉不存在的key    */
     private Set<byte[]> set;
 
@@ -70,14 +63,14 @@ public class DBImpl {
 
             keyLog = new KeyLog[keyNum];
             for (int i = 0; i < keyNum; i++) {
-                //根据日志，基本上每个都25w多一点点
                 keyLog[i] = new KeyLog(12 * sortSize, path + File.separator + "key", i);
             }
             this.engineException = new EngineException(RetCodeEnum.NOT_FOUND, "not found this key");
-            this.set = ConcurrentHashMap.<byte[]>newKeySet();
 
-            this.directIoLib = DirectIoLib.getLibForPath(path);
-            threadLocalReadBuffer = ThreadLocal.withInitial(() -> AlignedDirectByteBuffer.allocate(directIoLib, 4096));
+            DirectIoLib directIoLib = DirectIoLib.getLibForPath(path);
+            this.threadLocalReadBuffer = ThreadLocal.withInitial(() -> new ReadBuffer(directIoLib));
+
+            this.set = ConcurrentHashMap.<byte[]>newKeySet();
 
             recoverSort();
         }
@@ -87,7 +80,6 @@ public class DBImpl {
 //            System.out.println("---------------Start first write---------------");
             keyLog = new KeyLog[keyNum];
             for (int i = 0; i < keyNum; i++) {
-                //根据日志，基本上每个都25w多一点点
                 keyLog[i] = new KeyLog(12 * sortSize, path + File.separator + "key", i);
             }
         }
@@ -129,7 +121,6 @@ public class DBImpl {
                                 byteBuffer.get(key);
                                 hmapi.put(ByteToLong.byteArrayToLong_seven(key), byteBuffer.getInt());
                             }
-
 
                             //判断如果是第二阶段的读阶段了，恢复完hash就可以释放keylog了
                             if (sum > 240000) {
@@ -185,8 +176,7 @@ public class DBImpl {
             throw this.engineException;
         }
 //        return valueLog[logNum].getMessageDirect(((long) currentPos) << 12, threadLocalReadBuffer.get(), threadLocalReadBytes.get());
-
-        return valueLog[logNum].getMessageDirect(((long) currentPos) << 12, threadLocalReadBytes.get(), threadLocalReadBuffer.get());
+        return valueLog[logNum].getMessageDirect(((long) currentPos) << 12, threadLocalReadBuffer.get().getReadBytes(), threadLocalReadBuffer.get().getReadBuffer());
     }
 
 
@@ -202,6 +192,5 @@ public class DBImpl {
         valueLog = null;
         sortLog = null;
         threadLocalReadBuffer = null;
-        threadLocalReadBytes = null;
     }
 }
