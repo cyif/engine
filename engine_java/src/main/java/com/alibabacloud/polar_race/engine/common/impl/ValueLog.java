@@ -2,6 +2,7 @@ package com.alibabacloud.polar_race.engine.common.impl;
 
 import com.alibabacloud.polar_race.engine.common.utils.PutMessageLock;
 import com.alibabacloud.polar_race.engine.common.utils.PutMessageReentrantLock;
+import net.smacke.jaydio.DirectRandomAccessFile;
 import sun.nio.ch.DirectBuffer;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -32,6 +33,8 @@ public class ValueLog {
 
     private PutMessageLock putMessageLock;
 
+    private DirectRandomAccessFile directRandomAccessFile;
+
     public ValueLog(String storePath, int filename) {
         /*打开文件*/
         try {
@@ -48,8 +51,12 @@ public class ValueLog {
             this.fileChannel = this.randomAccessFile.getChannel();
             this.num = 0;
             this.putMessageLock = new PutMessageReentrantLock();
+
+            this.directRandomAccessFile = new DirectRandomAccessFile(file, "r");
         } catch (FileNotFoundException e) {
             System.out.println("create file channel " + "valueLog" + " Failed. ");
+        } catch (IOException e){
+            e.printStackTrace();
         }
 
         this.directWriteBuffer = ByteBuffer.allocateDirect(4096);
@@ -109,6 +116,20 @@ public class ValueLog {
 //        byteBuffer.flip();
 //        byteBuffer.get(bytes);
         UNSAFE.copyMemory(null, ((DirectBuffer) byteBuffer).address(), bytes, 16, 4096);
+        return bytes;
+    }
+
+
+    byte[] getMessageDirect(long offset, byte[] bytes) {
+        try {
+            putMessageLock.lock();
+            this.directRandomAccessFile.seek(offset);
+            this.directRandomAccessFile.read(bytes);
+            putMessageLock.unlock();
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
         return bytes;
     }
 

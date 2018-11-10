@@ -171,8 +171,11 @@ public class DBImpl {
             set.add(key);
             throw this.engineException;
         }
-        return valueLog[logNum].getMessageDirect(((long) currentPos) << 12, threadLocalReadBuffer.get(), threadLocalReadBytes.get());
+//        return valueLog[logNum].getMessageDirect(((long) currentPos) << 12, threadLocalReadBuffer.get(), threadLocalReadBytes.get());
+
+        return valueLog[logNum].getMessageDirect(((long) currentPos) << 12, threadLocalReadBytes.get());
     }
+    
 
     public void close() {
         for (KeyLog K : keyLog) {
