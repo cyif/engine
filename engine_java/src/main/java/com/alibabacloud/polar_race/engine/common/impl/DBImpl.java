@@ -5,11 +5,15 @@ import com.alibabacloud.polar_race.engine.common.exceptions.RetCodeEnum;
 import com.alibabacloud.polar_race.engine.common.utils.ByteToLong;
 import com.carrotsearch.hppc.LongIntHashMap;
 import com.carrotsearch.hppc.cursors.LongIntCursor;
+import net.smacke.jaydio.DirectIoLib;
+import net.smacke.jaydio.buffer.AlignedDirectByteBuffer;
+
 import java.io.File;
 import java.nio.ByteBuffer;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Supplier;
 
 
 /**
@@ -35,8 +39,13 @@ public class DBImpl {
     private final static int sortSize = 252000;
     private SortLog sortLog[];
 
+
+    private DirectIoLib directIoLib;
+
+
     /*  用于读，增加读取并发性，减小gc    */
-    private ThreadLocal<ByteBuffer> threadLocalReadBuffer = ThreadLocal.withInitial(() -> ByteBuffer.allocateDirect(4096));
+//    private ThreadLocal<ByteBuffer> threadLocalReadBuffer = ThreadLocal.withInitial(() -> ByteBuffer.allocateDirect(4096));
+    private ThreadLocal<AlignedDirectByteBuffer> threadLocalReadBuffer;
     private ThreadLocal<byte[]> threadLocalReadBytes = ThreadLocal.withInitial(() -> new byte[4096]);
     /*  用于读，直接过滤掉不存在的key    */
     private Set<byte[]> set;
@@ -66,6 +75,10 @@ public class DBImpl {
             }
             this.engineException = new EngineException(RetCodeEnum.NOT_FOUND, "not found this key");
             this.set = ConcurrentHashMap.<byte[]>newKeySet();
+
+            this.directIoLib = DirectIoLib.getLibForPath(path);
+            threadLocalReadBuffer = ThreadLocal.withInitial(() -> AlignedDirectByteBuffer.allocate(directIoLib, 4096));
+
             recoverSort();
         }
 
@@ -173,7 +186,7 @@ public class DBImpl {
         }
 //        return valueLog[logNum].getMessageDirect(((long) currentPos) << 12, threadLocalReadBuffer.get(), threadLocalReadBytes.get());
 
-        return valueLog[logNum].getMessageDirect(((long) currentPos) << 12, threadLocalReadBytes.get());
+        return valueLog[logNum].getMessageDirect(((long) currentPos) << 12, threadLocalReadBytes.get(), threadLocalReadBuffer.get());
     }
 
 

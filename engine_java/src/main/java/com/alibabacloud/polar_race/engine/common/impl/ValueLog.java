@@ -36,7 +36,7 @@ public class ValueLog {
     private PutMessageLock putMessageLock;
 
     private DirectIoLib directIoLib;
-    private AlignedDirectByteBuffer alignedDirectByteBuffer;
+//    private AlignedDirectByteBuffer alignedDirectByteBuffer;
     private int fd;
 
 //    private DirectRandomAccessFile directRandomAccessFile;
@@ -58,7 +58,7 @@ public class ValueLog {
 
 
             this.directIoLib = DirectIoLib.getLibForPath(storePath);
-            this.alignedDirectByteBuffer = AlignedDirectByteBuffer.allocate(directIoLib, 4096);
+//            this.alignedDirectByteBuffer = AlignedDirectByteBuffer.allocate(directIoLib, 4096);
             this.fd = directIoLib.oDirectOpen(file.toString(), true);
 
 
@@ -133,16 +133,16 @@ public class ValueLog {
     }
 
 
-    byte[] getMessageDirect(long offset, byte[] bytes) {
+    byte[] getMessageDirect(long offset, byte[] bytes, AlignedDirectByteBuffer byteBuffer) {
         try {
-            putMessageLock.lock();
+//            putMessageLock.lock();
 //            this.directRandomAccessFile.seek(offset);
 //            this.directRandomAccessFile.read(bytes);
 
-            this.directIoLib.pread(fd, alignedDirectByteBuffer, offset);
-            alignedDirectByteBuffer.get(bytes);
+            this.directIoLib.pread(fd, byteBuffer, offset);
+            byteBuffer.get(bytes);
 
-            putMessageLock.unlock();
+//            putMessageLock.unlock();
 
         } catch (IOException e) {
             e.printStackTrace();
