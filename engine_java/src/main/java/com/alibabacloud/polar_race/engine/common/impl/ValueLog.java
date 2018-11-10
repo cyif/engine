@@ -57,7 +57,7 @@ public class ValueLog {
             this.fileChannel = this.randomAccessFile.getChannel();
 
 
-            this.directIoLib = DirectIoLib.getLibForPath(file.toString());
+            this.directIoLib = DirectIoLib.getLibForPath(storePath);
             this.alignedDirectByteBuffer = AlignedDirectByteBuffer.allocate(directIoLib, 4096);
             this.fd = directIoLib.oDirectOpen(file.toString(), true);
 
