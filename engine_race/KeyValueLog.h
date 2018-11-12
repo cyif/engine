@@ -73,7 +73,7 @@ namespace polar_race {
 
             //打开Value文件
             auto mode = O_CREAT | O_RDWR | O_DIRECT;
-            if(this->keyMap.size() < 100000) {
+            if(this->keyMap.size() < 90000) {
                 mode = O_CREAT | O_RDWR ;
             }
             this->valueFd = open(this->valueFilePath.data(), mode, 0777);
@@ -81,7 +81,7 @@ namespace polar_race {
             this->valueFilePosition = ((long) max) * 4096;
 
             this->buffer = static_cast<char *>(malloc(4096));
-            posix_memalign((void **) &buffer, (size_t)getpagesize(), 4096);
+            posix_memalign((void **) &buffer, 4096, 4096);
         }
 
         ~KeyValueLog() {
