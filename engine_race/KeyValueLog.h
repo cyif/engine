@@ -73,9 +73,9 @@ namespace polar_race {
 
             //打开Value文件
             auto mode = O_CREAT | O_RDWR | O_DIRECT;
-            if(this->keyMap.size() < 110000) {
-                mode = O_CREAT | O_RDWR ;
-            }
+//            if(this->keyMap.size() < 110000) {
+//                mode = O_CREAT | O_RDWR ;
+//            }
             this->valueFd = open(this->valueFilePath.data(), mode, 0777);
             fallocate(this->valueFd, 0, 0, 1024L * 1024 * 4096);
             this->valueFilePosition = ((long) max) * 4096;
