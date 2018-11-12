@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CodeBlocks_project_file>
+	<FileVersion major="1" minor="6"/>
+	<Project>
+		<Option title="engine_race"/>
+		<Option makefile_is_custom="1"/>
+		<Option compiler="gcc"/>
+		<Option virtualFolders="CMake Files\;"/>
+		<Build>
+			<Target title="all">
+				<Option working_dir="/Users/qiwenchao/Desktop/POLARBD/王石冲/engine/engine_race/cmake-build-debug"/>
+				<Option type="4"/>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j4 -f &quot;/Users/qiwenchao/Desktop/POLARBD/王石冲/engine/engine_race/cmake-build-debug/Makefile&quot;  VERBOSE=1 all"/>
+					<CompileFile command="/usr/bin/make -j4 -f &quot;/Users/qiwenchao/Desktop/POLARBD/王石冲/engine/engine_race/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j4 -f &quot;/Users/qiwenchao/Desktop/POLARBD/王石冲/engine/engine_race/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j4 -f &quot;/Users/qiwenchao/Desktop/POLARBD/王石冲/engine/engine_race/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="rebuild_cache">
+				<Option working_dir="/Users/qiwenchao/Desktop/POLARBD/王石冲/engine/engine_race/cmake-build-debug"/>
+				<Option type="4"/>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j4 -f &quot;/Users/qiwenchao/Desktop/POLARBD/王石冲/engine/engine_race/cmake-build-debug/Makefile&quot;  VERBOSE=1 rebuild_cache"/>
+					<CompileFile command="/usr/bin/make -j4 -f &quot;/Users/qiwenchao/Desktop/POLARBD/王石冲/engine/engine_race/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j4 -f &quot;/Users/qiwenchao/Desktop/POLARBD/王石冲/engine/engine_race/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j4 -f &quot;/Users/qiwenchao/Desktop/POLARBD/王石冲/engine/engine_race/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="edit_cache">
+				<Option working_dir="/Users/qiwenchao/Desktop/POLARBD/王石冲/engine/engine_race/cmake-build-debug"/>
+				<Option type="4"/>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j4 -f &quot;/Users/qiwenchao/Desktop/POLARBD/王石冲/engine/engine_race/cmake-build-debug/Makefile&quot;  VERBOSE=1 edit_cache"/>
+					<CompileFile command="/usr/bin/make -j4 -f &quot;/Users/qiwenchao/Desktop/POLARBD/王石冲/engine/engine_race/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j4 -f &quot;/Users/qiwenchao/Desktop/POLARBD/王石冲/engine/engine_race/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j4 -f &quot;/Users/qiwenchao/Desktop/POLARBD/王石冲/engine/engine_race/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="engine_race">
+				<Option output="/Users/qiwenchao/Desktop/POLARBD/王石冲/engine/engine_race/cmake-build-debug/engine_race" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/Users/qiwenchao/Desktop/POLARBD/王石冲/engine/engine_race/cmake-build-debug"/>
+				<Option object_output="./"/>
+				<Option type="1"/>
+				<Option compiler="gcc"/>
+				<Compiler>
+					<Add directory="/Users/qiwenchao/Desktop/POLARBD/王石冲/engine/engine_race/."/>
+					<Add directory="/Users/qiwenchao/Desktop/POLARBD/王石冲/engine/engine_race/.."/>
+					<Add directory="/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include/c++/v1"/>
+					<Add directory="/usr/local/include"/>
+					<Add directory="/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/10.0.0/include"/>
+					<Add directory="/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include"/>
+					<Add directory="/System/Library/Frameworks"/>
+					<Add directory="/Library/Frameworks"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j4 -f &quot;/Users/qiwenchao/Desktop/POLARBD/王石冲/engine/engine_race/cmake-build-debug/Makefile&quot;  VERBOSE=1 engine_race"/>
+					<CompileFile command="/usr/bin/make -j4 -f &quot;/Users/qiwenchao/Desktop/POLARBD/王石冲/engine/engine_race/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j4 -f &quot;/Users/qiwenchao/Desktop/POLARBD/王石冲/engine/engine_race/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j4 -f &quot;/Users/qiwenchao/Desktop/POLARBD/王石冲/engine/engine_race/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="engine_race/fast">
+				<Option output="/Users/qiwenchao/Desktop/POLARBD/王石冲/engine/engine_race/cmake-build-debug/engine_race" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/Users/qiwenchao/Desktop/POLARBD/王石冲/engine/engine_race/cmake-build-debug"/>
+				<Option object_output="./"/>
+				<Option type="1"/>
+				<Option compiler="gcc"/>
+				<Compiler>
+					<Add directory="/Users/qiwenchao/Desktop/POLARBD/王石冲/engine/engine_race/."/>
+					<Add directory="/Users/qiwenchao/Desktop/POLARBD/王石冲/engine/engine_race/.."/>
+					<Add directory="/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include/c++/v1"/>
+					<Add directory="/usr/local/include"/>
+					<Add directory="/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/10.0.0/include"/>
+					<Add directory="/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include"/>
+					<Add directory="/System/Library/Frameworks"/>
+					<Add directory="/Library/Frameworks"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j4 -f &quot;/Users/qiwenchao/Desktop/POLARBD/王石冲/engine/engine_race/cmake-build-debug/Makefile&quot;  VERBOSE=1 engine_race/fast"/>
+					<CompileFile command="/usr/bin/make -j4 -f &quot;/Users/qiwenchao/Desktop/POLARBD/王石冲/engine/engine_race/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j4 -f &quot;/Users/qiwenchao/Desktop/POLARBD/王石冲/engine/engine_race/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j4 -f &quot;/Users/qiwenchao/Desktop/POLARBD/王石冲/engine/engine_race/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+		</Build>
+		<Unit filename="/Users/qiwenchao/Desktop/POLARBD/王石冲/engine/engine_race/CMakeLists.txt">
+			<Option target="engine_race"/>
+		</Unit>
+		<Unit filename="/Users/qiwenchao/Desktop/POLARBD/王石冲/engine/engine_race/KeyValueLog.h">
+			<Option target="engine_race"/>
+		</Unit>
+		<Unit filename="/Users/qiwenchao/Desktop/POLARBD/王石冲/engine/engine_race/LongIntMapForRace.h">
+			<Option target="engine_race"/>
+		</Unit>
+		<Unit filename="/Users/qiwenchao/Desktop/POLARBD/王石冲/engine/engine_race/Makefile">
+			<Option target="engine_race"/>
+		</Unit>
+		<Unit filename="/Users/qiwenchao/Desktop/POLARBD/王石冲/engine/engine_race/RDPEngine.h">
+			<Option target="engine_race"/>
+		</Unit>
+		<Unit filename="/Users/qiwenchao/Desktop/POLARBD/王石冲/engine/engine_race/engine_race.cc">
+			<Option target="engine_race"/>
+		</Unit>
+		<Unit filename="/Users/qiwenchao/Desktop/POLARBD/王石冲/engine/engine_race/engine_race.h">
+			<Option target="engine_race"/>
+		</Unit>
+		<Unit filename="/Users/qiwenchao/Desktop/POLARBD/王石冲/engine/engine_race/sparsepp/spp.h">
+			<Option target="engine_race"/>
+		</Unit>
+		<Unit filename="/Users/qiwenchao/Desktop/POLARBD/王石冲/engine/engine_race/sparsepp/spp_config.h">
+			<Option target="engine_race"/>
+		</Unit>
+		<Unit filename="/Users/qiwenchao/Desktop/POLARBD/王石冲/engine/engine_race/sparsepp/spp_dlalloc.h">
+			<Option target="engine_race"/>
+		</Unit>
+		<Unit filename="/Users/qiwenchao/Desktop/POLARBD/王石冲/engine/engine_race/sparsepp/spp_memory.h">
+			<Option target="engine_race"/>
+		</Unit>
+		<Unit filename="/Users/qiwenchao/Desktop/POLARBD/王石冲/engine/engine_race/sparsepp/spp_smartptr.h">
+			<Option target="engine_race"/>
+		</Unit>
+		<Unit filename="/Users/qiwenchao/Desktop/POLARBD/王石冲/engine/engine_race/sparsepp/spp_stdint.h">
+			<Option target="engine_race"/>
+		</Unit>
+		<Unit filename="/Users/qiwenchao/Desktop/POLARBD/王石冲/engine/engine_race/sparsepp/spp_timer.h">
+			<Option target="engine_race"/>
+		</Unit>
+		<Unit filename="/Users/qiwenchao/Desktop/POLARBD/王石冲/engine/engine_race/sparsepp/spp_traits.h">
+			<Option target="engine_race"/>
+		</Unit>
+		<Unit filename="/Users/qiwenchao/Desktop/POLARBD/王石冲/engine/engine_race/sparsepp/spp_utils.h">
+			<Option target="engine_race"/>
+		</Unit>
+		<Unit filename="/Users/qiwenchao/Desktop/POLARBD/王石冲/engine/engine_race/CMakeLists.txt">
+			<Option virtualFolder="CMake Files\"/>
+		</Unit>
+	</Project>
+</CodeBlocks_project_file>
