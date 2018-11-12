@@ -81,7 +81,7 @@ namespace polar_race {
             this->valueFilePosition = ((long) max) * 4096;
 
             this->buffer = static_cast<char *>(malloc(4096));
-            posix_memalign((void **) &buffer, 4096, 4096);
+            posix_memalign((void **) &buffer, (size_t)getpagesize(), 4096);
         }
 
         ~KeyValueLog() {
