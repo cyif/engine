@@ -4,7 +4,7 @@
 
 #ifndef ENGINE_RACE_KEYVALUELOG_H
 #define ENGINE_RACE_KEYVALUELOG_H
-
+#define _GNU_SOURCE
 #include <stdint.h>
 #include <string>
 #include <sstream>

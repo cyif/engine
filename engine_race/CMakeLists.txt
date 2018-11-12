@@ -9,8 +9,8 @@ include_directories(..)
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
 
 add_executable(engine_race
-#        benchmark.cc
-#        main.cc
+        benchmark.cc
+        main.cc
         engine_race.cc
         engine_race.h
         RDPEngine.h
@@ -28,15 +28,15 @@ add_executable(engine_race
         CMakeLists.txt
         engine_race.cc
         engine_race.h
-#        histogram.cc
-#        histogram.h
+        histogram.cc
+        histogram.h
         KeyValueLog.h
-#        likely.h
+        likely.h
         LongIntMapForRace.h
         Makefile
-#        random.cc
-#        random.h
+        random.cc
+        random.h
         RDPEngine.h
-#        testutil.cc
-#        testutil.h
+        testutil.cc
+        testutil.h
         )

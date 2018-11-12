@@ -4,9 +4,9 @@ set(CMAKE_DEPENDS_LANGUAGES
   )
 # The set of files for implicit dependencies of each language:
 set(CMAKE_DEPENDS_CHECK_CXX
-  "/Users/qiwenchao/Desktop/POLARBD/王石冲/engine/engine_race/engine_race.cc" "/Users/qiwenchao/Desktop/POLARBD/王石冲/engine/engine_race/cmake-build-debug/CMakeFiles/engine_race.dir/engine_race.cc.o"
+  "/home/parallels/Desktop/engine/engine_race/engine_race.cc" "/home/parallels/Desktop/engine/engine_race/cmake-build-debug/CMakeFiles/engine_race.dir/engine_race.cc.o"
   )
-set(CMAKE_CXX_COMPILER_ID "AppleClang")
+set(CMAKE_CXX_COMPILER_ID "GNU")
 
 # The include file search paths:
 set(CMAKE_CXX_TARGET_INCLUDE_PATH
