@@ -79,6 +79,9 @@ namespace polar_race {
             this->valueFd = open(this->valueFilePath.data(), mode, 0777);
             fallocate(this->valueFd, 0, 0, 1024L * 1024 * 4096);
             this->valueFilePosition = ((long) max) * 4096;
+
+            this->buffer = static_cast<char *>(malloc(4096));
+            posix_memalign((void **) &buffer, 4096, 4096);
         }
 
         ~KeyValueLog() {
@@ -95,7 +98,9 @@ namespace polar_race {
 
         void putValue(const PolarString &key, const char *value) {
             _mutex.lock();
-            pwrite(this->valueFd, value, 4096, valueFilePosition);
+
+            memcpy(this->buffer, value, 4096);
+            pwrite(this->valueFd, this->buffer, 4096, valueFilePosition);
             auto k = (long *) key.data();
             memcpy(keyBuffer + keyBufferPosition, k, 8);
             int index;
@@ -134,6 +139,7 @@ namespace polar_race {
         LongIntMapForRace keyMap = LongIntMapForRace();
         u_int8_t *keyBuffer;
 
+        char * buffer;
     };
 }
 
