@@ -58,7 +58,7 @@ namespace polar_race {
 
 
         int putValue(const char *value) {
-            int currentPos = (filePosition >> 12) + cacheBufferPosition;
+            int currentPos = (int)((filePosition >> 12) + cacheBufferPosition);
             memcpy(cacheBuffer + (cacheBufferPosition << 12), value, 4096);
             cacheBufferPosition++;
             if (cacheBufferPosition == 4) {
@@ -71,7 +71,7 @@ namespace polar_race {
 
         void readValue(int index, char *value) {
             if (index >= (this->filePosition >> 12)) {
-                int cacheBufferPosition = index - (this->filePosition >> 12);
+                int cacheBufferPosition = (int)(index - (this->filePosition >> 12));
                 memcpy(value, cacheBuffer + (cacheBufferPosition << 12), 4096);
             } else {
                 pread(this->fd, value, 4096, ((long) index) * 4096);
@@ -84,12 +84,8 @@ namespace polar_race {
 
 
         void recover(int sum) {
-            cacheBufferPosition = sum % PAGE_PER_BLOCK;
-            if (cacheBufferPosition == 0) {
-                setValueFilePosition(((long) sum) << 12);
-            } else {
-                setValueFilePosition(((long) sum - (sum % PAGE_PER_BLOCK)) << 12);
-            }
+            cacheBufferPosition = sum % (int)PAGE_PER_BLOCK;
+            setValueFilePosition(((long) sum - cacheBufferPosition) <<12);
         }
 
 //        void flush() {
