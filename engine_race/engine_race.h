@@ -3,9 +3,9 @@
 #define ENGINE_RACE_ENGINE_RACE_H_
 
 #include <string>
-#include <include/engine.h>
 #include <sys/stat.h>
-#include "RDPEngine.h"
+#include "PEngine.h"
+#include "../include/engine.h"
 
 namespace polar_race {
 
@@ -14,7 +14,7 @@ namespace polar_race {
         static RetCode Open(const std::string &name, Engine **eptr);
 
         explicit EngineRace(const std::string &dir) {
-           this->rdpEngine = new RDPEngine(dir);
+           this->pEngine = new PEngine(dir);
         }
 
         ~EngineRace();
@@ -34,7 +34,7 @@ namespace polar_race {
                       Visitor &visitor) override;
 
     private:
-        RDPEngine *rdpEngine;
+        PEngine *pEngine;
 
     };
 

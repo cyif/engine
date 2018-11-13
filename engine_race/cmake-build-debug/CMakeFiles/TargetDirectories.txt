@@ -1,3 +1,0 @@
-/home/parallels/Desktop/engine/engine_race/cmake-build-debug/CMakeFiles/edit_cache.dir
-/home/parallels/Desktop/engine/engine_race/cmake-build-debug/CMakeFiles/rebuild_cache.dir
-/home/parallels/Desktop/engine/engine_race/cmake-build-debug/CMakeFiles/engine_race.dir

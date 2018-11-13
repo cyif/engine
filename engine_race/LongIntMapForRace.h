@@ -12,10 +12,17 @@
 
 class LongIntMapForRace {
 public:
-    explicit LongIntMapForRace() {
+    explicit LongIntMapForRace() : LongIntMapForRace(1024 * 1024) {}
+
+    explicit LongIntMapForRace(int capacity) :
+        arraySize(capacity),
+        assigned(0),
+        mask(capacity-1),
+        hasEmptyKey(false) {
         this->keyMixer = initialKeyMixer();
-        this->assigned = 0;
-        allocateBuffers();
+        int emptyElementSlot = 1;
+        this->keys = static_cast<long *>(malloc((arraySize + emptyElementSlot) * sizeof(long)));
+        this->values = static_cast<int *>(malloc((arraySize + emptyElementSlot) * sizeof(int)));
     };
 
     ~LongIntMapForRace() {
@@ -29,7 +36,7 @@ public:
 
     int put(const long &key, const int &value) {
         assert(this->assigned < mask + 1);
-        if(key == 0) {
+        if (key == 0) {
             hasEmptyKey = true;
             int previousValue = values[mask + 1];
             values[mask + 1] = value;
@@ -76,20 +83,11 @@ private:
     int assigned;
     int mask;
     int hasEmptyKey;
-
-    void allocateBuffers() {
-        int arraySize = 1024 * 1024;
-        int emptyElementSlot = 1;
-        this->keys = static_cast<long *>(malloc((arraySize + emptyElementSlot) * sizeof(long)));
-        this->values = static_cast<int *>(malloc((arraySize + emptyElementSlot) * sizeof(int)));
-        this->mask = arraySize - 1;
-
-    }
+    int arraySize;
 
     int hashKey(const long &key) {
         assert(key != 0);
         return mix(key, this->keyMixer);
-
     }
 
     int initialKeyMixer() {

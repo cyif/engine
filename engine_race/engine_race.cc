@@ -32,19 +32,19 @@ namespace polar_race {
 
 // 2. Close engine
     EngineRace::~EngineRace() {
-        delete rdpEngine;
+        delete pEngine;
         fprintf(stderr, "closing database\n");
     }
 
 // 3. Write a key-value pair into engine
     RetCode EngineRace::Write(const PolarString &key, const PolarString &value) {
-        rdpEngine->put(key, value);
+        pEngine->put(key, value);
         return kSucc;
     }
 
 // 4. Read value of a key
     RetCode EngineRace::Read(const PolarString &key, std::string *value) {
-        return rdpEngine->read(key, value);
+        return pEngine->read(key, value);
     }
 
 /*
