@@ -129,9 +129,9 @@ namespace polar_race {
                 sum ++;
             }
             keyLog->setKeyBufferPosition(pos);
-            valueLog->recover(sum);
-//            valueLog->setValueFilePosition(((long) sum) << 12);
-//            valueLog->flush();
+//            valueLog->recover(sum);
+            valueLog->setValueFilePosition(((long) sum) << 12);
+            valueLog->flush(sum);
 
         }
 

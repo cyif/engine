@@ -88,11 +88,14 @@ namespace polar_race {
             setValueFilePosition(((long) sum - cacheBufferPosition) <<12);
         }
 
-//        void flush() {
-//            if (cacheBufferPosition != 0)
-//                pwrite(this->fd, cacheBuffer, ((size_t) cacheBufferPosition * 4096),
-//                       filePosition - (cacheBufferPosition << 12));
-//        }
+        void flush(int sum) {
+            cacheBufferPosition = sum % (int)PAGE_PER_BLOCK;
+            if (cacheBufferPosition != 0) {
+                pwrite(this->fd, cacheBuffer, ((size_t)cacheBufferPosition << 12),
+                       filePosition - (cacheBufferPosition << 12));
+                cacheBufferPosition = 0;
+            }
+        }
 
     private:
         int id;
