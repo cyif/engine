@@ -70,12 +70,13 @@ namespace polar_race {
         }
 
         void readValue(int index, char *value) {
-            if (index >= (this->filePosition >> 12)) {
-                int cacheBufferPosition = (int)(index - (this->filePosition >> 12));
-                memcpy(value, cacheBuffer + (cacheBufferPosition << 12), 4096);
-            } else {
-                pread(this->fd, value, 4096, ((long) index) * 4096);
-            }
+//            if (index >= (this->filePosition >> 12)) {
+//                int cacheBufferPosition = (int)(index - (this->filePosition >> 12));
+//                memcpy(value, cacheBuffer + (cacheBufferPosition << 12), 4096);
+//            } else {
+//                pread(this->fd, value, 4096, ((long) index) * 4096);
+//            }
+            pread(this->fd, value, 4096, ((long) index) * 4096);
         }
 
         void setValueFilePosition(long position) {
