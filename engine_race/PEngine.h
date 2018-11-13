@@ -23,10 +23,17 @@
 #include "key_log.h"
 #include "value_log.h"
 
-#define VALUE_LOG_SIZE 1024L * 1024 * 4096
+//#define VALUE_LOG_SIZE 1024L * 1024 * 4096
 //
 //#define VALUE_LOG_SIZE 1024 * 4096
-#define LOG_NUM 64
+#define VALUE_LOG_SIZE 1024L * 256 * 4096
+#define KEY_LOG_SIZE 1024L * 256 * 12
+#define PER_MAP_SIZE 1024L * 256
+
+
+#define LOG_NUM 256
+#define LOG_NUM_BITS 8
+
 
 using namespace std;
 namespace polar_race {
@@ -48,8 +55,8 @@ namespace polar_race {
             this->valueLogs = static_cast<ValueLog **>(malloc(LOG_NUM * sizeof(ValueLog *)));
 
             for (int i = 0; i < LOG_NUM; i++) {
-                *(maps + i) = new LongIntMapForRace();
-                *(keyLogs + i) = new KeyLog(path, i);
+                *(maps + i) = new LongIntMapForRace(PER_MAP_SIZE);
+                *(keyLogs + i) = new KeyLog(path, i, KEY_LOG_SIZE);
                 *(valueLogs + i) = new ValueLog(path, i, VALUE_LOG_SIZE);
             }
 
@@ -76,14 +83,13 @@ namespace polar_race {
         }
 
         int getLogId(const PolarString &k) {
-            return (*((u_int8_t *) (k.data()))) >> 2;
+            return (*((u_int8_t *) (k.data()))) >> LOG_NUM_BITS;
         }
 
         void put(const PolarString &key, const PolarString &value) {
             auto logId = getLogId(key);
             logMutex[logId].lock();
-            off_t position = valueLogs[logId]->putValue(value.data());
-            int index = static_cast<int>(position >> 12);
+            int index = valueLogs[logId]->putValue(value.data());
             keyLogs[logId]->putValue(key, index);
             logMutex[logId].unlock();
         }
@@ -122,8 +128,10 @@ namespace polar_race {
                 sum ++;
             }
             keyLog->setKeyBufferPosition(pos);
-            valueLog->setValueFilePosition(((long) sum) << 12);
-            valueLog->flush();
+            valueLog->recover(sum);
+//            valueLog->setValueFilePosition(((long) sum) << 12);
+//            valueLog->flush();
+
         }
 
     };

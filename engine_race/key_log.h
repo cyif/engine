@@ -24,24 +24,22 @@ namespace polar_race {
 
     class KeyLog {
     public:
-        size_t KEY_BUFFER_SIZE = 12 * 1024 * 1024;
-//        size_t KEY_BUFFER_SIZE = 12 * 1024 * 8;
 
-
-        KeyLog(const std::string &path, const int &id) : id(id), keyBufferPosition(0) {
+        KeyLog(const std::string &path, const int &id, const size_t &size) : id(id), keyBufferPosition(0) {
             //获得Key file path
             std::ostringstream ss;
             ss << path << "/key-" << this->id;
             this->filePath = ss.str();
             //打开key文件并且映射mmap
             this->fd = open(this->filePath.data(), O_CREAT | O_RDWR, 0777);
-            fallocate(this->fd, 0, 0, KEY_BUFFER_SIZE);
-            this->keyBuffer = static_cast<u_int8_t *>(mmap(nullptr, KEY_BUFFER_SIZE, PROT_READ | PROT_WRITE,
+            this->keyBufferSize = size;
+            fallocate(this->fd, 0, 0, this->keyBufferSize);
+            this->keyBuffer = static_cast<u_int8_t *>(mmap(nullptr, this->keyBufferSize, PROT_READ | PROT_WRITE,
                                                            MAP_SHARED | MAP_POPULATE, this->fd, 0));
         }
 
         ~KeyLog() {
-            munmap(keyBuffer, KEY_BUFFER_SIZE);
+            munmap(keyBuffer, this->keyBufferSize);
             close(this->fd);
         }
 
@@ -70,6 +68,7 @@ namespace polar_race {
         std::string filePath;
         long keyBufferPosition;
         u_int8_t *keyBuffer;
+        size_t keyBufferSize;
     };
 }
 #endif //ENGINE_KEY_LOG_H

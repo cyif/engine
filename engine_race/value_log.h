@@ -4,6 +4,7 @@
 
 #ifndef ENGINE_VALUE_LOG_H
 #define ENGINE_VALUE_LOG_H
+
 #include <stdint.h>
 #include <string>
 #include <sstream>
@@ -22,10 +23,10 @@ namespace polar_race {
 
     class ValueLog {
     public:
-        size_t BLOCK_SIZE = 4 * 4096;
-        size_t CACHE_BUFFER_SIZE = BLOCK_SIZE + 4;
+        size_t PAGE_PER_BLOCK = 4;
+        size_t BLOCK_SIZE = PAGE_PER_BLOCK * 4096;
 
-        ValueLog(const std::string &path, const int &id, const long &size): id(id), filePosition(0) {
+        ValueLog(const std::string &path, const int &id, const long &size) : id(id), filePosition(0) {
 
             //获得value file path
             std::ostringstream fp, cfp;
@@ -41,55 +42,61 @@ namespace polar_race {
 
             //value cache file
             this->cacheFd = open(this->cacheFilePath.data(), O_CREAT | O_RDWR, 0777);
-            fallocate(this->cacheFd, 0, 0, CACHE_BUFFER_SIZE);
-            this->cacheBuffer = static_cast<u_int8_t *>(mmap(nullptr, CACHE_BUFFER_SIZE, PROT_READ | PROT_WRITE,
-                                                           MAP_SHARED | MAP_POPULATE, this->cacheFd, 0));
-            this->cacheBufferPosition = *(int *) (cacheBuffer + BLOCK_SIZE);
+            fallocate(this->cacheFd, 0, 0, BLOCK_SIZE);
+            this->cacheBuffer = static_cast<u_int8_t *>(mmap(nullptr, BLOCK_SIZE, PROT_READ | PROT_WRITE,
+                                                             MAP_SHARED | MAP_POPULATE, this->cacheFd, 0));
+            this->cacheBufferPosition = 0;
 
-//            this->buffer = static_cast<char *>(malloc(CACHE_BUFFER_SIZE));
-            posix_memalign((void **) &cacheBuffer, CACHE_BUFFER_SIZE, CACHE_BUFFER_SIZE);
+//            posix_memalign((void **) &cacheBuffer, BLOCK_SIZE, BLOCK_SIZE);
         }
 
         ~ValueLog() {
-            munmap(cacheBuffer, CACHE_BUFFER_SIZE);
+            munmap(cacheBuffer, BLOCK_SIZE);
             close(this->fd);
             close(this->cacheFd);
-//            free(buffer);
         }
 
 
-        off_t putValue(const char *value) {
-//            memcpy(buffer, value, 4096);
-            off_t currentPos = filePosition + (cacheBufferPosition << 12);
+        int putValue(const char *value) {
+            int currentPos = (filePosition >> 12) + cacheBufferPosition;
             memcpy(cacheBuffer + (cacheBufferPosition << 12), value, 4096);
-            cacheBufferPosition ++;
+            cacheBufferPosition++;
             if (cacheBufferPosition == 4) {
                 pwrite(this->fd, cacheBuffer, BLOCK_SIZE, filePosition);
                 filePosition += BLOCK_SIZE;
                 cacheBufferPosition = 0;
-                memcpy(cacheBuffer + BLOCK_SIZE, &cacheBufferPosition, 4);
-            } else {
-                memcpy(cacheBuffer + BLOCK_SIZE, &cacheBufferPosition, 4);
             }
             return currentPos;
         }
 
         void readValue(int index, char *value) {
-            auto filePosition = ((long) index) << 12;
-            pread(this->fd, value, 4096, filePosition);
+            if (index >= (this->filePosition >> 12)) {
+                int cacheBufferPosition = index - (this->filePosition >> 12);
+                memcpy(value, cacheBuffer + (cacheBufferPosition << 12), 4096);
+            } else {
+                pread(this->fd, value, 4096, ((long) index) * 4096);
+            }
         }
 
         void setValueFilePosition(long position) {
             this->filePosition = position;
         }
 
-        void flush() {
-            if (cacheBufferPosition != 0) {
-                pwrite(this->fd, cacheBuffer, ((size_t)cacheBufferPosition << 12), filePosition - (cacheBufferPosition << 12));
-                cacheBufferPosition = 0;
-                memcpy(cacheBuffer + BLOCK_SIZE, &cacheBufferPosition, 4);
+
+        void recover(int sum) {
+            cacheBufferPosition = sum % PAGE_PER_BLOCK;
+            if (cacheBufferPosition == 0) {
+                setValueFilePosition(((long) sum) << 12);
+            } else {
+                setValueFilePosition(((long) sum - (sum % PAGE_PER_BLOCK)) << 12);
             }
         }
+
+//        void flush() {
+//            if (cacheBufferPosition != 0)
+//                pwrite(this->fd, cacheBuffer, ((size_t) cacheBufferPosition * 4096),
+//                       filePosition - (cacheBufferPosition << 12));
+//        }
 
     private:
         int id;
@@ -98,7 +105,6 @@ namespace polar_race {
         std::string filePath;
         std::string cacheFilePath;
         off_t filePosition;
-//        char * buffer;
         u_int8_t *cacheBuffer;
         int cacheBufferPosition;
 

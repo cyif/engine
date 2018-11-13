@@ -12,7 +12,7 @@
 
 class LongIntMapForRace {
 public:
-    explicit LongIntMapForRace() : LongIntMapForRace(1024 * 1024) {}
+//    explicit LongIntMapForRace() : LongIntMapForRace(1024 * 1024) {}
 
     explicit LongIntMapForRace(int capacity) :
         arraySize(capacity),
