@@ -26,7 +26,7 @@ namespace polar_race {
         size_t PAGE_PER_BLOCK = 4;
         size_t BLOCK_SIZE = PAGE_PER_BLOCK * 4096;
 
-        ValueLog(const std::string &path, const int &id, const long &size) : id(id), filePosition(0) {
+        ValueLog(const std::string &path, const int &id, const long &size) : id(id), filePosition(0), clearFlag(1) {
 
             //获得value file path
             std::ostringstream fp, cfp;
@@ -51,9 +51,12 @@ namespace polar_race {
         }
 
         ~ValueLog() {
-            munmap(cacheBuffer, BLOCK_SIZE);
+            if (clearFlag){
+                munmap(cacheBuffer, BLOCK_SIZE);
+                close(this->cacheFd);
+            }
+
             close(this->fd);
-            close(this->cacheFd);
         }
 
 
@@ -96,6 +99,12 @@ namespace polar_race {
                        filePosition - (cacheBufferPosition << 12));
                 cacheBufferPosition = 0;
             }
+
+            if (sum > 240000){
+                munmap(cacheBuffer, BLOCK_SIZE);
+                close(this->cacheFd);
+                clearFlag = 0;
+            }
         }
 
     private:
@@ -108,6 +117,7 @@ namespace polar_race {
         u_int8_t *cacheBuffer;
         int cacheBufferPosition;
 
+        int clearFlag;
     };
 }
 #endif //ENGINE_VALUE_LOG_H

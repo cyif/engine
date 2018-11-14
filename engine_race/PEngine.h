@@ -73,9 +73,7 @@ namespace polar_race {
 
         ~PEngine() {
             for (int i = 0; i < LOG_NUM; i++) {
-                if (keyLogs != NULL){
-                    delete keyLogs[i];
-                }
+                delete keyLogs[i];
                 delete valueLogs[i];
                 delete maps[i];
             }
@@ -134,10 +132,6 @@ namespace polar_race {
 //            valueLog->recover(sum);
             valueLog->setValueFilePosition(((long) sum) << 12);
             valueLog->flush(sum);
-
-            if (sum > 240000){
-                delete(keyLog);
-            }
         }
 
     };
