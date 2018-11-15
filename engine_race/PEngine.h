@@ -23,8 +23,8 @@
 #include "value_log.h"
 #include "SortLog.h"
 
-#define LOG_NUM 256
-#define NUM_PER_SLOT 1024L * 256
+#define LOG_NUM 64
+#define NUM_PER_SLOT 1024L * 1024
 #define VALUE_LOG_SIZE NUM_PER_SLOT * 4096
 #define KEY_LOG_SIZE NUM_PER_SLOT * 12
 #define PER_MAP_SIZE NUM_PER_SLOT
@@ -62,20 +62,14 @@ namespace polar_race {
             for (int i = 0; i < LOG_NUM; i++) {
                 delete keyLogs[i];
                 delete valueLogs[i];
-//                delete maps[i];
                 delete sortLogs[i];
             }
             delete[] keyLogs;
             delete[] valueLogs;
-//            delete[] maps;
             delete[] sortLogs;
-
-//            std::cout << "close" << endl;
-
         }
 
         void recover(){
-            // recover
             std::thread t[LOG_NUM];
             for (int i = 0; i < LOG_NUM; i++) {
                 t[i] = std::thread(&PEngine::recoverAndSort, this, i);
@@ -113,7 +107,7 @@ namespace polar_race {
 
 
         int getLogId(const PolarString &k) {
-            return (*((u_int8_t *) (k.data())));
+            return (*((u_int8_t *) (k.data()))) % 4;
         }
 
         void put(const PolarString &key, const PolarString &value) {
