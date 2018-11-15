@@ -46,8 +46,6 @@ namespace polar_race {
             this->cacheBuffer = static_cast<u_int8_t *>(mmap(nullptr, BLOCK_SIZE, PROT_READ | PROT_WRITE,
                                                              MAP_SHARED | MAP_POPULATE, this->cacheFd, 0));
             this->cacheBufferPosition = 0;
-
-//            posix_memalign((void **) &cacheBuffer, BLOCK_SIZE, BLOCK_SIZE);
         }
 
         ~ValueLog() {
@@ -58,26 +56,18 @@ namespace polar_race {
 
 
         int putValue(const char *value) {
-
+            int currentPos = (int)((filePosition >> 12) + cacheBufferPosition);
+            memcpy(cacheBuffer + (cacheBufferPosition << 12), value, 4096);
+            cacheBufferPosition++;
             if (cacheBufferPosition == PAGE_PER_BLOCK) {
                 pwrite(this->fd, cacheBuffer, BLOCK_SIZE, filePosition);
                 filePosition += BLOCK_SIZE;
                 cacheBufferPosition = 0;
             }
-
-            int currentPos = (filePosition >> 12) + cacheBufferPosition;
-            memcpy(cacheBuffer + (cacheBufferPosition << 12), value, 4096);
-            cacheBufferPosition++;
             return currentPos;
         }
 
         void readValue(int index, char *value) {
-//            if (index >= (this->filePosition >> 12)) {
-//                int cacheBufferPosition = index - (this->filePosition >> 12);
-//                memcpy(value, cacheBuffer + (cacheBufferPosition << 12), 4096);
-//            } else {
-//                pread(this->fd, value, 4096, ((long) index) * 4096);
-//            }
             pread(this->fd, value, 4096, ((long) index) * 4096);
         }
 
@@ -85,23 +75,14 @@ namespace polar_race {
             this->filePosition = position;
         }
 
-        void recover(int sum) {
-            cacheBufferPosition = sum % PAGE_PER_BLOCK;
-            if (cacheBufferPosition == 0) {
-                setValueFilePosition(((long) sum) << 12);
-            } else {
-                setValueFilePosition(((long) sum - (sum % PAGE_PER_BLOCK)) << 12);
-            }
-        }
-
         void flush(int sum) {
             if (sum != 0) {
-                cacheBufferPosition = sum % (int) PAGE_PER_BLOCK;
-                if (cacheBufferPosition == 0)
-                    pwrite(this->fd, cacheBuffer, BLOCK_SIZE, filePosition - BLOCK_SIZE);
-                else
-                    pwrite(this->fd, cacheBuffer, ((size_t) cacheBufferPosition * 4096), filePosition - (cacheBufferPosition << 12));
-                cacheBufferPosition = 0;
+                cacheBufferPosition = sum % (int)PAGE_PER_BLOCK;
+                if (cacheBufferPosition != 0) {
+                    pwrite(this->fd, cacheBuffer, ((size_t)cacheBufferPosition << 12),
+                           filePosition - (cacheBufferPosition << 12));
+                    cacheBufferPosition = 0;
+                }
             }
         }
 
