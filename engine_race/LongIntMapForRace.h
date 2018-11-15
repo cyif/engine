@@ -9,6 +9,12 @@
 #include <assert.h>
 #include <cmath>
 #include <chrono>
+#include "SortLog.h"
+#include <iostream>
+
+#include "../include/polar_string.h"
+
+
 
 class LongIntMapForRace {
 public:
@@ -35,6 +41,7 @@ public:
     }
 
     int put(const long &key, const int &value) {
+
         assert(this->assigned < mask + 1);
         if (key == 0) {
             hasEmptyKey = true;
@@ -57,8 +64,30 @@ public:
             assigned++;
             return 0;
         }
-
     };
+
+    void pour_into(SortLog* sortLog){
+        int max = mask + 1;
+        int slot = -1;
+
+        if(slot < max) {
+            ++slot;
+
+            while(slot < max) {
+                long existing;
+                if((existing = keys[slot]) != 0L) {
+                    sortLog->put(existing, values[slot]);
+                }
+                ++slot;
+            }
+        }
+
+        if(slot == max && hasEmptyKey) {
+            sortLog->put(0L, values[max]);
+            ++slot;
+        }
+
+    }
 
     int getOrDefault(const long & key, const int &defaultValue) {
         if(key == 0) {

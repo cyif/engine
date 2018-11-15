@@ -22,18 +22,20 @@
 #include "../include/engine.h"
 #include "key_log.h"
 #include "value_log.h"
+#include "SortLog.h"
 
-//#define VALUE_LOG_SIZE 1024L * 1024 * 4096
-//
-//#define VALUE_LOG_SIZE 1024 * 4096
-#define VALUE_LOG_SIZE 1024L * 256 * 4096
-#define KEY_LOG_SIZE 1024L * 256 * 12
-#define PER_MAP_SIZE 1024L * 256
+#define LOG_NUM 64
+#define NUM_PER_SLOT 1024L * 1024
+#define VALUE_LOG_SIZE NUM_PER_SLOT * 4096
+#define KEY_LOG_SIZE NUM_PER_SLOT * 12
+#define PER_MAP_SIZE NUM_PER_SLOT
 
 
-#define LOG_NUM 256
-#define LOG_NUM_BITS 8
-
+//#define LOG_NUM 64
+//#define NUM_PER_SLOT 1024L
+//#define VALUE_LOG_SIZE NUM_PER_SLOT * 4096
+//#define KEY_LOG_SIZE NUM_PER_SLOT * 12
+//#define PER_MAP_SIZE 1024L
 
 using namespace std;
 namespace polar_race {
@@ -50,20 +52,42 @@ namespace polar_race {
     public:
         explicit PEngine(const string &path) {
             // init
-            this->maps = static_cast<LongIntMapForRace **>(malloc(LOG_NUM * sizeof(LongIntMapForRace *)));
+//            this->maps = static_cast<LongIntMapForRace **>(malloc(LOG_NUM * sizeof(LongIntMapForRace *)));
+            this->sortLogs = static_cast<SortLog **>(malloc(LOG_NUM * sizeof(SortLog *)));
             this->keyLogs = static_cast<KeyLog **>(malloc(LOG_NUM * sizeof(KeyLog *)));
             this->valueLogs = static_cast<ValueLog **>(malloc(LOG_NUM * sizeof(ValueLog *)));
 
             for (int i = 0; i < LOG_NUM; i++) {
-                *(maps + i) = new LongIntMapForRace(PER_MAP_SIZE);
+                *(sortLogs + i) = new SortLog(PER_MAP_SIZE);
                 *(keyLogs + i) = new KeyLog(path, i, KEY_LOG_SIZE);
                 *(valueLogs + i) = new ValueLog(path, i, VALUE_LOG_SIZE);
             }
 
+            recover();
+        }
+
+        ~PEngine() {
+            for (int i = 0; i < LOG_NUM; i++) {
+                delete keyLogs[i];
+                delete valueLogs[i];
+//                delete maps[i];
+                delete sortLogs[i];
+            }
+            delete[] keyLogs;
+            delete[] valueLogs;
+//            delete[] maps;
+            delete[] sortLogs;
+
+//            std::cout << "close" << endl;
+
+        }
+
+        void recover(){
             // recover
             std::thread t[LOG_NUM];
             for (int i = 0; i < LOG_NUM; i++) {
-                t[i] = std::thread(&PEngine::startAndRecover, this, keyLogs[i], valueLogs[i], maps[i], i);
+//                t[i] = std::thread(&PEngine::startAndRecover, this, keyLogs[i], valueLogs[i], maps[i], i);
+                t[i] = std::thread(&PEngine::recoverAndSort, this, i);
             }
 
             for (auto &i : t) {
@@ -71,56 +95,35 @@ namespace polar_race {
             }
         }
 
-        ~PEngine() {
-            for (int i = 0; i < LOG_NUM; i++) {
-                delete keyLogs[i];
-                delete valueLogs[i];
-                delete maps[i];
+        void recoverAndSort(const int &id) {
+            KeyLog* keyLog= keyLogs[id];
+            ValueLog* valueLog = valueLogs[id];
+            SortLog* sortLog = sortLogs[id];
+
+            int pos = 0;
+            u_int64_t k = 0;
+            int v = 0;
+            int sum = 0;
+
+            while (keyLog->getKey(k, v, pos)) {
+                sortLog->put(k, v);
+                pos += 12;
+                sum ++;
             }
-            delete[] keyLogs;
-            delete[] valueLogs;
-            delete[] maps;
+
+            sortLog->quicksort();
+
+            keyLog->setKeyBufferPosition(pos);
+//            valueLog->recover(sum);
+            valueLog->setValueFilePosition(((long) sum) << 12);
+            valueLog->flush(sum);
+
+
         }
-
-        int getLogId(const PolarString &k) {
-//            return (*((u_int8_t *) (k.data()))) >> LOG_NUM_BITS;
-            return (int) (*((u_int8_t *) (k.data())));
-        }
-
-        void put(const PolarString &key, const PolarString &value) {
-            auto logId = getLogId(key);
-            logMutex[logId].lock();
-            int index = valueLogs[logId]->putValue(value.data());
-            keyLogs[logId]->putValue(key, index);
-            logMutex[logId].unlock();
-        }
-
-        RetCode read(const PolarString &key, string *value) {
-            auto buffer = readBuffer.get();
-            auto logId = getLogId(key);
-            auto k = (long *) key.data();
-            auto index = maps[logId]->getOrDefault(*k, -1);
-            if (index == -1) {
-                return kNotFound;
-            } else {
-                valueLogs[logId]->readValue(index, buffer);
-                value->assign(buffer, 4096);
-                return kSucc;
-            }
-        }
-
-    private:
-        KeyLog **keyLogs;
-
-        ValueLog **valueLogs;
-
-        LongIntMapForRace **maps;
-
-        std::mutex logMutex[LOG_NUM];
 
         void startAndRecover(KeyLog *keyLog, ValueLog *valueLog, LongIntMapForRace *map, const int &id) {
             int pos = 0;
-            long k = 0;
+            u_int64_t k = 0;
             int v = 0;
             int sum = 0;
             while (keyLog->getKey(k, v, pos)) {
@@ -133,6 +136,50 @@ namespace polar_race {
             valueLog->setValueFilePosition(((long) sum) << 12);
             valueLog->flush(sum);
         }
+
+        int getLogId(const PolarString &k) {
+            return (*((u_int8_t *) (k.data()))) >> 2;
+        }
+
+        void put(const PolarString &key, const PolarString &value) {
+
+            auto logId = getLogId(key);
+            logMutex[logId].lock();
+            int index = valueLogs[logId]->putValue(value.data());
+            keyLogs[logId]->putValue(key, index);
+            logMutex[logId].unlock();
+        }
+
+        RetCode read(const PolarString &key, string *value) {
+            auto buffer = readBuffer.get();
+            auto logId = getLogId(key);
+            auto k = (u_int64_t *) key.data();
+//            auto index = maps[logId]->getOrDefault(*k, -1);
+            auto index = sortLogs[logId]->find(*k);
+
+            if (index == -1) {
+                return kNotFound;
+            } else {
+                valueLogs[logId]->readValue(index, buffer);
+                value->assign(buffer, 4096);
+                return kSucc;
+            }
+        }
+
+
+
+    private:
+        KeyLog **keyLogs;
+
+        ValueLog **valueLogs;
+
+        SortLog **sortLogs;
+
+//        LongIntMapForRace **maps;
+
+        std::mutex logMutex[LOG_NUM];
+
+
 
     };
 

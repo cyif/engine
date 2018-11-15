@@ -45,15 +45,15 @@ namespace polar_race {
 
 
         void putValue(const PolarString &key, const int value) {
-            auto k = (long *) key.data();
+            auto k = (u_int64_t *) key.data();
             memcpy(keyBuffer + keyBufferPosition, k, 8);
             memcpy(keyBuffer + keyBufferPosition + 8, &value, 4);
             keyBufferPosition += 12;
         }
 
 
-        bool getKey(long & key, int & value, int pos) {
-            key = *(long *)  (keyBuffer + pos);
+        bool getKey(u_int64_t & key, int & value, int pos) {
+            key = *(u_int64_t *)  (keyBuffer + pos);
             value = *(int *) (keyBuffer + pos + 8);
             return (key != 0 || value != 0);
         }

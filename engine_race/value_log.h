@@ -26,7 +26,7 @@ namespace polar_race {
         size_t PAGE_PER_BLOCK = 4;
         size_t BLOCK_SIZE = PAGE_PER_BLOCK * 4096;
 
-        ValueLog(const std::string &path, const int &id, const long &size) : id(id), filePosition(0), clearFlag(1) {
+        ValueLog(const std::string &path, const int &id, const long &size) : id(id), filePosition(0) {
 
             //获得value file path
             std::ostringstream fp, cfp;
@@ -51,30 +51,29 @@ namespace polar_race {
         }
 
         ~ValueLog() {
-            if (clearFlag){
-                munmap(cacheBuffer, BLOCK_SIZE);
-                close(this->cacheFd);
-            }
-
+            munmap(cacheBuffer, BLOCK_SIZE);
             close(this->fd);
+            close(this->cacheFd);
         }
 
 
         int putValue(const char *value) {
-            int currentPos = (int)((filePosition >> 12) + cacheBufferPosition);
-            memcpy(cacheBuffer + (cacheBufferPosition << 12), value, 4096);
-            cacheBufferPosition++;
-            if (cacheBufferPosition == 4) {
+
+            if (cacheBufferPosition == PAGE_PER_BLOCK) {
                 pwrite(this->fd, cacheBuffer, BLOCK_SIZE, filePosition);
                 filePosition += BLOCK_SIZE;
                 cacheBufferPosition = 0;
             }
+
+            int currentPos = (filePosition >> 12) + cacheBufferPosition;
+            memcpy(cacheBuffer + (cacheBufferPosition << 12), value, 4096);
+            cacheBufferPosition++;
             return currentPos;
         }
 
         void readValue(int index, char *value) {
 //            if (index >= (this->filePosition >> 12)) {
-//                int cacheBufferPosition = (int)(index - (this->filePosition >> 12));
+//                int cacheBufferPosition = index - (this->filePosition >> 12);
 //                memcpy(value, cacheBuffer + (cacheBufferPosition << 12), 4096);
 //            } else {
 //                pread(this->fd, value, 4096, ((long) index) * 4096);
@@ -86,24 +85,23 @@ namespace polar_race {
             this->filePosition = position;
         }
 
-
         void recover(int sum) {
-            cacheBufferPosition = sum % (int)PAGE_PER_BLOCK;
-            setValueFilePosition(((long) sum - cacheBufferPosition) <<12);
+            cacheBufferPosition = sum % PAGE_PER_BLOCK;
+            if (cacheBufferPosition == 0) {
+                setValueFilePosition(((long) sum) << 12);
+            } else {
+                setValueFilePosition(((long) sum - (sum % PAGE_PER_BLOCK)) << 12);
+            }
         }
 
         void flush(int sum) {
-            cacheBufferPosition = sum % (int)PAGE_PER_BLOCK;
-            if (cacheBufferPosition != 0) {
-                pwrite(this->fd, cacheBuffer, ((size_t)cacheBufferPosition << 12),
-                       filePosition - (cacheBufferPosition << 12));
+            if (sum != 0) {
+                cacheBufferPosition = sum % (int) PAGE_PER_BLOCK;
+                if (cacheBufferPosition == 0)
+                    pwrite(this->fd, cacheBuffer, BLOCK_SIZE, filePosition - BLOCK_SIZE);
+                else
+                    pwrite(this->fd, cacheBuffer, ((size_t) cacheBufferPosition * 4096), filePosition - (cacheBufferPosition << 12));
                 cacheBufferPosition = 0;
-            }
-
-            if (sum > 240000){
-                munmap(cacheBuffer, BLOCK_SIZE);
-                close(this->cacheFd);
-                clearFlag = 0;
             }
         }
 
@@ -117,7 +115,6 @@ namespace polar_race {
         u_int8_t *cacheBuffer;
         int cacheBufferPosition;
 
-        int clearFlag;
     };
 }
 #endif //ENGINE_VALUE_LOG_H
