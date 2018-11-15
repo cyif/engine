@@ -107,7 +107,7 @@ namespace polar_race {
 
 
         int getLogId(const PolarString &k) {
-            return (*((u_int8_t *) (k.data()))) % 4;
+            return (*((u_int8_t *) (k.data()))) >> 2;
         }
 
         void put(const PolarString &key, const PolarString &value) {
