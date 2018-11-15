@@ -47,9 +47,6 @@ public:
     }
 
     void quicksort(int pLeft, int pRight) {
-
-//        std::cout << pLeft << " " << pRight << std::endl;
-
         if (pLeft < pRight) {
             int storeIndex = partition(pLeft, pRight);
             quicksort(pLeft, storeIndex - 1);
@@ -77,9 +74,6 @@ public:
     }
 
      void swap(int left, int right) {
-//        keys[left] ^= keys[right] ^= keys[left] ^= keys[right];
-//        values[left] ^= values[right] ^= values[left] ^= values[right];
-
         u_int64_t tmp_key = keys[left];
         keys[left] = keys[right];
         keys[right] = tmp_key;

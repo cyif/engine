@@ -14,7 +14,6 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <mutex>
-#include "LongIntMapForRace.h"
 #include "../include/polar_string.h"
 #include "../include/engine.h"
 using namespace std;

@@ -10,7 +10,6 @@
 #include <fcntl.h>
 #include <stdio.h>
 #include <aio.h>
-
 #include <sys/time.h>      //添加头文件
 #include <unistd.h>
 #include <string>
@@ -24,18 +23,12 @@
 #include "value_log.h"
 #include "SortLog.h"
 
-#define LOG_NUM 64
-#define NUM_PER_SLOT 1024L * 1024
+#define LOG_NUM 256
+#define NUM_PER_SLOT 1024L * 256
 #define VALUE_LOG_SIZE NUM_PER_SLOT * 4096
 #define KEY_LOG_SIZE NUM_PER_SLOT * 12
 #define PER_MAP_SIZE NUM_PER_SLOT
 
-
-//#define LOG_NUM 64
-//#define NUM_PER_SLOT 1024L
-//#define VALUE_LOG_SIZE NUM_PER_SLOT * 4096
-//#define KEY_LOG_SIZE NUM_PER_SLOT * 12
-//#define PER_MAP_SIZE 1024L
 
 using namespace std;
 namespace polar_race {
@@ -51,8 +44,7 @@ namespace polar_race {
 
     public:
         explicit PEngine(const string &path) {
-            // init
-//            this->maps = static_cast<LongIntMapForRace **>(malloc(LOG_NUM * sizeof(LongIntMapForRace *)));
+
             this->sortLogs = static_cast<SortLog **>(malloc(LOG_NUM * sizeof(SortLog *)));
             this->keyLogs = static_cast<KeyLog **>(malloc(LOG_NUM * sizeof(KeyLog *)));
             this->valueLogs = static_cast<ValueLog **>(malloc(LOG_NUM * sizeof(ValueLog *)));
@@ -86,7 +78,6 @@ namespace polar_race {
             // recover
             std::thread t[LOG_NUM];
             for (int i = 0; i < LOG_NUM; i++) {
-//                t[i] = std::thread(&PEngine::startAndRecover, this, keyLogs[i], valueLogs[i], maps[i], i);
                 t[i] = std::thread(&PEngine::recoverAndSort, this, i);
             }
 
@@ -114,28 +105,12 @@ namespace polar_race {
             sortLog->quicksort();
 
             keyLog->setKeyBufferPosition(pos);
-//            valueLog->recover(sum);
             valueLog->setValueFilePosition(((long) sum) << 12);
             valueLog->flush(sum);
 
 
         }
 
-        void startAndRecover(KeyLog *keyLog, ValueLog *valueLog, LongIntMapForRace *map, const int &id) {
-            int pos = 0;
-            u_int64_t k = 0;
-            int v = 0;
-            int sum = 0;
-            while (keyLog->getKey(k, v, pos)) {
-                map->put(k, v);
-                pos += 12;
-                sum ++;
-            }
-            keyLog->setKeyBufferPosition(pos);
-//            valueLog->recover(sum);
-            valueLog->setValueFilePosition(((long) sum) << 12);
-            valueLog->flush(sum);
-        }
 
         int getLogId(const PolarString &k) {
             return (*((u_int8_t *) (k.data()))) >> 2;
@@ -154,7 +129,6 @@ namespace polar_race {
             auto buffer = readBuffer.get();
             auto logId = getLogId(key);
             auto k = (u_int64_t *) key.data();
-//            auto index = maps[logId]->getOrDefault(*k, -1);
             auto index = sortLogs[logId]->find(*k);
 
             if (index == -1) {
@@ -175,12 +149,7 @@ namespace polar_race {
 
         SortLog **sortLogs;
 
-//        LongIntMapForRace **maps;
-
         std::mutex logMutex[LOG_NUM];
-
-
-
     };
 
 }
