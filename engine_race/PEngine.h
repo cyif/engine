@@ -32,8 +32,8 @@
 //#define RECOVER_THREAD 64
 
 
-#define LOG_NUM 64
-#define NUM_PER_SLOT 1024L * 1024
+#define LOG_NUM 256
+#define NUM_PER_SLOT 251000L
 #define VALUE_LOG_SIZE NUM_PER_SLOT * 4096
 #define KEY_LOG_SIZE NUM_PER_SLOT * 8
 #define PER_MAP_SIZE NUM_PER_SLOT
@@ -139,7 +139,7 @@ namespace polar_race {
         }
 
         int getLogId(const char* k) {
-            return *((u_int8_t *) k) % 64;
+            return *((u_int8_t *) k);
         }
 
         void put(const PolarString &key, const PolarString &value) {

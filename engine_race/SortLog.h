@@ -47,8 +47,8 @@ public:
     }
 
     void put(u_int64_t &bigEndkey, const u_int32_t &value) {
-        keys[nums] = swapEndian(bigEndkey);
-//        keys[nums] = bigEndkey;
+//        keys[nums] = swapEndian(bigEndkey);
+        keys[nums] = bigEndkey;
         values[nums] = value;
         nums++;
     };
@@ -102,8 +102,8 @@ public:
 
      int find(u_int64_t & bigEndkey) {
 
-        u_int64_t key = swapEndian(bigEndkey);
-//        u_int64_t key = bigEndkey;
+//        u_int64_t key = swapEndian(bigEndkey);
+        u_int64_t key = bigEndkey;
 
         int left = 0;
         int right = nums - 1;
