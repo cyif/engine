@@ -32,8 +32,8 @@
 //#define RECOVER_THREAD 64
 
 
-#define LOG_NUM 1024
-#define NUM_PER_SLOT 1024L * 64
+#define LOG_NUM 64
+#define NUM_PER_SLOT 1024L * 1024
 #define VALUE_LOG_SIZE NUM_PER_SLOT * 4096
 #define KEY_LOG_SIZE NUM_PER_SLOT * 8
 #define PER_MAP_SIZE NUM_PER_SLOT
@@ -138,13 +138,12 @@ namespace polar_race {
             }
         }
 
-        u_int16_t getLogId(const char* k) {
-            return (((u_int16_t)k[0]) << 2) | (((u_int16_t)k[1]) >>6);
+        int getLogId(const char* k) {
+            return *((u_int8_t *) k) % 64;
         }
 
         void put(const PolarString &key, const PolarString &value) {
-
-            u_int16_t logId = getLogId(key.data());
+            int logId = getLogId(key.data());
             logMutex[logId].lock();
             valueLogs[logId]->putValue(value.data());
             keyLogs[logId]->putValue(key.data());
@@ -153,7 +152,7 @@ namespace polar_race {
 
         RetCode read(const PolarString &key, string *value) {
             auto buffer = readBuffer.get();
-            u_int16_t logId = getLogId(key.data());
+            int logId = getLogId(key.data());
             auto index = sortLogs[logId]->find(*(u_int64_t*)key.data());
 
             if (index == -1) {
