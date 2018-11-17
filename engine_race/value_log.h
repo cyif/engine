@@ -46,6 +46,8 @@ namespace polar_race {
             this->cacheBuffer = static_cast<u_int8_t *>(mmap(nullptr, BLOCK_SIZE, PROT_READ | PROT_WRITE,
                                                              MAP_SHARED | MAP_POPULATE, this->cacheFd, 0));
             this->cacheBufferPosition = 0;
+
+//            posix_memalign((void **) &cacheBuffer, BLOCK_SIZE, BLOCK_SIZE);
         }
 
         ~ValueLog() {
@@ -55,32 +57,28 @@ namespace polar_race {
         }
 
 
-        int putValue(const char *value) {
-            int currentPos = (int)((filePosition >> 12) + cacheBufferPosition);
+        void putValue(const char *value) {
+
             memcpy(cacheBuffer + (cacheBufferPosition << 12), value, 4096);
             cacheBufferPosition++;
+
             if (cacheBufferPosition == PAGE_PER_BLOCK) {
                 pwrite(this->fd, cacheBuffer, BLOCK_SIZE, filePosition);
                 filePosition += BLOCK_SIZE;
                 cacheBufferPosition = 0;
             }
-            return currentPos;
         }
 
         void readValue(int index, char *value) {
             pread(this->fd, value, 4096, ((long) index) * 4096);
         }
 
-        void setValueFilePosition(long position) {
-            this->filePosition = position;
-        }
-
-        void flush(int sum) {
+        void recover(u_int32_t sum) {
+            this->filePosition = (off_t)sum << 12;
             if (sum != 0) {
-                cacheBufferPosition = sum % (int)PAGE_PER_BLOCK;
+                cacheBufferPosition = sum % (int) PAGE_PER_BLOCK;
                 if (cacheBufferPosition != 0) {
-                    pwrite(this->fd, cacheBuffer, ((size_t)cacheBufferPosition << 12),
-                           filePosition - (cacheBufferPosition << 12));
+                    pwrite(this->fd, cacheBuffer, ((size_t) cacheBufferPosition << 12), filePosition - (cacheBufferPosition << 12));
                     cacheBufferPosition = 0;
                 }
             }

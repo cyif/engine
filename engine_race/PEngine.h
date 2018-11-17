@@ -10,6 +10,7 @@
 #include <fcntl.h>
 #include <stdio.h>
 #include <aio.h>
+
 #include <sys/time.h>      //添加头文件
 #include <unistd.h>
 #include <string>
@@ -23,14 +24,31 @@
 #include "value_log.h"
 #include "SortLog.h"
 
-#define LOG_NUM 64
-#define NUM_PER_SLOT 1024L * 1024
-#define VALUE_LOG_SIZE NUM_PER_SLOT * 4096
-#define KEY_LOG_SIZE NUM_PER_SLOT * 12
-#define PER_MAP_SIZE NUM_PER_SLOT
+//#define LOG_NUM 256
+//#define NUM_PER_SLOT 255000
+//#define VALUE_LOG_SIZE NUM_PER_SLOT * 4096
+//#define KEY_LOG_SIZE NUM_PER_SLOT * 12
+//#define PER_MAP_SIZE NUM_PER_SLOT
+//#define RECOVER_THREAD 64
 
+
+#define LOG_NUM 1024
+#define NUM_PER_SLOT 1024L * 64
+#define VALUE_LOG_SIZE NUM_PER_SLOT * 4096
+#define KEY_LOG_SIZE NUM_PER_SLOT * 8
+#define PER_MAP_SIZE NUM_PER_SLOT
+#define RECOVER_THREAD 64
+
+
+//#define LOG_NUM 256
+//#define NUM_PER_SLOT 1024L
+//#define VALUE_LOG_SIZE NUM_PER_SLOT * 4096
+//#define KEY_LOG_SIZE NUM_PER_SLOT * 12
+//#define PER_MAP_SIZE 1024L
+//#define RECOVER_THREAD 64
 
 using namespace std;
+using namespace std::chrono;
 namespace polar_race {
     static char *prepare() {
         auto buffer = static_cast<char *>(malloc(4096));
@@ -42,9 +60,20 @@ namespace polar_race {
 
     class PEngine {
 
-    public:
-        explicit PEngine(const string &path) {
+    private:
+        milliseconds start;
+        KeyLog **keyLogs;
+        ValueLog **valueLogs;
+        SortLog **sortLogs;
+        std::mutex logMutex[LOG_NUM];
 
+    public:
+        milliseconds now() {
+            return duration_cast<milliseconds>(system_clock::now().time_since_epoch());
+        }
+
+        explicit PEngine(const string &path) {
+            // init
             this->sortLogs = static_cast<SortLog **>(malloc(LOG_NUM * sizeof(SortLog *)));
             this->keyLogs = static_cast<KeyLog **>(malloc(LOG_NUM * sizeof(KeyLog *)));
             this->valueLogs = static_cast<ValueLog **>(malloc(LOG_NUM * sizeof(ValueLog *)));
@@ -54,8 +83,9 @@ namespace polar_race {
                 *(keyLogs + i) = new KeyLog(path, i, KEY_LOG_SIZE);
                 *(valueLogs + i) = new ValueLog(path, i, VALUE_LOG_SIZE);
             }
-
+            this->start = now();
             recover();
+            fprintf(stderr, "recover complete. time spent is %lims\n", (now() - start).count());
         }
 
         ~PEngine() {
@@ -67,11 +97,13 @@ namespace polar_race {
             delete[] keyLogs;
             delete[] valueLogs;
             delete[] sortLogs;
+            fprintf(stderr, "deleting engine, total life is %lims\n", (now() - start).count());
         }
 
         void recover(){
-            std::thread t[LOG_NUM];
-            for (int i = 0; i < LOG_NUM; i++) {
+            // recover
+            std::thread t[RECOVER_THREAD];
+            for (int i = 0; i < RECOVER_THREAD; i++) {
                 t[i] = std::thread(&PEngine::recoverAndSort, this, i);
             }
 
@@ -80,50 +112,49 @@ namespace polar_race {
             }
         }
 
-        void recoverAndSort(const int &id) {
-            KeyLog* keyLog= keyLogs[id];
-            ValueLog* valueLog = valueLogs[id];
-            SortLog* sortLog = sortLogs[id];
+        void recoverAndSort(const int& thread_id) {
 
-            int pos = 0;
-            u_int64_t k = 0;
-            int v = 0;
-            int sum = 0;
+            char log_per_thread = LOG_NUM / RECOVER_THREAD;
+            int id = thread_id * log_per_thread;
 
-            while (keyLog->getKey(k, v, pos)) {
-                sortLog->put(k, v);
-                pos += 12;
-                sum ++;
+            for (int i = 0; i < log_per_thread; i++) {
+
+                KeyLog* keyLog= keyLogs[id];
+                ValueLog* valueLog = valueLogs[id];
+                SortLog* sortLog = sortLogs[id];
+
+                u_int64_t k;
+                u_int32_t cnt = 0;
+
+                while (keyLog->getKey(k))
+                    sortLog->put(k, cnt++);
+
+                sortLog->quicksort();
+
+                keyLog->setKeyBufferPosition(cnt * 8);
+                valueLog->recover(cnt);
+
+                id++;
             }
-
-            sortLog->quicksort();
-
-            keyLog->setKeyBufferPosition(pos);
-            valueLog->setValueFilePosition(((long) sum) << 12);
-            valueLog->flush(sum);
-
-
         }
 
-
-        int getLogId(const PolarString &k) {
-            return (*((u_int8_t *) (k.data()))) % 64;
+        u_int16_t getLogId(const char* k) {
+            return (((u_int16_t)k[0]) << 2) | (((u_int16_t)k[1]) >>6);
         }
 
         void put(const PolarString &key, const PolarString &value) {
 
-            auto logId = getLogId(key);
+            u_int16_t logId = getLogId(key.data());
             logMutex[logId].lock();
-            int index = valueLogs[logId]->putValue(value.data());
-            keyLogs[logId]->putValue(key, index);
+            valueLogs[logId]->putValue(value.data());
+            keyLogs[logId]->putValue(key.data());
             logMutex[logId].unlock();
         }
 
         RetCode read(const PolarString &key, string *value) {
             auto buffer = readBuffer.get();
-            auto logId = getLogId(key);
-            auto k = (u_int64_t *) key.data();
-            auto index = sortLogs[logId]->find(*k);
+            u_int16_t logId = getLogId(key.data());
+            auto index = sortLogs[logId]->find(*(u_int64_t*)key.data());
 
             if (index == -1) {
                 return kNotFound;
@@ -134,16 +165,6 @@ namespace polar_race {
             }
         }
 
-
-
-    private:
-        KeyLog **keyLogs;
-
-        ValueLog **valueLogs;
-
-        SortLog **sortLogs;
-
-        std::mutex logMutex[LOG_NUM];
     };
 
 }

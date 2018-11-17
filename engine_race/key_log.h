@@ -33,8 +33,9 @@ namespace polar_race {
             this->fd = open(this->filePath.data(), O_CREAT | O_RDWR, 0777);
             this->keyBufferSize = size;
             fallocate(this->fd, 0, 0, this->keyBufferSize);
-            this->keyBuffer = static_cast<u_int8_t *>(mmap(nullptr, this->keyBufferSize, PROT_READ | PROT_WRITE,
+            this->keyBuffer = static_cast<char *>(mmap(nullptr, this->keyBufferSize, PROT_READ | PROT_WRITE,
                                                            MAP_SHARED | MAP_POPULATE, this->fd, 0));
+            this->keyBufferPosition = 0;
         }
 
         ~KeyLog() {
@@ -43,18 +44,17 @@ namespace polar_race {
         }
 
 
-        void putValue(const PolarString &key, const int value) {
-            auto k = (u_int64_t *) key.data();
-            memcpy(keyBuffer + keyBufferPosition, k, 8);
-            memcpy(keyBuffer + keyBufferPosition + 8, &value, 4);
-            keyBufferPosition += 12;
+        void putValue(const char * key) {
+            memcpy(keyBuffer + keyBufferPosition, key, 8);
+            keyBufferPosition += 8;
         }
 
 
-        bool getKey(u_int64_t & key, int & value, int pos) {
-            key = *(u_int64_t *)  (keyBuffer + pos);
-            value = *(int *) (keyBuffer + pos + 8);
-            return (key != 0 || value != 0);
+        bool getKey(u_int64_t & key) {
+//            memcpy(key, keyBuffer + keyBufferPosition, 8);
+            key = *(u_int64_t*)(keyBuffer + keyBufferPosition);
+            keyBufferPosition += 8;
+            return key != 0;
         }
 
         void setKeyBufferPosition(long position) {
@@ -66,7 +66,7 @@ namespace polar_race {
         int fd;
         std::string filePath;
         long keyBufferPosition;
-        u_int8_t *keyBuffer;
+        char * keyBuffer;
         size_t keyBufferSize;
     };
 }
