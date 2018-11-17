@@ -48,7 +48,7 @@
 //#define RECOVER_THREAD 64
 
 using namespace std;
-using namespace std::chrono;
+//using namespace std::chrono;
 namespace polar_race {
     static char *prepare() {
         auto buffer = static_cast<char *>(malloc(4096));
@@ -61,16 +61,16 @@ namespace polar_race {
     class PEngine {
 
     private:
-        milliseconds start;
+//        milliseconds start;
         KeyLog **keyLogs;
         ValueLog **valueLogs;
         SortLog **sortLogs;
         std::mutex logMutex[LOG_NUM];
 
     public:
-        milliseconds now() {
-            return duration_cast<milliseconds>(system_clock::now().time_since_epoch());
-        }
+//        milliseconds now() {
+//            return duration_cast<milliseconds>(system_clock::now().time_since_epoch());
+//        }
 
         explicit PEngine(const string &path) {
             // init
@@ -83,9 +83,9 @@ namespace polar_race {
                 *(keyLogs + i) = new KeyLog(path, i, KEY_LOG_SIZE);
                 *(valueLogs + i) = new ValueLog(path, i, VALUE_LOG_SIZE);
             }
-            this->start = now();
+//            this->start = now();
             recover();
-            fprintf(stderr, "recover complete. time spent is %lims\n", (now() - start).count());
+//            fprintf(stderr, "recover complete. time spent is %lims\n", (now() - start).count());
         }
 
         ~PEngine() {
@@ -97,7 +97,7 @@ namespace polar_race {
             delete[] keyLogs;
             delete[] valueLogs;
             delete[] sortLogs;
-            fprintf(stderr, "deleting engine, total life is %lims\n", (now() - start).count());
+//            fprintf(stderr, "deleting engine, total life is %lims\n", (now() - start).count());
         }
 
         void recover(){
