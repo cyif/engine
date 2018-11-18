@@ -50,13 +50,13 @@
 using namespace std;
 //using namespace std::chrono;
 namespace polar_race {
-    static char *prepare() {
+    static char *alignBuffer() {
         auto buffer = static_cast<char *>(malloc(4096));
         posix_memalign((void **) &buffer, 4096, 4096);
         return buffer;
     }
 
-    static thread_local std::unique_ptr<char> readBuffer(static_cast<char *>(prepare()));
+    static thread_local std::unique_ptr<char> readBuffer(static_cast<char *>(alignBuffer()));
 
     class PEngine {
 
@@ -138,13 +138,12 @@ namespace polar_race {
             }
         }
 
-        int getLogId(const char* k) {
+        inline int getLogId(const char* k) {
             return *((u_int8_t *) k);
         }
 
         void put(const PolarString &key, const PolarString &value) {
-//            int logId = getLogId(key.data());
-            int logId = *((u_int8_t *) key.data());
+            int logId = getLogId(key.data());
             logMutex[logId].lock();
             valueLogs[logId]->putValue(value.data());
             keyLogs[logId]->putValue(key.data());
@@ -153,8 +152,7 @@ namespace polar_race {
 
         RetCode read(const PolarString &key, string *value) {
             auto buffer = readBuffer.get();
-//            int logId = getLogId(key.data());
-            int logId = *((u_int8_t *) key.data());
+            int logId = getLogId(key.data());
             auto index = sortLogs[logId]->find(*(u_int64_t*)key.data());
 
             if (index == -1) {
