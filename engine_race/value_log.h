@@ -46,8 +46,6 @@ namespace polar_race {
             this->cacheBuffer = static_cast<u_int8_t *>(mmap(nullptr, BLOCK_SIZE, PROT_READ | PROT_WRITE,
                                                              MAP_SHARED | MAP_POPULATE, this->cacheFd, 0));
             this->cacheBufferPosition = 0;
-
-//            posix_memalign((void **) &cacheBuffer, BLOCK_SIZE, BLOCK_SIZE);
         }
 
         ~ValueLog() {

@@ -24,14 +24,6 @@
 #include "value_log.h"
 #include "SortLog.h"
 
-//#define LOG_NUM 256
-//#define NUM_PER_SLOT 255000
-//#define VALUE_LOG_SIZE NUM_PER_SLOT * 4096
-//#define KEY_LOG_SIZE NUM_PER_SLOT * 12
-//#define PER_MAP_SIZE NUM_PER_SLOT
-//#define RECOVER_THREAD 64
-
-
 #define LOG_NUM 256
 #define NUM_PER_SLOT 255000L
 #define VALUE_LOG_SIZE NUM_PER_SLOT * 4096
@@ -40,15 +32,8 @@
 #define RECOVER_THREAD 64
 
 
-//#define LOG_NUM 256
-//#define NUM_PER_SLOT 1024L
-//#define VALUE_LOG_SIZE NUM_PER_SLOT * 4096
-//#define KEY_LOG_SIZE NUM_PER_SLOT * 12
-//#define PER_MAP_SIZE 1024L
-//#define RECOVER_THREAD 64
-
 using namespace std;
-//using namespace std::chrono;
+using namespace std::chrono;
 namespace polar_race {
     static char *alignBuffer() {
         auto buffer = static_cast<char *>(malloc(4096));
@@ -61,43 +46,62 @@ namespace polar_race {
     class PEngine {
 
     private:
-//        milliseconds start;
+        milliseconds start;
         KeyLog **keyLogs;
         ValueLog **valueLogs;
         SortLog **sortLogs;
         std::mutex logMutex[LOG_NUM];
 
     public:
-//        milliseconds now() {
-//            return duration_cast<milliseconds>(system_clock::now().time_since_epoch());
-//        }
+        milliseconds now() {
+            return duration_cast<milliseconds>(system_clock::now().time_since_epoch());
+        }
 
         explicit PEngine(const string &path) {
             // init
-            this->sortLogs = static_cast<SortLog **>(malloc(LOG_NUM * sizeof(SortLog *)));
+            this->sortLogs = nullptr;
             this->keyLogs = static_cast<KeyLog **>(malloc(LOG_NUM * sizeof(KeyLog *)));
             this->valueLogs = static_cast<ValueLog **>(malloc(LOG_NUM * sizeof(ValueLog *)));
 
             for (int i = 0; i < LOG_NUM; i++) {
-                *(sortLogs + i) = new SortLog(PER_MAP_SIZE);
-                *(keyLogs + i) = new KeyLog(path, i, KEY_LOG_SIZE);
                 *(valueLogs + i) = new ValueLog(path, i, VALUE_LOG_SIZE);
             }
-//            this->start = now();
-            recover();
-//            fprintf(stderr, "recover complete. time spent is %lims\n", (now() - start).count());
+
+            std::ostringstream ss;
+            ss << path << "/key-0";
+            string filePath = ss.str();
+
+            if (access(filePath.data(), 0) != -1) {
+                this->sortLogs = static_cast<SortLog **>(malloc(LOG_NUM * sizeof(SortLog *)));
+                for (int i = 0; i < LOG_NUM; i++) {
+                    *(sortLogs + i) = new SortLog(PER_MAP_SIZE);
+                    *(keyLogs + i) = new KeyLog(path, i, KEY_LOG_SIZE);
+                }
+                this->start = now();
+                recover();
+                fprintf(stderr, "recover complete. time spent is %lims\n", (now() - start).count());
+            } else{
+                for (int i = 0; i < LOG_NUM; i++) {
+                    *(keyLogs + i) = new KeyLog(path, i, KEY_LOG_SIZE);
+                }
+            }
         }
 
         ~PEngine() {
             for (int i = 0; i < LOG_NUM; i++) {
                 delete keyLogs[i];
                 delete valueLogs[i];
-                delete sortLogs[i];
             }
             delete[] keyLogs;
             delete[] valueLogs;
-            delete[] sortLogs;
-//            fprintf(stderr, "deleting engine, total life is %lims\n", (now() - start).count());
+            if (sortLogs != nullptr){
+                for (int i = 0; i < LOG_NUM; i++) {
+                    delete sortLogs[i];
+                }
+                delete[] sortLogs;
+            }
+
+            fprintf(stderr, "deleting engine, total life is %lims\n", (now() - start).count());
         }
 
         void recover(){

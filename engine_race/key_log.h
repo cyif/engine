@@ -51,7 +51,6 @@ namespace polar_race {
 
 
         bool getKey(u_int64_t & key) {
-//            memcpy(key, keyBuffer + keyBufferPosition, 8);
             key = *(u_int64_t*)(keyBuffer + keyBufferPosition);
             keyBufferPosition += 8;
             return key != 0;

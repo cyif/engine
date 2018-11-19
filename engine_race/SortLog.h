@@ -47,8 +47,8 @@ public:
     }
 
     void put(u_int64_t &bigEndkey, const u_int32_t &value) {
-//        keys[nums] = swapEndian(bigEndkey);
-        keys[nums] = bigEndkey;
+        keys[nums] = swapEndian(bigEndkey);
+//        keys[nums] = bigEndkey;
         values[nums] = value;
         nums++;
     };
@@ -56,14 +56,6 @@ public:
     void quicksort() {
         if (nums > 0){
             quicksort(0, nums - 1);
-//            int k = 0;
-//            for (int i = 0; i < nums; i++)
-//                if (i == nums - 1 || keys[i] != keys[i + 1]) {
-//                    keys[k] = keys[i];
-//                    values[k] = values[i];
-//                    k++;
-//                }
-//            nums = k;
         }
     }
 
@@ -102,9 +94,8 @@ public:
 
      int find(u_int64_t & bigEndkey) {
 
-//        u_int64_t key = swapEndian(bigEndkey);
-        u_int64_t key = bigEndkey;
-
+        u_int64_t key = swapEndian(bigEndkey);
+//        u_int64_t key = bigEndkey;
         int left = 0;
         int right = nums - 1;
         int middle;
