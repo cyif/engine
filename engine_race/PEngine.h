@@ -157,7 +157,7 @@ namespace polar_race {
         RetCode read(const PolarString &key, string *value) {
             auto buffer = readBuffer.get();
             int logId = getLogId(key.data());
-            auto index = sortLogs[logId]->find(*(u_int64_t*)key.data());
+            auto index = sortLogs[logId]->find(*((u_int64_t*)key.data()));
 
             if (index == -1) {
                 return kNotFound;
@@ -166,6 +166,35 @@ namespace polar_race {
                 value->assign(buffer, 4096);
                 return kSucc;
             }
+        }
+        RetCode range(const PolarString &lower, const PolarString &upper,
+                                  Visitor &visitor){
+            auto buffer = readBuffer.get();
+            int logId = getLogId(lower.data());
+            auto sortLogi = sortLogs[logId];
+
+            auto index = sortLogi->findLower(*((u_int64_t*)lower.data()));
+            if (index == -1) {
+                return kNotFound;
+            }
+
+            while (index < sortLogi->size()){
+                u_int64_t keyNow = sortLogi->getKey(index);
+
+                valueLogs[logId]->readValue(sortLogi->getOffset(index), buffer);
+                visitor.Visit(PolarString((char*) keyNow, 8),PolarString(buffer, 4096));
+                index++;
+
+                if (*((u_int64_t*)upper.data()) == keyNow)
+                    break;
+                if (index == sortLogi->size()) {
+                    logId++;
+                    sortLogi = sortLogs[logId];
+                    index = 0;
+                }
+            }
+
+            return kSucc;
         }
 
     };

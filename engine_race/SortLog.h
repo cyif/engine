@@ -35,7 +35,7 @@ public:
         return nums;
     }
 
-    u_int64_t swapEndian(u_int64_t & key){
+    u_int64_t swapEndian(u_int64_t key){
         return (((key & 0x00000000000000FF) << 56) |
                 ((key & 0x000000000000FF00) << 40) |
                 ((key & 0x0000000000FF0000) << 24) |
@@ -112,6 +112,34 @@ public:
             }
         }
         return -1;
+    }
+
+    int findLower(u_int64_t & bigEndLower){
+        u_int64_t lowerKey = swapEndian(bigEndLower);
+        int left = 0;
+        int right = nums - 1;
+        int middle;
+        while (left <= right) {
+            middle = (left + right) / 2;
+            if (keys[middle] == lowerKey) {
+                while (middle + 1 <= nums - 1 && keys[middle + 1] == lowerKey)
+                    middle++;
+                return middle;
+            } else if (lowerKey < keys[middle]) {
+                right = middle - 1;
+            } else {
+                left = middle + 1;
+            }
+        }
+        return -1;
+    }
+
+    int getOffset(int num){
+        return values[num];
+    }
+
+    u_int64_t getKey(int num){
+        return swapEndian(keys[num]);
     }
 
 };
