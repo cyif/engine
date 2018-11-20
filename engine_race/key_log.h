@@ -16,6 +16,7 @@
 #include <mutex>
 #include "../include/polar_string.h"
 #include "../include/engine.h"
+
 using namespace std;
 
 namespace polar_race {
@@ -45,10 +46,9 @@ namespace polar_race {
 
 
         void putValue(const char * key) {
-            memcpy(keyBuffer + keyBufferPosition, key, 8);
+            *(u_int64_t *) (keyBuffer + keyBufferPosition) = *(u_int64_t *) key;
             keyBufferPosition += 8;
         }
-
 
         bool getKey(u_int64_t & key) {
             key = *(u_int64_t*)(keyBuffer + keyBufferPosition);

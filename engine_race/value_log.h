@@ -59,7 +59,6 @@ namespace polar_race {
 
             memcpy(cacheBuffer + (cacheBufferPosition << 12), value, 4096);
             cacheBufferPosition++;
-
             if (cacheBufferPosition == PAGE_PER_BLOCK) {
                 pwrite(this->fd, cacheBuffer, BLOCK_SIZE, filePosition);
                 filePosition += BLOCK_SIZE;
@@ -73,13 +72,10 @@ namespace polar_race {
 
         void recover(u_int32_t sum) {
             this->filePosition = (off_t)sum << 12;
-            if (sum != 0) {
-                cacheBufferPosition = sum % (int) PAGE_PER_BLOCK;
-                if (cacheBufferPosition != 0) {
-                    pwrite(this->fd, cacheBuffer, ((size_t) cacheBufferPosition << 12), filePosition - (cacheBufferPosition << 12));
-                    cacheBufferPosition = 0;
-                }
-            }
+            this->cacheBufferPosition = sum % 4;
+            auto offset = (size_t ) cacheBufferPosition << 12;
+            filePosition -= offset;
+            pwrite(this->fd, cacheBuffer, offset, filePosition);
         }
 
     private:

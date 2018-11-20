@@ -22,7 +22,7 @@ namespace polar_race {
             mkdir(name.data(), 0777);
         }
 
-//        fprintf(stderr, "Opening database!\n");
+        fprintf(stderr, "Opening database!\n");
 
         auto *engine_race = new EngineRace(name);
 
@@ -33,7 +33,7 @@ namespace polar_race {
 // 2. Close engine
     EngineRace::~EngineRace() {
         delete pEngine;
-//        fprintf(stderr, "closing database\n");
+        fprintf(stderr, "closing database\n");
     }
 
 // 3. Write a key-value pair into engine
@@ -60,7 +60,7 @@ namespace polar_race {
 //   Range("", "", visitor)
     RetCode EngineRace::Range(const PolarString &lower, const PolarString &upper,
                               Visitor &visitor) {
-        return kSucc;
+        return pEngine->range(lower, upper, visitor);
     }
 
 }  // namespace polar_race
