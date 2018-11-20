@@ -23,6 +23,8 @@
 #include "key_log.h"
 #include "value_log.h"
 #include "SortLog.h"
+#include "CacheQueue.h"
+#include <unordered_map>
 
 #define LOG_NUM 256
 #define NUM_PER_SLOT 255000
@@ -62,23 +64,48 @@ namespace polar_race {
     private:
         KeyLog **keyLogs;
         ValueLog **valueLogs;
+        mutex logMutex[LOG_NUM];
+
         SortLog **sortLogs;
-        std::mutex logMutex[LOG_NUM];
+        u_int64_t endKey;
+
+        CacheQueue *cacheQueue;
+
+        atomic_bool readThreadFlag;
+        unordered_map<long, int> readThreadIdHash;
+        int readThreadId;
+        mutex readThreadIdLock;
+
 
     public:
         explicit PEngine(const string &path) {
-            // init
-            this->sortLogs = static_cast<SortLog **>(malloc(LOG_NUM * sizeof(SortLog *)));
+
             this->keyLogs = static_cast<KeyLog **>(malloc(LOG_NUM * sizeof(KeyLog *)));
             this->valueLogs = static_cast<ValueLog **>(malloc(LOG_NUM * sizeof(ValueLog *)));
 
-            for (int i = 0; i < LOG_NUM; i++) {
-                *(sortLogs + i) = new SortLog(PER_MAP_SIZE);
-                *(keyLogs + i) = new KeyLog(path, i, KEY_LOG_SIZE);
-                *(valueLogs + i) = new ValueLog(path, i, VALUE_LOG_SIZE);
+            std::ostringstream ss;
+            ss << path << "/key-0";
+            string filePath = ss.str();
+
+            if (access(filePath.data(), 0) != -1) {
+                this->sortLogs = static_cast<SortLog **>(malloc(LOG_NUM * sizeof(SortLog *)));
+                for (int i = 0; i < LOG_NUM; i++) {
+                    *(keyLogs + i) = new KeyLog(path, i, KEY_LOG_SIZE);
+                    *(valueLogs + i) = new ValueLog(path, i, VALUE_LOG_SIZE);
+                    *(sortLogs + i) = new SortLog(NUM_PER_SLOT);
+                }
+                this->cacheQueue = new CacheQueue(this->sortLogs);
+                this->readThreadFlag = false;
+                readThreadId = 0;
+
+                recover();
+            } else {
+                for (int i = 0; i < LOG_NUM; i++) {
+                    *(keyLogs + i) = new KeyLog(path, i, KEY_LOG_SIZE);
+                    *(valueLogs + i) = new ValueLog(path, i, VALUE_LOG_SIZE);
+                }
             }
 
-            recover();
             printf("============================Engine Start!========================\n");
         }
 
@@ -86,37 +113,45 @@ namespace polar_race {
             for (int i = 0; i < LOG_NUM; i++) {
                 delete keyLogs[i];
                 delete valueLogs[i];
-                delete sortLogs[i];
             }
             delete[] keyLogs;
             delete[] valueLogs;
-            delete[] sortLogs;
+
+            if (sortLogs != nullptr) {
+                for (int i = 0; i < LOG_NUM; i++)
+                    delete sortLogs[i];
+                delete[] sortLogs;
+                delete cacheQueue;
+            }
             printf("============================Engine Stop!========================\n");
 
         }
 
-        void recover(){
+       void recover(){
             // recover
             std::thread t[RECOVER_THREAD];
             for (int i = 0; i < RECOVER_THREAD; i++) {
                 t[i] = std::thread(&PEngine::recoverAndSort, this, i);
+                t[i].detach();
             }
 
             for (auto &i : t) {
                 i.join();
             }
+
+            this->endKey = sortLogs[LOG_NUM - 1]->findKeyByIndex(sortLogs[LOG_NUM - 1]->size() - 1);
         }
 
-        void recoverAndSort(const int& thread_id) {
+        void recoverAndSort(const int &thread_id) {
 
             char log_per_thread = LOG_NUM / RECOVER_THREAD;
             int id = thread_id * log_per_thread;
 
             for (int i = 0; i < log_per_thread; i++) {
 
-                KeyLog* keyLog= keyLogs[id];
-                ValueLog* valueLog = valueLogs[id];
-                SortLog* sortLog = sortLogs[id];
+                KeyLog *keyLog= keyLogs[id];
+                ValueLog *valueLog = valueLogs[id];
+                SortLog *sortLog = sortLogs[id];
 
                 u_int64_t k;
                 u_int32_t cnt = 0;
@@ -150,7 +185,7 @@ namespace polar_race {
         RetCode read(const PolarString &key, string *value) {
             auto buffer = readBuffer.get();
             auto logId = getLogId(key.data());
-            auto index = sortLogs[logId]->find(*(u_int64_t*)key.data());
+            auto index = sortLogs[logId]->find(*((u_int64_t*)key.data()));
 
             if (index == -1) {
                 return kNotFound;
@@ -178,6 +213,10 @@ namespace polar_race {
             if (upper == "") {
                 upperFlag = true;
                 upperLogId = LOG_NUM - 1;
+            }
+
+            if (lowerFlag && upperFlag){
+                return rangeAll(visitor);
             }
 
             printf("%lu   %lu\n", swapEndian(lowerKey), swapEndian(upperKey));
@@ -219,6 +258,48 @@ namespace polar_race {
 //              printf("KEY  %lu\n", swapEndian(k));
                 visitor.Visit(PolarString(((char *)(&k)), 8), PolarString(buffer, 4096));
 
+            }
+        }
+
+        RetCode rangeAll(Visitor &visitor){
+            bool expected = false;
+            if (readThreadFlag.compare_exchange_strong(expected, true)){
+                //启动读磁盘线程
+                std::thread readDiskThread = std::thread(&PEngine::readDisk, this);
+                readDiskThread.detach();
+            }
+
+            long id = syscall(224);
+            auto it = readThreadIdHash.find(id);
+            if (it == readThreadIdHash.end()){
+                readThreadIdLock.lock();
+                readThreadIdHash.insert(make_pair(id, readThreadId));
+                readThreadId++;
+                readThreadIdLock.unlock();
+            }
+            it = readThreadIdHash.find(id);
+            int threadId = it->second;
+
+            PolarString key;
+            PolarString value;
+            while (true) {
+                cacheQueue->read(threadId, key, value);
+                visitor.Visit(key, value);
+                if (*((u_int64_t*)key.data()) == this->endKey)
+                    break;
+            }
+
+            return kSucc;
+        }
+
+        void readDisk() {
+            u_int16_t logId;
+            u_int32_t offset;
+            while (true) {
+                char* buffer = cacheQueue->getPutBlock(logId, offset);
+                if (logId == LOG_NUM) break;
+                valueLogs[logId]->readValue(offset, buffer);
+                cacheQueue->addRear();
             }
         }
 
