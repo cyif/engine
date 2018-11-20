@@ -27,7 +27,7 @@
 #include <unordered_map>
 
 #define LOG_NUM 256
-#define NUM_PER_SLOT 255000
+#define NUM_PER_SLOT 2550
 #define VALUE_LOG_SIZE NUM_PER_SLOT * 4096
 #define KEY_LOG_SIZE NUM_PER_SLOT * 8
 #define PER_MAP_SIZE NUM_PER_SLOT
@@ -127,12 +127,12 @@ namespace polar_race {
 
         }
 
-       void recover(){
+        void recover() {
             // recover
             std::thread t[RECOVER_THREAD];
             for (int i = 0; i < RECOVER_THREAD; i++) {
                 t[i] = std::thread(&PEngine::recoverAndSort, this, i);
-                t[i].detach();
+//                t[i].detach();
             }
 
             for (auto &i : t) {
@@ -149,7 +149,7 @@ namespace polar_race {
 
             for (int i = 0; i < log_per_thread; i++) {
 
-                KeyLog *keyLog= keyLogs[id];
+                KeyLog *keyLog = keyLogs[id];
                 ValueLog *valueLog = valueLogs[id];
                 SortLog *sortLog = sortLogs[id];
 
@@ -168,7 +168,7 @@ namespace polar_race {
             }
         }
 
-        int getLogId(const char* k) {
+        int getLogId(const char *k) {
 //            return ((u_int16_t)((u_int8_t)k[0]) << 2) | ((u_int8_t) k[1] >> 6);
             return (*((u_int8_t *) k));
         }
@@ -185,7 +185,7 @@ namespace polar_race {
         RetCode read(const PolarString &key, string *value) {
             auto buffer = readBuffer.get();
             auto logId = getLogId(key.data());
-            auto index = sortLogs[logId]->find(*((u_int64_t*)key.data()));
+            auto index = sortLogs[logId]->find(*((u_int64_t *) key.data()));
 
             if (index == -1) {
                 return kNotFound;
@@ -215,7 +215,7 @@ namespace polar_race {
                 upperLogId = LOG_NUM - 1;
             }
 
-            if (lowerFlag && upperFlag){
+            if (lowerFlag && upperFlag) {
                 return rangeAll(visitor);
             }
 
@@ -226,12 +226,12 @@ namespace polar_race {
                 return kInvalidArgument;
             } else {
                 for (int logId = lowerLogId; logId <= upperLogId; logId++) {
-                    SortLog * sortLog = sortLogs[logId];
-                    ValueLog * valueLog = valueLogs[logId];
+                    SortLog *sortLog = sortLogs[logId];
+                    ValueLog *valueLog = valueLogs[logId];
 //                    printf("%lu   %lu\n", sortLog->getMaxKey(), sortLog->getMinKey());
 
                     if ((!lowerFlag && !sortLog->hasGreaterEqualKey(lowerKey))
-                    || (!upperFlag && !sortLog->hasLessKey(upperKey)))
+                        || (!upperFlag && !sortLog->hasLessKey(upperKey)))
                         break;
 
                     auto l = 0;
@@ -249,29 +249,30 @@ namespace polar_race {
             return kSucc;
         }
 
-        void range(int lowerIndex, int upperIndex, SortLog * sortLog, ValueLog * valueLog, Visitor &visitor, char * buffer) {
+        void
+        range(int lowerIndex, int upperIndex, SortLog *sortLog, ValueLog *valueLog, Visitor &visitor, char *buffer) {
             for (int i = lowerIndex; i <= upperIndex; i++) {
                 auto offset = sortLog->findValueByIndex(i);
 
                 valueLog->readValue(offset, buffer);
                 u_int64_t k = sortLog->findKeyByIndex(i);
 //              printf("KEY  %lu\n", swapEndian(k));
-                visitor.Visit(PolarString(((char *)(&k)), 8), PolarString(buffer, 4096));
+                visitor.Visit(PolarString(((char *) (&k)), 8), PolarString(buffer, 4096));
 
             }
         }
 
-        RetCode rangeAll(Visitor &visitor){
+        RetCode rangeAll(Visitor &visitor) {
             bool expected = false;
-            if (readThreadFlag.compare_exchange_strong(expected, true)){
+            if (readThreadFlag.compare_exchange_strong(expected, true)) {
                 //启动读磁盘线程
                 std::thread readDiskThread = std::thread(&PEngine::readDisk, this);
-                readDiskThread.detach();
+//                readDiskThread.detach();
             }
 
             long id = syscall(224);
             auto it = readThreadIdHash.find(id);
-            if (it == readThreadIdHash.end()){
+            if (it == readThreadIdHash.end()) {
                 readThreadIdLock.lock();
                 readThreadIdHash.insert(make_pair(id, readThreadId));
                 readThreadId++;
@@ -285,7 +286,7 @@ namespace polar_race {
             while (true) {
                 cacheQueue->read(threadId, key, value);
                 visitor.Visit(key, value);
-                if (*((u_int64_t*)key.data()) == this->endKey)
+                if (*((u_int64_t *) key.data()) == this->endKey)
                     break;
             }
 
@@ -296,7 +297,7 @@ namespace polar_race {
             u_int16_t logId;
             u_int32_t offset;
             while (true) {
-                char* buffer = cacheQueue->getPutBlock(logId, offset);
+                char *buffer = cacheQueue->getPutBlock(logId, offset);
                 if (logId == LOG_NUM) break;
                 valueLogs[logId]->readValue(offset, buffer);
                 cacheQueue->addRear();
