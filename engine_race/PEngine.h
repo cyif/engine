@@ -27,7 +27,7 @@
 #include <unordered_map>
 
 #define LOG_NUM 256
-#define NUM_PER_SLOT 2550
+#define NUM_PER_SLOT 255000
 #define VALUE_LOG_SIZE NUM_PER_SLOT * 4096
 #define KEY_LOG_SIZE NUM_PER_SLOT * 8
 #define PER_MAP_SIZE NUM_PER_SLOT
