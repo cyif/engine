@@ -215,11 +215,12 @@ namespace polar_race {
                 upperLogId = LOG_NUM - 1;
             }
 
+            printf("%lu   %lu\n", swapEndian(lowerKey), swapEndian(upperKey));
+
             if (lowerFlag && upperFlag && sortLogs[0]->size() > 200000) {
                 return rangeAll(visitor);
             }
 
-            printf("%lu   %lu\n", swapEndian(lowerKey), swapEndian(upperKey));
 //            printf("%d   %d\n", lowerLogId, upperLogId);
             auto buffer = readBuffer.get();
             if (lowerLogId > upperLogId && !upperFlag) {
