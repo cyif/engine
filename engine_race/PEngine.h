@@ -215,7 +215,7 @@ namespace polar_race {
                 upperLogId = LOG_NUM - 1;
             }
 
-            if (lowerFlag && upperFlag) {
+            if (lowerFlag && upperFlag && sortLogs[0]->size() > 200000) {
                 return rangeAll(visitor);
             }
 
