@@ -13,7 +13,7 @@
 #include <mutex>
 #include <condition_variable>
 
-#define CACHE_SIZE 1
+#define CACHE_SIZE 100
 #define LOG_NUM 256
 
 using namespace std;
@@ -66,17 +66,20 @@ namespace polar_race {
             while (remain[position] == 0 || readPositions[threadId] == rear)
                 full[position].wait(lck);
 
+            lck.unlock();
 
             memcpy(key, (char *)(&keys[position]), 8);
             memcpy(value, (values + (position * 4096)), 4096);
 
             readPositions[threadId]++;
 
+            lck.lock();
             remain[position]--;
             if (remain[position] == 0) {
 //                printf("empty position %d\n",position);
-                empty[position].notify_one();
+                empty[position].notify_all();
             }
+            lck.unlock();
 
         }
 
@@ -91,14 +94,15 @@ namespace polar_race {
                 empty[position].wait(lck);
             }
 
-            getNextKeyOffset(logId, keys[position], offset);
+            lck.unlock();
 
+            getNextKeyOffset(logId, keys[position], offset);
             char* valueCache = values + ((position) * 4096);
 
             rear++;
             getBlockMutex.unlock();
 
-            //            printf("\n========\n");
+//            printf("\n========\n");
 //            printf("remain: %lu\n", remain[position]);
 //            printf("logId: %lu\n", logId);
 //            printf("key: %lu\n", swapEndian(keys[position]));
@@ -110,11 +114,10 @@ namespace polar_race {
 
         //应该由读磁盘线程来操作！！！
         void addRear(u_int32_t position) {
-//            getBlockMutex.lock();
             unique_lock <mutex> lck(mtx[position]);
+//            printf("addRear remain: %lu\n", remain[position]);
             remain[position] = 64;
             full[position].notify_all();
-//            getBlockMutex.unlock();
 
         }
 

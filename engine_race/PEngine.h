@@ -263,7 +263,7 @@ namespace polar_race {
 //                std::thread readDiskThread = std::thread(&PEngine::readDisk, this);
 //                readDiskThread.detach();
 
-                int readThread = 1;
+                int readThread = 4;
                 std::thread t[readThread];
                 for (int i = 0; i < readThread; i++) {
                     t[i] = std::thread(&PEngine::readDisk, this);
@@ -292,10 +292,11 @@ namespace polar_race {
 //            PolarString key;
 //            PolarString value;
 
-            char key[8];
-            char* value = readBuffer.get();
+
 
             while (true) {
+                char key[8];
+                char* value = readBuffer.get();
                 cacheQueue->read(threadId, key, value);
                 visitor.Visit(PolarString(key, 8), PolarString(value, 4096));
                 if (*((u_int64_t *) key) == this->endKey)
@@ -311,7 +312,7 @@ namespace polar_race {
             u_int32_t position;
             while (true) {
                 char *buffer = cacheQueue->getPutBlock(logId, offset, position);
-                printf("getPutBlock: %d\n",position);
+//                printf("getPutBlock: %d\n",position);
                 if (logId == LOG_NUM) break;
                 valueLogs[logId]->readValue(offset, buffer);
                 cacheQueue->addRear(position);
