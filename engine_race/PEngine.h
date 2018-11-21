@@ -23,6 +23,8 @@
 #include "value_log.h"
 #include "SortLog.h"
 #include "CacheQueue.h"
+#include "CacheQueueCondition.h"
+
 #include <unordered_map>
 
 #define LOG_NUM 256
@@ -57,7 +59,9 @@ namespace polar_race {
         SortLog **sortLogs;
         u_int64_t endKey;
 
-        CacheQueue *cacheQueue;
+//        CacheQueue *cacheQueue;
+        CacheQueueCondition * cacheQueue;
+
 
         atomic_bool readThreadFlag;
         unordered_map<std::thread::id, int> readThreadIdHash;
@@ -84,7 +88,7 @@ namespace polar_race {
                     *(valueLogs + i) = new ValueLog(path, i, VALUE_LOG_SIZE);
                     *(sortLogs + i) = new SortLog(NUM_PER_SLOT);
                 }
-                this->cacheQueue = new CacheQueue(this->sortLogs);
+                this->cacheQueue = new CacheQueueCondition(this->sortLogs);
                 this->readThreadFlag = false;
                 readThreadId = 0;
 
@@ -208,7 +212,7 @@ namespace polar_race {
 
 //            printf("%lu   %lu\n", swapEndian(lowerKey), swapEndian(upperKey));
 
-            if (lowerFlag && upperFlag && sortLogs[0]->size() > 200000) {
+            if (lowerFlag && upperFlag) {
                 return rangeAll(visitor);
             }
 
@@ -256,8 +260,18 @@ namespace polar_race {
             if (readThreadFlag.compare_exchange_strong(expected, true)) {
                 //启动读磁盘线程
                 printf("===============start read thread==================\n");
-                std::thread readDiskThread = std::thread(&PEngine::readDisk, this);
-                readDiskThread.detach();
+//                std::thread readDiskThread = std::thread(&PEngine::readDisk, this);
+//                readDiskThread.detach();
+
+                int readThread = 1;
+                std::thread t[readThread];
+                for (int i = 0; i < readThread; i++) {
+                    t[i] = std::thread(&PEngine::readDisk, this);
+                }
+
+                for (auto &i : t) {
+                    i.detach();
+                }
             }
 
             std::thread::id id = std::this_thread::get_id();
@@ -266,14 +280,14 @@ namespace polar_race {
             if (it == readThreadIdHash.end()) {
                 readThreadIdLock.lock();
                 readThreadIdHash.insert(make_pair(id, readThreadId));
-                cout << "threadId: " << id <<  " realId: " << readThreadId << endl;
+//                cout << "threadId: " << id <<  " realId: " << readThreadId << endl;
                 readThreadId++;
                 readThreadIdLock.unlock();
             }
 
             it = readThreadIdHash.find(id);
             int threadId = it->second;
-            cout << "current threadId: " << threadId << endl;
+//            cout << "current threadId: " << threadId << endl;
 
             PolarString key;
             PolarString value;
@@ -291,10 +305,12 @@ namespace polar_race {
             u_int16_t logId;
             u_int32_t offset;
             while (true) {
-                char *buffer = cacheQueue->getPutBlock(logId, offset);
+                int position;
+                char *buffer = cacheQueue->getPutBlock(logId, offset, position);
+//                printf("%d\n",position);
                 if (logId == LOG_NUM) break;
                 valueLogs[logId]->readValue(offset, buffer);
-                cacheQueue->addRear();
+                cacheQueue->addRear(position);
             }
         }
 
