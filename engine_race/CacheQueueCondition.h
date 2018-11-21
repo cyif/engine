@@ -13,7 +13,7 @@
 #include <mutex>
 #include <condition_variable>
 
-#define CACHE_SIZE 60000
+#define CACHE_SIZE 1
 #define LOG_NUM 256
 
 using namespace std;
@@ -58,45 +58,55 @@ namespace polar_race {
         }
 
         //64个线程读取下一个缓存块，返回key和cache地址
-        void read(int &threadId, PolarString & key, PolarString & value) {
+        void read(int &threadId, char* key, char* value) {
 
             u_int32_t position = getRealQueuePosition(readPositions[threadId]);
 
             unique_lock <mutex> lck(mtx[position]);
-            while (remain[position] == 0 || readPositions[threadId] == rear) {
-//                printf("wait %d\n",position);
-//                printf("remain: %d\n",remain[position]);
+            while (remain[position] == 0 || readPositions[threadId] == rear)
                 full[position].wait(lck);
-            }
 
-            key = PolarString((char *)(&keys[position]), 8);
-            value = PolarString(values + (position * 4096), 4096);
+
+            memcpy(key, (char *)(&keys[position]), 8);
+            memcpy(value, (values + (position * 4096)), 4096);
+
             readPositions[threadId]++;
 
             remain[position]--;
-            if (remain[position] == 0)
+            if (remain[position] == 0) {
+//                printf("empty position %d\n",position);
                 empty[position].notify_one();
+            }
 
         }
 
         // 读磁盘线程获取下一个写缓存块，以及文件位置，logId == LOG_NUM 说明读取结束
         char* getPutBlock(u_int16_t &logId, u_int32_t &offset, u_int32_t & position) {
-//            getBlockMutex.lock();
+            getBlockMutex.lock();
 
             position = getRealQueuePosition(rear);
             unique_lock <mutex> lck(mtx[position]);
 
-            while (remain[position] > 0)
+            while (remain[position] > 0) {
                 empty[position].wait(lck);
+            }
 
             getNextKeyOffset(logId, keys[position], offset);
+
             char* valueCache = values + ((position) * 4096);
 
             rear++;
-//            getBlockMutex.unlock();
+            getBlockMutex.unlock();
+
+            //            printf("\n========\n");
+//            printf("remain: %lu\n", remain[position]);
+//            printf("logId: %lu\n", logId);
+//            printf("key: %lu\n", swapEndian(keys[position]));
+//            printf("offset: %lu\n", offset);
 
             return valueCache;
         }
+
 
         //应该由读磁盘线程来操作！！！
         void addRear(u_int32_t position) {

@@ -289,12 +289,16 @@ namespace polar_race {
             int threadId = it->second;
 //            cout << "current threadId: " << threadId << endl;
 
-            PolarString key;
-            PolarString value;
+//            PolarString key;
+//            PolarString value;
+
+            char key[8];
+            char* value = readBuffer.get();
+
             while (true) {
                 cacheQueue->read(threadId, key, value);
-                visitor.Visit(key, value);
-                if (*((u_int64_t *) key.data()) == this->endKey)
+                visitor.Visit(PolarString(key, 8), PolarString(value, 4096));
+                if (*((u_int64_t *) key) == this->endKey)
                     break;
             }
 
@@ -307,7 +311,7 @@ namespace polar_race {
             u_int32_t position;
             while (true) {
                 char *buffer = cacheQueue->getPutBlock(logId, offset, position);
-//                printf("%d\n",position);
+                printf("getPutBlock: %d\n",position);
                 if (logId == LOG_NUM) break;
                 valueLogs[logId]->readValue(offset, buffer);
                 cacheQueue->addRear(position);
