@@ -13,7 +13,7 @@
 #include <mutex>
 #include <condition_variable>
 
-#define CACHE_SIZE 100
+#define CACHE_SIZE 60000
 #define LOG_NUM 256
 
 using namespace std;
@@ -63,7 +63,7 @@ namespace polar_race {
             u_int32_t position = getRealQueuePosition(readPositions[threadId]);
 
             unique_lock <mutex> lck(mtx[position]);
-            while (remain[position] == 0) {
+            while (remain[position] == 0 || readPositions[threadId] == rear) {
 //                printf("wait %d\n",position);
 //                printf("remain: %d\n",remain[position]);
                 full[position].wait(lck);
@@ -75,38 +75,42 @@ namespace polar_race {
 
             remain[position]--;
             if (remain[position] == 0)
-                empty[position].notify_all();
+                empty[position].notify_one();
 
         }
 
         // 读磁盘线程获取下一个写缓存块，以及文件位置，logId == LOG_NUM 说明读取结束
-        char* getPutBlock(u_int16_t &logId, u_int32_t &offset, int & position) {
-            getBlockMutex.lock();
+        char* getPutBlock(u_int16_t &logId, u_int32_t &offset, u_int32_t & position) {
+//            getBlockMutex.lock();
 
             position = getRealQueuePosition(rear);
             unique_lock <mutex> lck(mtx[position]);
+
             while (remain[position] > 0)
                 empty[position].wait(lck);
-
-            rear++;
 
             getNextKeyOffset(logId, keys[position], offset);
             char* valueCache = values + ((position) * 4096);
 
-            getBlockMutex.unlock();
+            rear++;
+//            getBlockMutex.unlock();
 
             return valueCache;
         }
 
         //应该由读磁盘线程来操作！！！
         void addRear(u_int32_t position) {
+//            getBlockMutex.lock();
             unique_lock <mutex> lck(mtx[position]);
             remain[position] = 64;
             full[position].notify_all();
+//            getBlockMutex.unlock();
+
         }
 
 
         void getNextKeyOffset(u_int16_t &logId, u_int64_t &key, u_int32_t &offset) {
+
             if (currentSortIndex == sortLogs[currentSortLog]->size()) {
                 if (currentSortLog == LOG_NUM - 1)
                     rangeCnt++;

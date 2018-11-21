@@ -304,8 +304,8 @@ namespace polar_race {
         void readDisk() {
             u_int16_t logId;
             u_int32_t offset;
+            u_int32_t position;
             while (true) {
-                int position;
                 char *buffer = cacheQueue->getPutBlock(logId, offset, position);
 //                printf("%d\n",position);
                 if (logId == LOG_NUM) break;
