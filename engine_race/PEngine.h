@@ -26,7 +26,7 @@
 #include <unordered_map>
 
 #define LOG_NUM 256
-#define NUM_PER_SLOT 255000
+#define NUM_PER_SLOT 255000L
 #define VALUE_LOG_SIZE NUM_PER_SLOT * 4096
 #define KEY_LOG_SIZE NUM_PER_SLOT * 8
 #define RECOVER_THREAD 64
@@ -257,6 +257,7 @@ namespace polar_race {
                 //启动读磁盘线程
                 printf("===============start read thread==================\n");
                 std::thread readDiskThread = std::thread(&PEngine::readDisk, this);
+                readDiskThread.detach();
             }
 
             std::thread::id id = std::this_thread::get_id();

@@ -39,6 +39,7 @@ namespace polar_race {
                                                   currentSortIndex(0) {
             this->keys = (u_int64_t *) (malloc((CACHE_SIZE) * sizeof(u_int64_t)));
             this->values = (char *) (malloc((CACHE_SIZE) * 4096));
+            posix_memalign((void **) &values, 4096, CACHE_SIZE * 4096);
         }
 
         ~CacheQueue(){
