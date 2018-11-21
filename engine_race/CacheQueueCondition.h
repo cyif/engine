@@ -13,7 +13,7 @@
 #include <mutex>
 #include <condition_variable>
 
-#define CACHE_SIZE 60000
+#define CACHE_SIZE 100000
 #define LOG_NUM 256
 
 using namespace std;
@@ -86,21 +86,16 @@ namespace polar_race {
         // 读磁盘线程获取下一个写缓存块，以及文件位置，logId == LOG_NUM 说明读取结束
         char* getPutBlock(u_int16_t &logId, u_int32_t &offset, u_int32_t & position) {
             getBlockMutex.lock();
-
             position = getRealQueuePosition(rear);
-            unique_lock <mutex> lck(mtx[position]);
-
-            while (remain[position] > 0) {
-                empty[position].wait(lck);
-            }
-
-            lck.unlock();
-
             getNextKeyOffset(logId, keys[position], offset);
             char* valueCache = values + ((position) * 4096);
-
             rear++;
             getBlockMutex.unlock();
+
+            unique_lock <mutex> lck(mtx[position]);
+
+            while (remain[position] > 0)
+                empty[position].wait(lck);
 
 //            printf("\n========\n");
 //            printf("remain: %lu\n", remain[position]);
