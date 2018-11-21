@@ -87,7 +87,8 @@ namespace polar_race {
         char* getPutBlock(u_int16_t &logId, u_int32_t &offset, u_int32_t & position) {
             getBlockMutex.lock();
             position = getRealQueuePosition(rear);
-            getNextKeyOffset(logId, keys[position], offset);
+            u_int64_t key;
+            getNextKeyOffset(logId, key, offset);
             char* valueCache = values + ((position) * 4096);
             rear++;
             getBlockMutex.unlock();
@@ -96,6 +97,7 @@ namespace polar_race {
 
             while (remain[position] > 0)
                 empty[position].wait(lck);
+            keys[position] = key;
 
 //            printf("\n========\n");
 //            printf("remain: %lu\n", remain[position]);
