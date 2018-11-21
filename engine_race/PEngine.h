@@ -45,6 +45,14 @@ namespace polar_race {
 
     static thread_local std::unique_ptr<char> readBuffer(static_cast<char *>(prepare()));
 
+    static char *prepareKey() {
+        auto buffer = static_cast<char *>(malloc(8));
+        return buffer;
+    }
+
+    static thread_local std::unique_ptr<char> readKey(static_cast<char *>(prepareKey()));
+
+
     milliseconds now() {
         return duration_cast<milliseconds>(system_clock::now().time_since_epoch());
     }
@@ -212,7 +220,7 @@ namespace polar_race {
 
 //            printf("%lu   %lu\n", swapEndian(lowerKey), swapEndian(upperKey));
 
-            if (lowerFlag && upperFlag) {
+            if (lowerFlag && upperFlag && (sortLogs[0]->size() > 200000)) {
                 return rangeAll(visitor);
             }
 
@@ -263,7 +271,7 @@ namespace polar_race {
 //                std::thread readDiskThread = std::thread(&PEngine::readDisk, this);
 //                readDiskThread.detach();
 
-                int readThread = 4;
+                int readThread = 64;
                 std::thread t[readThread];
                 for (int i = 0; i < readThread; i++) {
                     t[i] = std::thread(&PEngine::readDisk, this);
@@ -295,7 +303,7 @@ namespace polar_race {
 
 
             while (true) {
-                char key[8];
+                char* key = readKey.get();
                 char* value = readBuffer.get();
                 cacheQueue->read(threadId, key, value);
                 visitor.Visit(PolarString(key, 8), PolarString(value, 4096));

@@ -13,7 +13,7 @@
 #include <mutex>
 #include <condition_variable>
 
-#define CACHE_SIZE 100
+#define CACHE_SIZE 60000
 #define LOG_NUM 256
 
 using namespace std;
