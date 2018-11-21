@@ -219,7 +219,7 @@ namespace polar_race {
             }
 
 //            printf("%lu   %lu\n", swapEndian(lowerKey), swapEndian(upperKey));
-
+//            if (lowerFlag && upperFlag) {
             if (lowerFlag && upperFlag && (sortLogs[0]->size() > 200000)) {
                 return rangeAll(visitor);
             }
@@ -297,17 +297,18 @@ namespace polar_race {
             int threadId = it->second;
 //            cout << "current threadId: " << threadId << endl;
 
-//            PolarString key;
-//            PolarString value;
+            PolarString key;
+            PolarString value;
 
 
 
             while (true) {
-                char* key = readKey.get();
-                char* value = readBuffer.get();
+//                char* key = readKey.get();
+//                char* value = readBuffer.get();
                 cacheQueue->read(threadId, key, value);
-                visitor.Visit(PolarString(key, 8), PolarString(value, 4096));
-                if (*((u_int64_t *) key) == this->endKey)
+//                visitor.Visit(PolarString(key, 8), PolarString(value, 4096));
+                visitor.Visit(key, value);
+                if (*((u_int64_t *) key.data()) == this->endKey)
                     break;
             }
 

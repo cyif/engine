@@ -58,7 +58,7 @@ namespace polar_race {
         }
 
         //64个线程读取下一个缓存块，返回key和cache地址
-        void read(int &threadId, char* key, char* value) {
+        void read(int &threadId, PolarString & key, PolarString & value) {
 
             u_int32_t position = getRealQueuePosition(readPositions[threadId]);
 
@@ -68,8 +68,8 @@ namespace polar_race {
 
             lck.unlock();
 
-            memcpy(key, (char *)(&keys[position]), 8);
-            memcpy(value, (values + (position * 4096)), 4096);
+            key = PolarString((char *)(&keys[position]), 8);
+            value = PolarString(values + (position * 4096), 4096);
 
             readPositions[threadId]++;
 
