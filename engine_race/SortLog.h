@@ -64,14 +64,15 @@ namespace polar_race {
         void quicksort() {
             if (nums > 0) {
                 quicksort(0, nums - 1);
-            int k = 0;
-            for (int i = 0; i < nums; i++)
-                if (i == nums - 1 || keys[i] != keys[i + 1]) {
-                    keys[k] = keys[i];
-                    values[k] = values[i];
-                    k++;
+                int k = 0;
+                for (int i = 0; i < nums; i++){
+                    if (i == nums - 1 || keys[i] != keys[i + 1]) {
+                        keys[k] = keys[i];
+                        values[k] = values[i];
+                        k++;
+                    }
                 }
-            nums = k;
+                nums = k;
             }
         }
 

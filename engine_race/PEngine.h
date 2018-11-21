@@ -10,8 +10,7 @@
 #include <fcntl.h>
 #include <stdio.h>
 #include <aio.h>
-
-#include <sys/time.h>      //添加头文件
+#include <sys/time.h>
 #include <unistd.h>
 #include <string>
 #include <mutex>
@@ -30,26 +29,11 @@
 #define NUM_PER_SLOT 255000
 #define VALUE_LOG_SIZE NUM_PER_SLOT * 4096
 #define KEY_LOG_SIZE NUM_PER_SLOT * 8
-#define PER_MAP_SIZE NUM_PER_SLOT
 #define RECOVER_THREAD 64
 
 
-//#define LOG_NUM 1024
-//#define NUM_PER_SLOT 1024L * 64
-//#define VALUE_LOG_SIZE NUM_PER_SLOT * 4096
-//#define KEY_LOG_SIZE NUM_PER_SLOT * 8
-//#define PER_MAP_SIZE NUM_PER_SLOT
-//#define RECOVER_THREAD 64
-
-
-//#define LOG_NUM 256
-//#define NUM_PER_SLOT 1024L
-//#define VALUE_LOG_SIZE NUM_PER_SLOT * 4096
-//#define KEY_LOG_SIZE NUM_PER_SLOT * 8
-//#define PER_MAP_SIZE 1024L
-//#define RECOVER_THREAD 64
-
 using namespace std;
+using namespace std::chrono;
 namespace polar_race {
     static char *prepare() {
         auto buffer = static_cast<char *>(malloc(4096));
@@ -58,6 +42,10 @@ namespace polar_race {
     }
 
     static thread_local std::unique_ptr<char> readBuffer(static_cast<char *>(prepare()));
+
+    milliseconds now() {
+        return duration_cast<milliseconds>(system_clock::now().time_since_epoch());
+    }
 
     class PEngine {
 
@@ -76,9 +64,11 @@ namespace polar_race {
         int readThreadId;
         mutex readThreadIdLock;
 
+        milliseconds start;
 
     public:
         explicit PEngine(const string &path) {
+            this->start = now();
 
             this->keyLogs = static_cast<KeyLog **>(malloc(LOG_NUM * sizeof(KeyLog *)));
             this->valueLogs = static_cast<ValueLog **>(malloc(LOG_NUM * sizeof(ValueLog *)));
@@ -99,6 +89,7 @@ namespace polar_race {
                 readThreadId = 0;
 
                 recover();
+                fprintf(stderr, "Open database complete. time spent is %lims\n", (now() - start).count());
             } else {
                 for (int i = 0; i < LOG_NUM; i++) {
                     *(keyLogs + i) = new KeyLog(path, i, KEY_LOG_SIZE);
@@ -123,6 +114,7 @@ namespace polar_race {
                 delete[] sortLogs;
                 delete cacheQueue;
             }
+            fprintf(stderr, "deleting engine, total life is %lims\n", (now() - start).count());
             printf("============================Engine Stop!========================\n");
 
         }
@@ -132,7 +124,6 @@ namespace polar_race {
             std::thread t[RECOVER_THREAD];
             for (int i = 0; i < RECOVER_THREAD; i++) {
                 t[i] = std::thread(&PEngine::recoverAndSort, this, i);
-//                t[i].detach();
             }
 
             for (auto &i : t) {
@@ -164,6 +155,7 @@ namespace polar_race {
                 keyLog->setKeyBufferPosition(cnt * 8);
                 valueLog->recover(cnt);
 
+                printf("====sort %d size %d=====\n",id,sortLog->size());
                 id++;
             }
         }
@@ -174,7 +166,6 @@ namespace polar_race {
         }
 
         void put(const PolarString &key, const PolarString &value) {
-
             auto logId = getLogId(key.data());
             logMutex[logId].lock();
             valueLogs[logId]->putValue(value.data());
@@ -221,7 +212,6 @@ namespace polar_race {
                 return rangeAll(visitor);
             }
 
-//            printf("%d   %d\n", lowerLogId, upperLogId);
             auto buffer = readBuffer.get();
             if (lowerLogId > upperLogId && !upperFlag) {
                 return kInvalidArgument;
@@ -229,7 +219,6 @@ namespace polar_race {
                 for (int logId = lowerLogId; logId <= upperLogId; logId++) {
                     SortLog *sortLog = sortLogs[logId];
                     ValueLog *valueLog = valueLogs[logId];
-//                    printf("%lu   %lu\n", sortLog->getMaxKey(), sortLog->getMinKey());
 
                     if ((!lowerFlag && !sortLog->hasGreaterEqualKey(lowerKey))
                         || (!upperFlag && !sortLog->hasLessKey(upperKey)))
@@ -243,7 +232,7 @@ namespace polar_race {
                     if (!upperFlag && logId == upperLogId) {
                         r = sortLog->getMaxIndexLessThan(upperKey);
                     }
-                    printf("RANGE    %d   %d   %d\n", l, r, logId);
+//                    printf("RANGE    %d   %d   %d\n", l, r, logId);
                     range(l, r, sortLog, valueLog, visitor, buffer);
                 }
             }
@@ -257,7 +246,6 @@ namespace polar_race {
 
                 valueLog->readValue(offset, buffer);
                 u_int64_t k = sortLog->findKeyByIndex(i);
-//              printf("KEY  %lu\n", swapEndian(k));
                 visitor.Visit(PolarString(((char *) (&k)), 8), PolarString(buffer, 4096));
 
             }
@@ -267,20 +255,23 @@ namespace polar_race {
             bool expected = false;
             if (readThreadFlag.compare_exchange_strong(expected, true)) {
                 //启动读磁盘线程
+                printf("===============start read thread==================\n");
                 std::thread readDiskThread = std::thread(&PEngine::readDisk, this);
-//                readDiskThread.detach();
             }
 
             long id = syscall(224);
+
             auto it = readThreadIdHash.find(id);
             if (it == readThreadIdHash.end()) {
                 readThreadIdLock.lock();
                 readThreadIdHash.insert(make_pair(id, readThreadId));
+                printf("range threadId %lu, giveid %d\n", id, readThreadId);
                 readThreadId++;
                 readThreadIdLock.unlock();
             }
             it = readThreadIdHash.find(id);
             int threadId = it->second;
+            printf("hash threadId %lu, giveid %d\n", id, threadId);
 
             PolarString key;
             PolarString value;

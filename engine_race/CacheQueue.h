@@ -41,6 +41,10 @@ namespace polar_race {
             this->values = (char *) (malloc((CACHE_SIZE) * 4096));
         }
 
+        ~CacheQueue(){
+            delete keys;
+            delete values;
+        }
         u_int32_t getRealQueuePosition(u_int32_t &position) {
             return position % CACHE_SIZE;
         }
@@ -52,7 +56,7 @@ namespace polar_race {
 
             u_int32_t position = getRealQueuePosition(readPositions[threadId]);
 
-            key = PolarString((char *)&keys[position], 8);
+            key = PolarString((char *)(&keys[position]), 8);
             value = PolarString(values + (position * 4096), 4096);
 
             readPositions[threadId]++;
@@ -103,6 +107,8 @@ namespace polar_race {
             logId = currentSortLog;
             key = sortLogs[currentSortLog]->findKeyByIndex(currentSortIndex);
             offset = sortLogs[currentSortLog]->findValueByIndex(currentSortIndex);
+
+            currentSortIndex++;
 
             if (rangeCnt == 2)
                 logId = LOG_NUM;
