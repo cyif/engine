@@ -29,8 +29,6 @@ namespace polar_race {
         u_int64_t *keys;
         char *values;
         std::mutex getBlockMutex;
-        std::mutex canReadMutex;
-
 
         SortLog **sortLogs;
         u_int16_t currentSortLog;
@@ -51,6 +49,9 @@ namespace polar_race {
             this->keys = (u_int64_t *) (malloc((CACHE_SIZE) * sizeof(u_int64_t)));
             this->values = (char *) (malloc((CACHE_SIZE) * 4096));
             posix_memalign((void **) &values, 4096, CACHE_SIZE * 4096);
+
+            for (int i=0; i<CACHE_SIZE; i++)
+                real[i] = i - CACHE_SIZE;
         }
 
         ~CacheQueueCondition(){
@@ -62,48 +63,48 @@ namespace polar_race {
         }
 
         //64个线程读取下一个缓存块，返回key和cache地址
-        void read(int &threadId, PolarString & key, PolarString & value) {
+        u_int32_t read(int &threadId, PolarString & key, PolarString & value) {
 
-            u_int32_t position = getRealQueuePosition(readPositions[threadId]);
+            u_int32_t position = readPositions[threadId] % CACHE_SIZE;
 
             unique_lock <mutex> lck(mtx[position]);
             while (remain[position] == 0 || readPositions[threadId] != real[position])
-//                full[position].wait(lck);
-                full[position].wait_for(lck, chrono::milliseconds(10));
+                full[position].wait(lck);
+//                full[position].wait_for(lck, chrono::milliseconds(1));
 
-//            lck.unlock();
+            lck.unlock();
 
             key = PolarString((char *)(&keys[position]), 8);
             value = PolarString(values + (position * 4096), 4096);
             readPositions[threadId]++;
 
-//            lck.lock();
+            return position;
+        }
+
+        void visited(u_int32_t position) {
+            unique_lock <mutex> lck(mtx[position]);
             remain[position]--;
             if (remain[position] == 0) {
-//                printf("empty position %d\n",position);
                 empty[position].notify_all();
+//                printf("empty position %d\n",position);
             }
-            lck.unlock();
-
         }
 
         // 读磁盘线程获取下一个写缓存块，以及文件位置，logId == LOG_NUM 说明读取结束
         char* getPutBlock(u_int16_t &logId, u_int32_t &offset, u_int32_t & realNum) {
 
             getBlockMutex.lock();
-            int position = getRealQueuePosition(rear);
+            int position = rear % CACHE_SIZE;
             u_int64_t key;
             getNextKeyOffset(logId, key, offset);
             char* valueCache = values + ((position) * 4096);
 
             realNum = rear;
             rear++;
-
             getBlockMutex.unlock();
 
-
             unique_lock <mutex> lck(mtx[position]);
-            while (remain[position] > 0) {
+            while (remain[position] > 0 || real[position] + CACHE_SIZE != realNum) {
                 empty[position].wait(lck);
             }
 
@@ -111,6 +112,11 @@ namespace polar_race {
 
             return valueCache;
 
+            //            printf("\n========\n");
+//            printf("rear: %d\n",rear);
+//            printf("position: %d\n",position);
+//            printf("newNum: %d\n",realNum);
+//            printf("oldNum: %d\n",real[position]);
             //            printf("\n========\n");
 //            printf("remain: %lu\n", remain[position]);
 //            printf("logId: %lu\n", logId);
@@ -123,7 +129,7 @@ namespace polar_race {
         void addRear(u_int32_t realNum) {
             int position = getRealQueuePosition(realNum);
             unique_lock <mutex> lck(mtx[position]);
-//            printf("addRear remain: %lu\n", remain[position]);
+//            printf("realNum: %lu\n", realNum);
             remain[position] = 64;
             real[position] = realNum;
             full[position].notify_all();
