@@ -13,7 +13,7 @@
 #include <mutex>
 #include <condition_variable>
 
-#define CACHE_SIZE 80000
+#define CACHE_SIZE 100000
 #define LOG_NUM 256
 
 using namespace std;
@@ -68,16 +68,16 @@ namespace polar_race {
 
             unique_lock <mutex> lck(mtx[position]);
             while (remain[position] == 0 || readPositions[threadId] != real[position])
-                full[position].wait(lck);
-//                full[position].wait_for(lck, chrono::milliseconds(10));
+//                full[position].wait(lck);
+                full[position].wait_for(lck, chrono::milliseconds(10));
 
-            lck.unlock();
+//            lck.unlock();
 
             key = PolarString((char *)(&keys[position]), 8);
             value = PolarString(values + (position * 4096), 4096);
             readPositions[threadId]++;
 
-            lck.lock();
+//            lck.lock();
             remain[position]--;
             if (remain[position] == 0) {
 //                printf("empty position %d\n",position);
@@ -98,7 +98,9 @@ namespace polar_race {
 
             realNum = rear;
             rear++;
+
             getBlockMutex.unlock();
+
 
             unique_lock <mutex> lck(mtx[position]);
             while (remain[position] > 0) {

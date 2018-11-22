@@ -219,7 +219,7 @@ namespace polar_race {
             }
 
 //            printf("%lu   %lu\n", swapEndian(lowerKey), swapEndian(upperKey));
-//            if (lowerFlag && upperFlag) {
+
             if (lowerFlag && upperFlag && (sortLogs[0]->size() > 200000)) {
                 return rangeAll(visitor);
             }
@@ -275,7 +275,7 @@ namespace polar_race {
 //                std::thread readDiskThread = std::thread(&PEngine::readDisk, this);
 //                readDiskThread.detach();
 
-                int readThread = 64;
+                int readThread = 16;
                 std::thread t[readThread];
                 for (int i = 0; i < readThread; i++) {
                     t[i] = std::thread(&PEngine::readDisk, this);
