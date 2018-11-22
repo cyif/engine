@@ -68,7 +68,7 @@ namespace polar_race {
         u_int64_t endKey;
 
 //        CacheQueue *cacheQueue;
-        CacheQueueCondition * cacheQueue;
+        CacheQueueCondition *cacheQueue;
 
 
         atomic_bool readThreadFlag;
@@ -224,6 +224,10 @@ namespace polar_race {
                 return rangeAll(visitor);
             }
 
+//            if (lowerFlag && upperFlag) {
+//                return rangeAll(visitor);
+//            }
+
             auto buffer = readBuffer.get();
             if (lowerLogId > upperLogId && !upperFlag) {
                 return kInvalidArgument;
@@ -300,16 +304,21 @@ namespace polar_race {
             PolarString key;
             PolarString value;
 
-
+//            char key[8];
+//            char *value = readBuffer.get();
 
             while (true) {
 //                char* key = readKey.get();
 //                char* value = readBuffer.get();
                 cacheQueue->read(threadId, key, value);
-//                visitor.Visit(PolarString(key, 8), PolarString(value, 4096));
+
                 visitor.Visit(key, value);
                 if (*((u_int64_t *) key.data()) == this->endKey)
                     break;
+
+//                visitor.Visit(PolarString(key, 8), PolarString(value, 4096));
+//                if (*((u_int64_t *) key) == this->endKey)
+//                    break;
             }
 
             return kSucc;

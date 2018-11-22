@@ -13,7 +13,7 @@
 #include <mutex>
 #include <condition_variable>
 
-#define CACHE_SIZE 100000
+#define CACHE_SIZE 80000
 #define LOG_NUM 256
 
 using namespace std;
@@ -29,6 +29,8 @@ namespace polar_race {
         u_int64_t *keys;
         char *values;
         std::mutex getBlockMutex;
+        std::mutex canReadMutex;
+
 
         SortLog **sortLogs;
         u_int16_t currentSortLog;
@@ -39,6 +41,8 @@ namespace polar_race {
         std::condition_variable empty[CACHE_SIZE];
         std::condition_variable full[CACHE_SIZE];
         int remain[CACHE_SIZE]{0};
+        int real[CACHE_SIZE]{0};
+
 
 
     public:
@@ -63,14 +67,14 @@ namespace polar_race {
             u_int32_t position = getRealQueuePosition(readPositions[threadId]);
 
             unique_lock <mutex> lck(mtx[position]);
-            while (remain[position] == 0 || readPositions[threadId] == rear)
+            while (remain[position] == 0 || readPositions[threadId] != real[position])
                 full[position].wait(lck);
+//                full[position].wait_for(lck, chrono::milliseconds(10));
 
             lck.unlock();
 
             key = PolarString((char *)(&keys[position]), 8);
             value = PolarString(values + (position * 4096), 4096);
-
             readPositions[threadId]++;
 
             lck.lock();
@@ -84,38 +88,43 @@ namespace polar_race {
         }
 
         // 读磁盘线程获取下一个写缓存块，以及文件位置，logId == LOG_NUM 说明读取结束
-        char* getPutBlock(u_int16_t &logId, u_int32_t &offset, u_int32_t & position) {
+        char* getPutBlock(u_int16_t &logId, u_int32_t &offset, u_int32_t & realNum) {
+
             getBlockMutex.lock();
-            position = getRealQueuePosition(rear);
+            int position = getRealQueuePosition(rear);
             u_int64_t key;
             getNextKeyOffset(logId, key, offset);
             char* valueCache = values + ((position) * 4096);
+
+            realNum = rear;
             rear++;
             getBlockMutex.unlock();
 
             unique_lock <mutex> lck(mtx[position]);
-
-            while (remain[position] > 0)
+            while (remain[position] > 0) {
                 empty[position].wait(lck);
+            }
+
             keys[position] = key;
 
-//            printf("\n========\n");
+            return valueCache;
+
+            //            printf("\n========\n");
 //            printf("remain: %lu\n", remain[position]);
 //            printf("logId: %lu\n", logId);
-//            printf("key: %lu\n", swapEndian(keys[position]));
+////            printf("key: %lu\n", swapEndian(keys[position]));
 //            printf("offset: %lu\n", offset);
-
-            return valueCache;
         }
 
 
         //应该由读磁盘线程来操作！！！
-        void addRear(u_int32_t position) {
+        void addRear(u_int32_t realNum) {
+            int position = getRealQueuePosition(realNum);
             unique_lock <mutex> lck(mtx[position]);
 //            printf("addRear remain: %lu\n", remain[position]);
             remain[position] = 64;
+            real[position] = realNum;
             full[position].notify_all();
-
         }
 
 
