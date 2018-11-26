@@ -23,7 +23,6 @@
 #include "value_log.h"
 #include "SortLog.h"
 #include "CacheQueue.h"
-#include "CacheQueueCondition.h"
 
 #include <unordered_map>
 
@@ -50,7 +49,7 @@ namespace polar_race {
         return buffer;
     }
 
-    static thread_local std::unique_ptr<char> readKey(static_cast<char *>(prepareKey()));
+//    static thread_local std::unique_ptr<char> readKey(static_cast<char *>(prepareKey()));
 
 
     milliseconds now() {
@@ -65,10 +64,10 @@ namespace polar_race {
         mutex logMutex[LOG_NUM];
 
         SortLog **sortLogs;
-        u_int64_t endKey;
+//        u_int64_t endKey;
 
 //        CacheQueue *cacheQueue;
-        CacheQueueCondition *cacheQueue;
+        CacheQueue *cacheQueue;
 
 
         atomic_bool readThreadFlag;
@@ -96,11 +95,11 @@ namespace polar_race {
                     *(valueLogs + i) = new ValueLog(path, i, VALUE_LOG_SIZE);
                     *(sortLogs + i) = new SortLog(NUM_PER_SLOT);
                 }
-                this->cacheQueue = new CacheQueueCondition(this->sortLogs);
+                recover();
+                this->cacheQueue = new CacheQueue(this->sortLogs);
                 this->readThreadFlag = false;
                 readThreadId = 0;
 
-                recover();
                 fprintf(stderr, "Open database complete. time spent is %lims\n", (now() - start).count());
             } else {
                 for (int i = 0; i < LOG_NUM; i++) {
@@ -142,7 +141,7 @@ namespace polar_race {
                 i.join();
             }
 
-            this->endKey = sortLogs[LOG_NUM - 1]->findKeyByIndex(sortLogs[LOG_NUM - 1]->size() - 1);
+//            this->endKey = sortLogs[LOG_NUM - 1]->findKeyByIndex(sortLogs[LOG_NUM - 1]->size() - 1);
         }
 
         void recoverAndSort(const int &thread_id) {
@@ -218,8 +217,6 @@ namespace polar_race {
                 upperLogId = LOG_NUM - 1;
             }
 
-//            printf("%lu   %lu\n", swapEndian(lowerKey), swapEndian(upperKey));
-
             if (lowerFlag && upperFlag && (sortLogs[0]->size() > 200000)) {
                 return rangeAll(visitor);
             }
@@ -255,8 +252,7 @@ namespace polar_race {
             return kSucc;
         }
 
-        void
-        range(int lowerIndex, int upperIndex, SortLog *sortLog, ValueLog *valueLog, Visitor &visitor, char *buffer) {
+        void range(int lowerIndex, int upperIndex, SortLog *sortLog, ValueLog *valueLog, Visitor &visitor, char *buffer) {
             for (int i = lowerIndex; i <= upperIndex; i++) {
                 auto offset = sortLog->findValueByIndex(i);
 
@@ -272,8 +268,6 @@ namespace polar_race {
             if (readThreadFlag.compare_exchange_strong(expected, true)) {
                 //启动读磁盘线程
                 printf("===============start read thread==================\n");
-//                std::thread readDiskThread = std::thread(&PEngine::readDisk, this);
-//                readDiskThread.detach();
 
                 int readThread = 64;
                 std::thread t[readThread];
@@ -286,37 +280,7 @@ namespace polar_race {
                 }
             }
 
-            std::thread::id id = std::this_thread::get_id();
-
-            auto it = readThreadIdHash.find(id);
-            if (it == readThreadIdHash.end()) {
-                readThreadIdLock.lock();
-                readThreadIdHash.insert(make_pair(id, readThreadId));
-//                cout << "threadId: " << id <<  " realId: " << readThreadId << endl;
-                readThreadId++;
-                readThreadIdLock.unlock();
-            }
-
-            it = readThreadIdHash.find(id);
-            int threadId = it->second;
-//            cout << "current threadId: " << threadId << endl;
-
-            PolarString key;
-            PolarString value;
-            u_int32_t position;
-
-//            char key[8];
-//            char *value = readBuffer.get();
-
-            while (true) {
-//                char* key = readKey.get();
-//                char* value = readBuffer.get();
-                position = cacheQueue->read(threadId, key, value);
-                visitor.Visit(key, value);
-                cacheQueue->visited(position);
-                if (*((u_int64_t *) key.data()) == this->endKey)
-                    break;
-            }
+            cacheQueue->read(visitor);
 
             return kSucc;
         }
@@ -330,19 +294,8 @@ namespace polar_race {
 //                printf("getPutBlock: %d\n",position);
                 if (logId == LOG_NUM) break;
                 valueLogs[logId]->readValue(offset, buffer);
-                cacheQueue->addRear(position);
+                cacheQueue->putBlockFinished(position);
             }
-        }
-
-        u_int64_t swapEndian(u_int64_t key) {
-            return (((key & 0x00000000000000FF) << 56) |
-                    ((key & 0x000000000000FF00) << 40) |
-                    ((key & 0x0000000000FF0000) << 24) |
-                    ((key & 0x00000000FF000000) << 8) |
-                    ((key & 0x000000FF00000000) >> 8) |
-                    ((key & 0x0000FF0000000000) >> 24) |
-                    ((key & 0x00FF000000000000) >> 40) |
-                    ((key & 0xFF00000000000000) >> 56));
         }
     };
 
