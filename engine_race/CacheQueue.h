@@ -14,7 +14,7 @@
 #include <mutex>
 #include <condition_variable>
 
-#define CACHE_SIZE 100
+#define CACHE_SIZE 100000
 #define LOG_NUM 256
 
 using namespace std;
@@ -24,10 +24,6 @@ namespace polar_race {
     private:
         u_int32_t rear;
 
-        //每个线程下一个要读取的位置
-        u_int32_t readPositions[64]{0};
-
-        u_int64_t *keys;
         char *values;
         std::mutex getBlockMutex;
 
@@ -39,8 +35,8 @@ namespace polar_race {
         std::mutex putFinishMtx[CACHE_SIZE];
         std::mutex getFinishMtx[CACHE_SIZE];
 
-        std::condition_variable empty[CACHE_SIZE];
-        std::condition_variable full[CACHE_SIZE];
+        std::condition_variable_any empty[CACHE_SIZE];
+        std::condition_variable_any full[CACHE_SIZE];
         int remain[CACHE_SIZE]{0};
         int real[CACHE_SIZE]{0};
 
@@ -50,7 +46,6 @@ namespace polar_race {
     public:
         explicit CacheQueue(SortLog **sortLogs) : sortLogs(sortLogs), rear(0), currentSortLog(0),
                                                            currentSortIndex(0) {
-            this->keys = (u_int64_t *) (malloc((CACHE_SIZE) * sizeof(u_int64_t)));
             this->values = (char *) (malloc((CACHE_SIZE) * 4096));
             posix_memalign((void **) &values, 4096, CACHE_SIZE * 4096);
 
@@ -65,7 +60,6 @@ namespace polar_race {
         }
 
         ~CacheQueue() {
-            delete keys;
             delete values;
         }
 
@@ -77,10 +71,10 @@ namespace polar_race {
 
                     int position = readPositions % CACHE_SIZE;
                     if (remain[position] == 0 || readPositions != real[position]) {
-                        unique_lock<mutex> lck(putFinishMtx[position]);
+                        putFinishMtx[position].lock();
                         while (remain[position] == 0 || readPositions != real[position])
-                            full[position].wait(lck);
-                        lck.unlock();
+                            full[position].wait(putFinishMtx[position]);
+                        putFinishMtx[position].unlock();
                     }
 
                     u_int64_t k = sortLogs[logId]->findKeyByIndex(i);
@@ -88,11 +82,11 @@ namespace polar_race {
                     visitor.Visit(PolarString(((char *) (&k)), 8), PolarString(v, 4096));
                     readPositions++;
 
-                    unique_lock<mutex> lck(getFinishMtx[position]);
+                    getFinishMtx[position].lock();
                     remain[position]--;
                     if (remain[position] == 0)
                         empty[position].notify_all();
-                    lck.unlock();
+                    getFinishMtx[position].unlock();
                 }
             }
         }
@@ -108,26 +102,31 @@ namespace polar_race {
             rear = (rear + 1) % totalNum;
             getBlockMutex.unlock();
 
-            if (remain[position] > 0 || (real[position] + CACHE_SIZE) % totalNum != realNum) {
-                unique_lock<mutex> lck(getFinishMtx[position]);
-                while (remain[position] > 0 || (real[position] + CACHE_SIZE) % totalNum != realNum) {
-                    empty[position].wait(lck);
+
+            if (remain[position] > 0 || (realNum >= CACHE_SIZE && real[position] + CACHE_SIZE != realNum)) {
+//                printf("position %d\n", position);
+//                printf("real position %d\n", real[position]);
+//                printf("real num %d\n", realNum);
+
+                getFinishMtx[position].lock();
+                while (remain[position] > 0 || (realNum >= CACHE_SIZE && real[position] + CACHE_SIZE != realNum)) {
+                    empty[position].wait(getFinishMtx[position]);
                 }
-                lck.unlock();
+                getFinishMtx[position].unlock();
             }
 
-            char *valueCache = values + ((position) * 4096);
-            return valueCache;
+            return values + ((position) * 4096);
         }
 
 
         //应该由读磁盘线程来操作！！！
         void putBlockFinished(u_int32_t realNum) {
             int position = realNum % CACHE_SIZE;
-            unique_lock<mutex> lck(putFinishMtx[position]);
+            putFinishMtx[position].lock();
             remain[position] = 64;
             real[position] = realNum;
             full[position].notify_all();
+            putFinishMtx[position].unlock();
         }
 
 
