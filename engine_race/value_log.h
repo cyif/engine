@@ -23,7 +23,7 @@ namespace polar_race {
 
     class ValueLog {
     public:
-        size_t PAGE_PER_BLOCK = 12;
+        size_t PAGE_PER_BLOCK = 8;
         size_t BLOCK_SIZE = PAGE_PER_BLOCK * 4096;
 
         ValueLog(const std::string &path, const int &id, const long &size) : id(id), filePosition(0) {

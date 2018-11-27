@@ -35,7 +35,7 @@ const size_t PER_MAP_SIZE = NUM_PER_SLOT;
 const int RECOVER_THREAD = 64;
 const size_t CACHE_SIZE = 1024 * 16 * 4096;
 const int CACHE_NUM = 14;
-const int CACHE_BLOCK_SIZE = 16 * 1024 * 1024;   //16mb
+const int CACHE_BLOCK_SIZE = 4 * 1024 * 1024;   //16mb
 
 //const int LOG_NUM = 1024;
 //const int NUM_PER_SLOT = 1024 * 4;
