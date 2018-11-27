@@ -33,8 +33,8 @@ const size_t VALUE_LOG_SIZE = NUM_PER_SLOT * 4096;  //512mb
 const size_t KEY_LOG_SIZE = NUM_PER_SLOT * 8;
 const size_t PER_MAP_SIZE = NUM_PER_SLOT;
 const int RECOVER_THREAD = 64;
-const size_t CACHE_SIZE = VALUE_LOG_SIZE;
-const int CACHE_NUM = 12;
+const size_t CACHE_SIZE = 1024 * 16 * 4096;
+const int CACHE_NUM = 14;
 const int CACHE_BLOCK_SIZE = 16 * 1024 * 1024;   //16mb
 
 //const int LOG_NUM = 1024;
@@ -176,10 +176,10 @@ namespace polar_race {
                 i.join();
             }
 
-            for (int i = 0; i < LOG_NUM; i++) {
-                printf("sortlog %d size: %d\n", i, sortLogs[i]->size());
-                totalNum += sortLogs[i]->size();
-            }
+//            for (int i = 0; i < LOG_NUM; i++) {
+//                printf("sortlog %d size: %d\n", i, sortLogs[i]->size());
+//                totalNum += sortLogs[i]->size();
+//            }
         }
 
         void recoverAndSort(const int& thread_id) {
@@ -260,7 +260,7 @@ namespace polar_race {
 //                return kSucc;
 //            }
 
-            if (lower == "" && upper == "" && (totalNum > 1000000)) {
+            if (lower == "" && upper == "" && (sortLogs[0]->size() > 10000)) {
                 rangeAll(visitor);
                 return kSucc;
             }
