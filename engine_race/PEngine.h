@@ -34,7 +34,7 @@ const size_t KEY_LOG_SIZE = NUM_PER_SLOT * 8;
 const size_t PER_MAP_SIZE = NUM_PER_SLOT;
 
 const size_t CACHE_SIZE = 1024*16*4096;
-const int CACHE_NUM = 8;
+const int CACHE_NUM = 16;
 const int CACHE_BLOCK_SIZE = 8 * 1024 * 1024;   //16mb
 
 const int RECOVER_THREAD = 64;
