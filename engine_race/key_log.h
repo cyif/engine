@@ -36,7 +36,7 @@ namespace polar_race {
             this->keyBufferSize = size;
             fallocate(this->fd, 0, 0, this->keyBufferSize);
             this->keyBuffer = static_cast<char *>(mmap(nullptr, this->keyBufferSize, PROT_READ | PROT_WRITE,
-                                                           MAP_SHARED | MAP_POPULATE, this->fd, 0));
+                                                       MAP_SHARED | MAP_POPULATE, this->fd, 0));
             this->keyBufferPosition = 0;
         }
 

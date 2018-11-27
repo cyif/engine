@@ -20,7 +20,6 @@
 
 namespace polar_race {
 
-
     class ValueLog {
     public:
         size_t PAGE_PER_BLOCK = 8;
@@ -45,7 +44,6 @@ namespace polar_race {
             fallocate(this->cacheFd, 0, 0, BLOCK_SIZE);
             this->cacheBuffer = static_cast<u_int8_t *>(mmap(nullptr, BLOCK_SIZE, PROT_READ | PROT_WRITE,
                                                              MAP_SHARED | MAP_POPULATE, this->cacheFd, 0));
-
             this->cacheBufferPosition = 0;
         }
 
@@ -78,9 +76,9 @@ namespace polar_race {
         }
 
         void recover(u_int32_t sum) {
-            this->filePosition = (off_t) sum << 12;
+            this->filePosition = (off_t)sum << 12;
             this->cacheBufferPosition = sum % PAGE_PER_BLOCK;
-            auto offset = (size_t) cacheBufferPosition << 12;
+            auto offset = (size_t ) cacheBufferPosition << 12;
             filePosition -= offset;
             pwrite(this->fd, cacheBuffer, offset, filePosition);
         }
@@ -93,7 +91,6 @@ namespace polar_race {
         std::string cacheFilePath;
         off_t filePosition;
         u_int8_t *cacheBuffer;
-        u_int8_t *cacheBufferLimit;
         int cacheBufferPosition;
 
     };

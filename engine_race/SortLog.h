@@ -12,24 +12,12 @@ namespace polar_race {
     class SortLog {
 
     private:
-        u_int64_t *keys;
-        u_int32_t *values;
+        u_int64_t keys[1024 * 20];
+        u_int32_t values[1024 * 20];
         int nums = 0;
         int arraySize;
 
     public:
-
-        explicit SortLog(int capacity) :
-                arraySize(capacity),
-                nums(0) {
-            this->keys = static_cast<u_int64_t *>(malloc((arraySize) * sizeof(u_int64_t)));
-            this->values = static_cast<u_int32_t *>(malloc((arraySize) * sizeof(u_int32_t)));
-        };
-
-        ~SortLog() {
-            free(keys);
-            free(values);
-        };
 
         int size() {
             return nums;

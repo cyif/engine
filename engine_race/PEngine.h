@@ -32,11 +32,13 @@ const int NUM_PER_SLOT = 1024 * 20;
 const size_t VALUE_LOG_SIZE = NUM_PER_SLOT * 4096;  //512mb
 const size_t KEY_LOG_SIZE = NUM_PER_SLOT * 8;
 const size_t PER_MAP_SIZE = NUM_PER_SLOT;
-const int RECOVER_THREAD = 64;
-const size_t CACHE_SIZE = 1024 * 16 * 4096;
-const int CACHE_NUM = 14;
-const int CACHE_BLOCK_SIZE = 4 * 1024 * 1024;   //16mb
 
+const size_t CACHE_SIZE = 1024*16*4096;
+const int CACHE_NUM = 8;
+const int CACHE_BLOCK_SIZE = 8 * 1024 * 1024;   //16mb
+
+const int RECOVER_THREAD = 64;
+const int READDISK_THREAD = 64;
 //const int LOG_NUM = 1024;
 //const int NUM_PER_SLOT = 1024 * 4;
 //const size_t VALUE_LOG_SIZE = NUM_PER_SLOT * 4096;
@@ -56,7 +58,7 @@ using namespace std::chrono;
 namespace polar_race {
     static char *prepare() {
         auto buffer = static_cast<char *>(malloc(4096));
-        posix_memalign((void **) &buffer, 4096, 4096);
+        posix_memalign((void **) &buffer, (size_t) getpagesize(), 4096);
         return buffer;
     }
     milliseconds now() {
@@ -74,10 +76,8 @@ namespace polar_race {
         SortLog **sortLogs;
         std::mutex logMutex[LOG_NUM];
 
-        int totalNum = 0;
-
         char * valueCache;
-        ThreadPool * readDiskThreadPool = new ThreadPool(64);
+        ThreadPool * readDiskThreadPool;
         std::atomic_flag readDiskFlag = ATOMIC_FLAG_INIT;
 
 //        std::atomic<int> threadCount = ATOMIC_VAR_INIT(0);
@@ -118,9 +118,9 @@ namespace polar_race {
             if (access(filePath.data(), 0) != -1) {
                 this->sortLogs = static_cast<SortLog **>(malloc(LOG_NUM * sizeof(SortLog *)));
                 this->valueCache = static_cast<char *>(malloc(CACHE_SIZE * CACHE_NUM));
-                posix_memalign((void **) &valueCache, 4096, CACHE_SIZE * CACHE_NUM);
+                posix_memalign((void **) &valueCache, (size_t) getpagesize(), CACHE_SIZE * CACHE_NUM);
                 for (int i = 0; i < LOG_NUM; i++) {
-                    *(sortLogs + i) = new SortLog(PER_MAP_SIZE);
+                    *(sortLogs + i) = new SortLog();
                     *(keyLogs + i) = new KeyLog(path, i, KEY_LOG_SIZE);
                     *(valueLogs + i) = new ValueLog(path, i, VALUE_LOG_SIZE);
                 }
@@ -130,25 +130,45 @@ namespace polar_race {
                     isCacheWritable[i] = true;
                     currentCacheLogId[i] = -1;
                 }
+                readDiskThreadPool = new ThreadPool(READDISK_THREAD);
                 recover();
             } else{
-                for (int i = 0; i < LOG_NUM; i++) {
-                    *(keyLogs + i) = new KeyLog(path, i, KEY_LOG_SIZE);
-                    *(valueLogs + i) = new ValueLog(path, i, VALUE_LOG_SIZE);
+                std::thread t[RECOVER_THREAD];
+                auto num = LOG_NUM / RECOVER_THREAD;
+                for (int i = 0; i < RECOVER_THREAD; i++) {
+                    auto s = num * i;
+                    t[i] = std::thread([s, num, path, this] {
+                        for (int id = s; id < s + num; id++) {
+                            *(keyLogs + id) = new KeyLog(path, id, KEY_LOG_SIZE);
+                            *(valueLogs + id) = new ValueLog(path, id, VALUE_LOG_SIZE);
+                        }
+                    });
+                }
+
+                for (auto & i : t) {
+                    i.join();
                 }
             }
-
-
-
 
             printf("Open database complete. time spent is %lims\n", (now() - start).count());
 //            printf("============================Engine Start!========================\n");
         }
 
         ~PEngine() {
-            for (int i = 0; i < LOG_NUM; i++) {
-                delete keyLogs[i];
-                delete valueLogs[i];
+            printf("deleting engine, total life is %lims\n", (now() - start).count());
+            std::thread t[RECOVER_THREAD];
+            auto num = LOG_NUM / RECOVER_THREAD;
+            for (int i = 0; i < RECOVER_THREAD; i++) {
+                auto s = num * i;
+                t[i] = std::thread([s, num, this] {
+                    for (int id = s; id < s+num; id++) {
+                        delete keyLogs[id];
+                        delete valueLogs[id];
+                    }
+                });
+            }
+            for (auto & i : t) {
+                i.join();
             }
             delete[] keyLogs;
             delete[] valueLogs;
@@ -160,9 +180,7 @@ namespace polar_race {
                 free(valueCache);
             }
 
-            printf("deleting engine, total life is %lims\n", (now() - start).count());
-//            printf("============================Engine Stop!========================\n");
-
+            printf("Finish deleting engine, total life is %lims\n", (now() - start).count());
         }
 
         void recover(){
@@ -175,11 +193,6 @@ namespace polar_race {
             for (auto &i : t) {
                 i.join();
             }
-
-//            for (int i = 0; i < LOG_NUM; i++) {
-//                printf("sortlog %d size: %d\n", i, sortLogs[i]->size());
-//                totalNum += sortLogs[i]->size();
-//            }
         }
 
         void recoverAndSort(const int& thread_id) {
@@ -208,7 +221,7 @@ namespace polar_race {
         }
 
         inline int getLogId(const char* k) {
-            return ((u_int16_t)((u_int8_t)k[0]) << 4) | ((u_int8_t) k[1] >> 4);
+            return ((u_int16_t)((u_int8_t)k[0]) << 3) | ((u_int8_t) k[1] >> 5);
 //            return (*((u_int8_t *) k));
         }
 
@@ -223,13 +236,13 @@ namespace polar_race {
         }
 
         RetCode read(const PolarString &key, string *value) {
-            auto buffer = readBuffer.get();
             auto logId = getLogId(key.data());
             auto index = sortLogs[logId]->find(*(u_int64_t*)key.data());
 
             if (index == -1) {
                 return kNotFound;
             } else {
+                auto buffer = readBuffer.get();
                 valueLogs[logId]->readValue(index, buffer);
                 value->assign(buffer, 4096);
                 return kSucc;
@@ -274,7 +287,7 @@ namespace polar_race {
                     SortLog * sortLog = sortLogs[logId];
                     ValueLog * valueLog = valueLogs[logId];
                     if ((!lowerFlag && !sortLog->hasGreaterEqualKey(lowerKey))
-                    || (!upperFlag && !sortLog->hasLessKey(upperKey)))
+                        || (!upperFlag && !sortLog->hasLessKey(upperKey)))
                         break;
 
                     auto l = 0;
