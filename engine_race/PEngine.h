@@ -221,7 +221,7 @@ namespace polar_race {
         }
 
         inline int getLogId(const char* k) {
-            return ((u_int16_t)((u_int8_t)k[0]) << 3) | ((u_int8_t) k[1] >> 5);
+            return ((u_int16_t)((u_int8_t)k[0]) << 4) | ((u_int8_t) k[1] >> 4);
 //            return (*((u_int8_t *) k));
         }
 
