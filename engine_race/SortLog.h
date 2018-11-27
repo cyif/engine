@@ -14,7 +14,7 @@ namespace polar_race {
     private:
         u_int64_t *keys;
         u_int32_t *values;
-        int nums;
+        int nums = 0;
         int arraySize;
 
     public:
@@ -65,13 +65,12 @@ namespace polar_race {
             if (nums > 0) {
                 quicksort(0, nums - 1);
                 int k = 0;
-                for (int i = 0; i < nums; i++){
+                for (int i = 0; i < nums; i++)
                     if (i == nums - 1 || keys[i] != keys[i + 1]) {
                         keys[k] = keys[i];
                         values[k] = values[i];
                         k++;
                     }
-                }
                 nums = k;
             }
         }
@@ -132,7 +131,7 @@ namespace polar_race {
             return -1;
         }
 
-        u_int32_t findValueByIndex(int index) {
+        int findValueByIndex(int index) {
             return values[index];
         }
 
