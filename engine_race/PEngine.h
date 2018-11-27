@@ -26,15 +26,15 @@
 #include "SortLog.h"
 #include "ThreadPool.h"
 
-const int LOG_NUM = 2048;
-const int NUM_PER_SLOT = 1024 * 32;
+const int LOG_NUM = 4096;
+const int NUM_PER_SLOT = 1024 * 20;
 //const int NUM_PER_SLOT = 512;
 const size_t VALUE_LOG_SIZE = NUM_PER_SLOT * 4096;  //512mb
 const size_t KEY_LOG_SIZE = NUM_PER_SLOT * 8;
 const size_t PER_MAP_SIZE = NUM_PER_SLOT;
 const int RECOVER_THREAD = 64;
 const size_t CACHE_SIZE = VALUE_LOG_SIZE;
-const int CACHE_NUM = 8;
+const int CACHE_NUM = 12;
 const int CACHE_BLOCK_SIZE = 16 * 1024 * 1024;   //16mb
 
 //const int LOG_NUM = 1024;
@@ -73,6 +73,8 @@ namespace polar_race {
         ValueLog **valueLogs;
         SortLog **sortLogs;
         std::mutex logMutex[LOG_NUM];
+
+        int totalNum = 0;
 
         char * valueCache;
         ThreadPool * readDiskThreadPool = new ThreadPool(64);
@@ -174,8 +176,10 @@ namespace polar_race {
                 i.join();
             }
 
-            for (int i = 0; i < LOG_NUM; i++)
+            for (int i = 0; i < LOG_NUM; i++) {
                 printf("sortlog %d size: %d\n", i, sortLogs[i]->size());
+                totalNum += sortLogs[i]->size();
+            }
         }
 
         void recoverAndSort(const int& thread_id) {
@@ -204,7 +208,7 @@ namespace polar_race {
         }
 
         inline int getLogId(const char* k) {
-            return ((u_int16_t)((u_int8_t)k[0]) << 3) | ((u_int8_t) k[1] >> 5);
+            return ((u_int16_t)((u_int8_t)k[0]) << 4) | ((u_int8_t) k[1] >> 4);
 //            return (*((u_int8_t *) k));
         }
 
@@ -256,7 +260,7 @@ namespace polar_race {
 //                return kSucc;
 //            }
 
-            if (lower == "" && upper == "" && (sortLogs[0]->size() > 25000 / 2)) {
+            if (lower == "" && upper == "" && (totalNum > 1000000)) {
                 rangeAll(visitor);
                 return kSucc;
             }

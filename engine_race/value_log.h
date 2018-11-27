@@ -25,7 +25,6 @@ namespace polar_race {
     public:
         size_t PAGE_PER_BLOCK = 8;
         size_t BLOCK_SIZE = PAGE_PER_BLOCK * 4096;
-        bool limit = false;
 
         ValueLog(const std::string &path, const int &id, const long &size) : id(id), filePosition(0) {
 
@@ -46,24 +45,12 @@ namespace polar_race {
             fallocate(this->cacheFd, 0, 0, BLOCK_SIZE);
             this->cacheBuffer = static_cast<u_int8_t *>(mmap(nullptr, BLOCK_SIZE, PROT_READ | PROT_WRITE,
                                                              MAP_SHARED | MAP_POPULATE, this->cacheFd, 0));
-            this->cacheBufferLimit = static_cast<u_int8_t *>(malloc(BLOCK_SIZE));
-            posix_memalign((void **) &cacheBufferLimit, 4096, BLOCK_SIZE);
 
             this->cacheBufferPosition = 0;
         }
 
         ~ValueLog() {
-
-            if (!limit)
-                munmap(cacheBuffer, BLOCK_SIZE);
-            else {
-                if (this->cacheBufferPosition != 0) {
-                    auto remainSize = (size_t) cacheBufferPosition << 12;
-                    pwrite(this->fd, cacheBuffer, remainSize, filePosition);
-                    filePosition += remainSize;
-                }
-                free(cacheBuffer);
-            }
+            munmap(cacheBuffer, BLOCK_SIZE);
             close(this->fd);
             close(this->cacheFd);
         }
@@ -79,12 +66,6 @@ namespace polar_race {
                 pwrite(this->fd, cacheBuffer, BLOCK_SIZE, filePosition);
                 filePosition += BLOCK_SIZE;
                 cacheBufferPosition = 0;
-
-                if (filePosition == (8 * 1500 * 4096)) {
-                    limit = true;
-                    munmap(cacheBuffer, BLOCK_SIZE);
-                    this->cacheBuffer = cacheBufferLimit;
-                }
             }
         }
 
@@ -99,11 +80,9 @@ namespace polar_race {
         void recover(u_int32_t sum) {
             this->filePosition = (off_t) sum << 12;
             this->cacheBufferPosition = sum % PAGE_PER_BLOCK;
-            if (sum <= (8 * 1500)) {
-                auto offset = (size_t) cacheBufferPosition << 12;
-                filePosition -= offset;
-                pwrite(this->fd, cacheBuffer, offset, filePosition);
-            }
+            auto offset = (size_t) cacheBufferPosition << 12;
+            filePosition -= offset;
+            pwrite(this->fd, cacheBuffer, offset, filePosition);
         }
 
     private:
