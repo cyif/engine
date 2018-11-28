@@ -33,7 +33,7 @@ const size_t VALUE_LOG_SIZE = NUM_PER_SLOT * 4096;  //512mb
 const size_t KEY_LOG_SIZE = NUM_PER_SLOT * 8;
 const size_t PER_MAP_SIZE = NUM_PER_SLOT;
 const size_t CACHE_SIZE = VALUE_LOG_SIZE;
-const int CACHE_NUM = 6;
+const int CACHE_NUM = 8;
 const int CACHE_BLOCK_SIZE = 16 * 1024 * 1024;   //16mb
 
 const int RECOVER_THREAD = 64;
@@ -389,13 +389,10 @@ namespace polar_race {
                 if (!isCacheReadable[cacheIndex] || currentCacheLogId[cacheIndex] != logId) {
                     readDiskFinishMtx[cacheIndex].lock();
                     while (!isCacheReadable[cacheIndex] || currentCacheLogId[cacheIndex] != logId) {
-                        rangeCacheFinish[cacheIndex].notify_all();
-//                        printf("Cache is not readable. LogId : %d,  CacheIndex %d, ThreadId %ld\n", logId, cacheIndex, gettidv1());
                         readDiskFinish[cacheIndex].wait(readDiskFinishMtx[cacheIndex]);
                     }
                     readDiskFinishMtx[cacheIndex].unlock();
                 }
-//                printf("Cache is readable. LogId : %d,  CacheIndex %d, ThreadId %ld\n", logId, cacheIndex, gettidv1());
 
                 auto cache = valueCache + cacheIndex * CACHE_SIZE;
 
@@ -405,11 +402,9 @@ namespace polar_race {
                     visitor.Visit(PolarString(((char *) (&k)), 8), PolarString((cache + offset), 4096));
                 }
 
-//                std::unique_lock <std::mutex> lock(rangeCacheFinishMtx[cacheIndex]);
                 rangeCacheFinishMtx[cacheIndex].lock();
                 auto rangeCount = ++rangeCacheCount[cacheIndex];
                 if (rangeCount == 64) {
-//                    printf("Notify Finish Range. LogId : %d,  CacheIndex %d, ThreadId %ld\n", logId, cacheIndex, gettidv1());
                     isCacheWritable[cacheIndex] = true;
                     isCacheReadable[cacheIndex] = false;
                     rangeCacheCount[cacheIndex] = 0;
