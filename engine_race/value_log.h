@@ -27,7 +27,7 @@ namespace polar_race {
         size_t BLOCK_SIZE = PAGE_PER_BLOCK * 4096;
         bool limit = false;
 
-        ValueLog(const std::string &path, const int &id, const long &size) : id(id), filePosition(0) {
+        ValueLog(const std::string &path, const int &id, const long &size, u_int8_t* cacheBufferLimit) : id(id), filePosition(0) {
 
             //获得value file path
             std::ostringstream fp, cfp;
@@ -46,9 +46,8 @@ namespace polar_race {
             fallocate(this->cacheFd, 0, 0, BLOCK_SIZE);
             this->cacheBuffer = static_cast<u_int8_t *>(mmap(nullptr, BLOCK_SIZE, PROT_READ | PROT_WRITE,
                                                              MAP_SHARED | MAP_POPULATE, this->cacheFd, 0));
-            this->cacheBufferLimit = static_cast<u_int8_t *>(malloc(BLOCK_SIZE));
-            posix_memalign((void **) &cacheBufferLimit, 4096, BLOCK_SIZE);
 
+            this->cacheBufferLimit = cacheBufferLimit;
             this->cacheBufferPosition = 0;
         }
 
@@ -62,7 +61,6 @@ namespace polar_race {
                     pwrite(this->fd, cacheBuffer, remainSize, filePosition);
                     filePosition += remainSize;
                 }
-                free(cacheBuffer);
             }
             close(this->fd);
             close(this->cacheFd);
@@ -99,7 +97,7 @@ namespace polar_race {
         void recover(u_int32_t sum) {
             this->filePosition = (off_t) sum << 12;
             this->cacheBufferPosition = sum % PAGE_PER_BLOCK;
-            if (sum <= 10000) {
+            if (sum <= 15000) {
                 auto offset = (size_t) cacheBufferPosition << 12;
                 filePosition -= offset;
                 pwrite(this->fd, cacheBuffer, offset, filePosition);
