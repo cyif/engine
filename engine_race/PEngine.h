@@ -94,15 +94,23 @@ namespace polar_race {
 
             if (access(filePath.data(), 0) != -1) {
 
-                for (int fileId = 0; fileId < FILE_NUM; fileId++)
-                    *(kvFiles + fileId) = new KVFiles(path, fileId, VALUE_LOG_SIZE * num_log_per_file,
-                                                      BLOCK_SIZE * num_log_per_file, KEY_LOG_SIZE * num_log_per_file);
+//                for (int fileId = 0; fileId < FILE_NUM; fileId++)
+//                    *(kvFiles + fileId) = new KVFiles(path, fileId, VALUE_LOG_SIZE * num_log_per_file,
+//                                                      BLOCK_SIZE * num_log_per_file, KEY_LOG_SIZE * num_log_per_file);
 
                 this->sortLogs = static_cast<SortLog **>(malloc(LOG_NUM * sizeof(SortLog *)));
 
                 std::thread t[RECOVER_THREAD];
                 for (int i = 0; i < RECOVER_THREAD; i++) {
-                    t[i] = std::thread([i, this] {
+                    t[i] = std::thread([i, num_log_per_file, path, this] {
+
+                        for (int fileId = i; fileId < FILE_NUM; fileId += RECOVER_THREAD) {
+                            *(kvFiles + fileId) = new KVFiles(path, fileId, VALUE_LOG_SIZE * num_log_per_file,
+                                                              BLOCK_SIZE * num_log_per_file,
+                                                              KEY_LOG_SIZE * num_log_per_file);
+                        }
+
+
                         for (int logId = i; logId < LOG_NUM; logId += RECOVER_THREAD) {
                             sortLogs[logId] = new SortLog();
 
