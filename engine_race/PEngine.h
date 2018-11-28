@@ -33,10 +33,10 @@ const int NUM_PER_SLOT = 1024 * 20;
 const size_t VALUE_LOG_SIZE = NUM_PER_SLOT * 4096;  //80mb
 const size_t KEY_LOG_SIZE = NUM_PER_SLOT * 8;
 
-const size_t VALUE_FILE_NUM = 1024;
+const size_t VALUE_FILE_NUM = 256;
 
 const size_t CACHE_SIZE = VALUE_LOG_SIZE;
-const int CACHE_NUM = 14;
+const int CACHE_NUM = 16;
 const int CACHE_BLOCK_SIZE = 16 * 1024 * 1024;   //16mb
 
 const int RECOVER_THREAD = 64;
@@ -106,8 +106,6 @@ namespace polar_race {
             ss << path << "/key-0";
             string filePath = ss.str();
 
-            int num_log_per_thread = LOG_NUM / RECOVER_THREAD;
-            int num_file_per_thread = VALUE_FILE_NUM / RECOVER_THREAD;
             int num_log_per_file = LOG_NUM / VALUE_FILE_NUM;
 
             if (access(filePath.data(), 0) != -1) {
@@ -145,7 +143,7 @@ namespace polar_race {
 
                 for (int i = 0; i < RECOVER_THREAD; i++) {
 
-                    t[i] = std::thread([i, num_log_per_thread, num_file_per_thread, num_log_per_file, path, this] {
+                    t[i] = std::thread([i, num_log_per_file, path, this] {
 
                         for (int fileId = i; fileId < VALUE_FILE_NUM; fileId += RECOVER_THREAD) {
                             *(valueLogFiles + fileId) = new ValueLogFile(path, fileId,
@@ -340,7 +338,6 @@ namespace polar_race {
                     //等待获取可用的cache
                     rangeCacheFinishMtx[cacheIndex].lock();
                     while (!isCacheWritable[cacheIndex]) {
-                        readDiskFinish[cacheIndex].notify_all();
                         rangeCacheFinish[cacheIndex].wait(rangeCacheFinishMtx[cacheIndex]);
                     }
                     rangeCacheFinishMtx[cacheIndex].unlock();
