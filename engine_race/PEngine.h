@@ -26,19 +26,19 @@
 #include "SortLog.h"
 #include "ThreadPool.h"
 
-const int LOG_NUM = 4096;
-const int NUM_PER_SLOT = 1024 * 20;
-//const int NUM_PER_SLOT = 512;
+const int LOG_NUM = 2048;
+const int NUM_PER_SLOT = 1024 * 32;
 const size_t VALUE_LOG_SIZE = NUM_PER_SLOT * 4096;  //512mb
 const size_t KEY_LOG_SIZE = NUM_PER_SLOT * 8;
 const size_t PER_MAP_SIZE = NUM_PER_SLOT;
 
-const size_t CACHE_SIZE = 1024*16*4096;
-const int CACHE_NUM = 16;
-const int CACHE_BLOCK_SIZE = 8 * 1024 * 1024;   //16mb
+const size_t CACHE_SIZE = VALUE_LOG_SIZE;
+const int CACHE_NUM = 8;
+const int CACHE_BLOCK_SIZE = 16 * 1024 * 1024;   //16mb
 
 const int RECOVER_THREAD = 64;
 const int READDISK_THREAD = 64;
+
 //const int LOG_NUM = 1024;
 //const int NUM_PER_SLOT = 1024 * 4;
 //const size_t VALUE_LOG_SIZE = NUM_PER_SLOT * 4096;
@@ -221,7 +221,7 @@ namespace polar_race {
         }
 
         inline int getLogId(const char* k) {
-            return ((u_int16_t)((u_int8_t)k[0]) << 4) | ((u_int8_t) k[1] >> 4);
+            return ((u_int16_t)((u_int8_t)k[0]) << 3) | ((u_int8_t) k[1] >> 5);
 //            return (*((u_int8_t *) k));
         }
 
@@ -273,7 +273,7 @@ namespace polar_race {
 //                return kSucc;
 //            }
 
-            if (lower == "" && upper == "" && (sortLogs[0]->size() > 10000)) {
+            if (lower == "" && upper == "" && (sortLogs[0]->size() > 20000)) {
                 rangeAll(visitor);
                 return kSucc;
             }
