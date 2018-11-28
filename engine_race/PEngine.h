@@ -33,7 +33,7 @@ const int NUM_PER_SLOT = 1024 * 20;
 const size_t VALUE_LOG_SIZE = NUM_PER_SLOT * 4096;  //80mb
 const size_t KEY_LOG_SIZE = NUM_PER_SLOT * 8;
 
-const size_t VALUE_FILE_NUM = 2048;
+const size_t VALUE_FILE_NUM = 1024;
 
 const size_t CACHE_SIZE = VALUE_LOG_SIZE;
 const int CACHE_NUM = 14;
@@ -122,8 +122,9 @@ namespace polar_race {
                     *(sortLogs + logId) = new SortLog(NUM_PER_SLOT);
                     *(keyLogs + logId) = new KeyLog(path, logId, KEY_LOG_SIZE);
 
-                    int fd = valueLogFiles[logId / num_log_per_file]->getFd();
-                    off_t globalOffset = (logId % num_log_per_file) * VALUE_LOG_SIZE;
+                    int fileId = logId % VALUE_FILE_NUM;
+                    int fd = valueLogFiles[fileId]->getFd();
+                    off_t globalOffset = (logId / VALUE_FILE_NUM) * VALUE_LOG_SIZE;
                     *(valueLogs + logId) = new ValueLog(path, logId, fd, globalOffset);
                 }
 
@@ -143,18 +144,20 @@ namespace polar_race {
                 std::thread t[RECOVER_THREAD];
 
                 for (int i = 0; i < RECOVER_THREAD; i++) {
+
                     t[i] = std::thread([i, num_log_per_thread, num_file_per_thread, num_log_per_file, path, this] {
 
-                        for (int fileId = i * num_file_per_thread; fileId < (i + 1) * num_file_per_thread; fileId++) {
+                        for (int fileId = i; fileId < VALUE_FILE_NUM; fileId += RECOVER_THREAD) {
                             *(valueLogFiles + fileId) = new ValueLogFile(path, fileId,
                                                                          VALUE_LOG_SIZE * num_log_per_file);
                         }
 
-                        for (int logId = i * num_log_per_thread; logId < (i + 1) * num_log_per_thread; logId++) {
+                        for (int logId = i; logId < LOG_NUM; logId+=RECOVER_THREAD) {
                             *(keyLogs + logId) = new KeyLog(path, logId, KEY_LOG_SIZE);
 
-                            int fd = valueLogFiles[logId / num_log_per_file]->getFd();
-                            off_t globalOffset = (logId % num_log_per_file) * VALUE_LOG_SIZE;
+                            int fileId = logId % VALUE_FILE_NUM;
+                            int fd = valueLogFiles[fileId]->getFd();
+                            off_t globalOffset = (logId / VALUE_FILE_NUM) * VALUE_LOG_SIZE;
                             *(valueLogs + logId) = new ValueLog(path, logId, fd, globalOffset);
                         }
                     });
@@ -285,9 +288,9 @@ namespace polar_race {
 //            }
 
             if (lower == "" && upper == "" && (sortLogs[0]->size() > 25000 / 2)) {
-                rangeAll(visitor);
-                return kSucc;
-            }
+//                rangeAll(visitor);
+//                return kSucc;
+//            }
 
             if (lowerLogId > upperLogId && !upperFlag) {
                 return kInvalidArgument;
