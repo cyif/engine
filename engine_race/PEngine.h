@@ -33,7 +33,7 @@ const size_t KEY_LOG_SIZE = NUM_PER_SLOT * 8;
 const size_t PER_MAP_SIZE = NUM_PER_SLOT;
 
 const size_t CACHE_SIZE = VALUE_LOG_SIZE;
-const int CACHE_NUM = 4;
+const int CACHE_NUM = 6;
 const int CACHE_BLOCK_SIZE = 16 * 1024 * 1024;   //16mb
 
 const int RECOVER_THREAD = 64;
@@ -335,6 +335,7 @@ namespace polar_race {
                     //等待获取可用的cache
                     rangeCacheFinishMtx[cacheIndex].lock();
                     while (!isCacheWritable[cacheIndex]) {
+                        readDiskFinish[cacheIndex].notify_all();
                         rangeCacheFinish[cacheIndex].wait(rangeCacheFinishMtx[cacheIndex]);
                     }
                     rangeCacheFinishMtx[cacheIndex].unlock();
@@ -385,7 +386,7 @@ namespace polar_race {
                 if (!isCacheReadable[cacheIndex] || currentCacheLogId[cacheIndex] != logId) {
                     readDiskFinishMtx[cacheIndex].lock();
                     while (!isCacheReadable[cacheIndex] || currentCacheLogId[cacheIndex] != logId) {
-//                        printf("Cache is not readable. LogId : %d,  CacheIndex %d, ThreadId %ld\n", logId, cacheIndex, gettidv1());
+                        rangeCacheFinish[cacheIndex].notify_all();
                         readDiskFinish[cacheIndex].wait(readDiskFinishMtx[cacheIndex]);
                     }
                     readDiskFinishMtx[cacheIndex].unlock();
