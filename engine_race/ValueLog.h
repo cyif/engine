@@ -16,7 +16,7 @@
 #include <mutex>
 #include "../include/polar_string.h"
 #include "../include/engine.h"
-
+#include "params.h"
 
 namespace polar_race {
 
@@ -28,35 +28,18 @@ namespace polar_race {
         off_t filePosition;
         off_t globalOffset;
 
-        std::string cacheFilePath;
-        int cacheFd;
-        u_int8_t *cacheBuffer;
+
         int cacheBufferPosition;
+        u_int8_t *cacheBuffer{};
+
 
     public:
-        size_t PAGE_PER_BLOCK = 8;
-        size_t BLOCK_SIZE = PAGE_PER_BLOCK * 4096;
 
-        ValueLog(const std::string &path, const int &id, const int &fd, const off_t &globalOffset) : fd(fd),
-                                                                                      globalOffset(globalOffset),
-                                                                                      filePosition(0),
-                                                                                      cacheBufferPosition(0) {
-
-            //获得value file path
-            std::ostringstream cfp;
-            cfp << path << "/value-cache-" << id;
-            this->cacheFilePath = cfp.str();
-
-            //value cache file
-            this->cacheFd = open(this->cacheFilePath.data(), O_CREAT | O_RDWR, 0777);
-            fallocate(this->cacheFd, 0, 0, BLOCK_SIZE);
-            this->cacheBuffer = static_cast<u_int8_t *>(mmap(nullptr, BLOCK_SIZE, PROT_READ | PROT_WRITE,
-                                                             MAP_SHARED | MAP_POPULATE, this->cacheFd, 0));
-        }
-
-        ~ValueLog() {
-            munmap(cacheBuffer, BLOCK_SIZE);
-            close(this->cacheFd);
+        ValueLog(const int &fd, const off_t &globalOffset, u_int8_t *cacheBuffer) : fd(fd),
+                                                                                    globalOffset(globalOffset),
+                                                                                    cacheBuffer(cacheBuffer),
+                                                                                    filePosition(0),
+                                                                                    cacheBufferPosition(0) {
         }
 
         off_t size() {

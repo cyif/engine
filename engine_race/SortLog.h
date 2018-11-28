@@ -7,29 +7,18 @@
 
 #include <malloc.h>
 #include <iostream>
+#include "params.h"
+
 
 namespace polar_race {
     class SortLog {
 
     private:
-        u_int64_t *keys;
-        u_int32_t *values;
+        u_int64_t keys[NUM_PER_SLOT];
+        u_int32_t values[NUM_PER_SLOT];
         int nums = 0;
-        int arraySize;
 
     public:
-
-        explicit SortLog(int capacity) :
-                arraySize(capacity),
-                nums(0) {
-            this->keys = static_cast<u_int64_t *>(malloc((arraySize) * sizeof(u_int64_t)));
-            this->values = static_cast<u_int32_t *>(malloc((arraySize) * sizeof(u_int32_t)));
-        };
-
-        ~SortLog() {
-            free(keys);
-            free(values);
-        };
 
         int size() {
             return nums;
@@ -42,17 +31,6 @@ namespace polar_race {
         bool hasLessKey(u_int64_t key) {
             return __builtin_bswap64(key) > keys[0];
         }
-
-//        u_int64_t swapEndian(u_int64_t key) {
-//            return (((key & 0x00000000000000FF) << 56) |
-//                    ((key & 0x000000000000FF00) << 40) |
-//                    ((key & 0x0000000000FF0000) << 24) |
-//                    ((key & 0x00000000FF000000) << 8) |
-//                    ((key & 0x000000FF00000000) >> 8) |
-//                    ((key & 0x0000FF0000000000) >> 24) |
-//                    ((key & 0x00FF000000000000) >> 40) |
-//                    ((key & 0xFF00000000000000) >> 56));
-//        }
 
         void put(u_int64_t &bigEndkey, const u_int32_t &value) {
             keys[nums] = __builtin_bswap64(bigEndkey);
