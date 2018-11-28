@@ -28,17 +28,16 @@
 
 const int LOG_NUM = 2048;
 const int NUM_PER_SLOT = 1024 * 32;
+//const int NUM_PER_SLOT = 512;
 const size_t VALUE_LOG_SIZE = NUM_PER_SLOT * 4096;  //512mb
 const size_t KEY_LOG_SIZE = NUM_PER_SLOT * 8;
 const size_t PER_MAP_SIZE = NUM_PER_SLOT;
-
 const size_t CACHE_SIZE = VALUE_LOG_SIZE;
 const int CACHE_NUM = 6;
 const int CACHE_BLOCK_SIZE = 16 * 1024 * 1024;   //16mb
 
 const int RECOVER_THREAD = 64;
 const int READDISK_THREAD = 64;
-
 //const int LOG_NUM = 1024;
 //const int NUM_PER_SLOT = 1024 * 4;
 //const size_t VALUE_LOG_SIZE = NUM_PER_SLOT * 4096;
@@ -105,6 +104,7 @@ namespace polar_race {
         milliseconds start;
 
         u_int8_t *cacheBufferLimit;
+
     public:
         explicit PEngine(const string &path) {
             this->start = now();
@@ -121,8 +121,9 @@ namespace polar_race {
                 this->sortLogs = static_cast<SortLog **>(malloc(LOG_NUM * sizeof(SortLog *)));
                 this->valueCache = static_cast<char *>(malloc(CACHE_SIZE * CACHE_NUM));
                 posix_memalign((void **) &valueCache, (size_t) getpagesize(), CACHE_SIZE * CACHE_NUM);
+
                 for (int i = 0; i < LOG_NUM; i++) {
-                    *(sortLogs + i) = new SortLog();
+                    *(sortLogs + i) = new SortLog(PER_MAP_SIZE);
                     *(keyLogs + i) = new KeyLog(path, i, KEY_LOG_SIZE);
                     *(valueLogs + i) = new ValueLog(path, i, VALUE_LOG_SIZE, nullptr);
                 }
@@ -146,7 +147,8 @@ namespace polar_race {
                     t[i] = std::thread([s, num, path, this] {
                         for (int id = s; id < s + num; id++) {
                             *(keyLogs + id) = new KeyLog(path, id, KEY_LOG_SIZE);
-                            *(valueLogs + id) = new ValueLog(path, id, VALUE_LOG_SIZE, cacheBufferLimit + (8 * 4096) * id);
+                            *(valueLogs + id) = new ValueLog(path, id, VALUE_LOG_SIZE,
+                                                             cacheBufferLimit + (8 * 4096) * id);
                         }
                     });
                 }
@@ -162,6 +164,12 @@ namespace polar_race {
 
         ~PEngine() {
             printf("deleting engine, total life is %lims\n", (now() - start).count());
+            if (sortLogs != nullptr) {
+                for (int i = 0; i < LOG_NUM; i++)
+                    delete sortLogs[i];
+                delete[] sortLogs;
+                free(valueCache);
+            }
             std::thread t[RECOVER_THREAD];
             auto num = LOG_NUM / RECOVER_THREAD;
             for (int i = 0; i < RECOVER_THREAD; i++) {
@@ -176,18 +184,13 @@ namespace polar_race {
             for (auto &i : t) {
                 i.join();
             }
-            delete[] keyLogs;
-            delete[] valueLogs;
-
-            if (sortLogs != nullptr) {
-                for (int i = 0; i < LOG_NUM; i++)
-                    delete sortLogs[i];
-                delete[] sortLogs;
-                free(valueCache);
-            }
 
             if (cacheBufferLimit != nullptr)
                 free(cacheBufferLimit);
+
+            delete[] keyLogs;
+            delete[] valueLogs;
+
 
             printf("Finish deleting engine, total life is %lims\n", (now() - start).count());
         }
@@ -282,7 +285,7 @@ namespace polar_race {
 //                return kSucc;
 //            }
 
-            if (lower == "" && upper == "" && (sortLogs[0]->size() > 12000)) {
+            if (lower == "" && upper == "" && (sortLogs[0]->size() > 25000 / 2)) {
                 rangeAll(visitor);
                 return kSucc;
             }
@@ -387,6 +390,7 @@ namespace polar_race {
                     readDiskFinishMtx[cacheIndex].lock();
                     while (!isCacheReadable[cacheIndex] || currentCacheLogId[cacheIndex] != logId) {
                         rangeCacheFinish[cacheIndex].notify_all();
+//                        printf("Cache is not readable. LogId : %d,  CacheIndex %d, ThreadId %ld\n", logId, cacheIndex, gettidv1());
                         readDiskFinish[cacheIndex].wait(readDiskFinishMtx[cacheIndex]);
                     }
                     readDiskFinishMtx[cacheIndex].unlock();

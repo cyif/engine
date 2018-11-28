@@ -12,38 +12,50 @@ namespace polar_race {
     class SortLog {
 
     private:
-        u_int64_t keys[1024 * 20];
-        u_int32_t values[1024 * 20];
+        u_int64_t *keys;
+        u_int32_t *values;
         int nums = 0;
         int arraySize;
 
     public:
+
+        explicit SortLog(int capacity) :
+                arraySize(capacity),
+                nums(0) {
+            this->keys = static_cast<u_int64_t *>(malloc((arraySize) * sizeof(u_int64_t)));
+            this->values = static_cast<u_int32_t *>(malloc((arraySize) * sizeof(u_int32_t)));
+        };
+
+        ~SortLog() {
+            free(keys);
+            free(values);
+        };
 
         int size() {
             return nums;
         }
 
         bool hasGreaterEqualKey(u_int64_t key) {
-            return swapEndian(key) <= keys[nums - 1];
+            return __builtin_bswap64(key) <= keys[nums - 1];
         }
 
         bool hasLessKey(u_int64_t key) {
-            return swapEndian(key) > keys[0];
+            return __builtin_bswap64(key) > keys[0];
         }
 
-        u_int64_t swapEndian(u_int64_t key) {
-            return (((key & 0x00000000000000FF) << 56) |
-                    ((key & 0x000000000000FF00) << 40) |
-                    ((key & 0x0000000000FF0000) << 24) |
-                    ((key & 0x00000000FF000000) << 8) |
-                    ((key & 0x000000FF00000000) >> 8) |
-                    ((key & 0x0000FF0000000000) >> 24) |
-                    ((key & 0x00FF000000000000) >> 40) |
-                    ((key & 0xFF00000000000000) >> 56));
-        }
+//        u_int64_t swapEndian(u_int64_t key) {
+//            return (((key & 0x00000000000000FF) << 56) |
+//                    ((key & 0x000000000000FF00) << 40) |
+//                    ((key & 0x0000000000FF0000) << 24) |
+//                    ((key & 0x00000000FF000000) << 8) |
+//                    ((key & 0x000000FF00000000) >> 8) |
+//                    ((key & 0x0000FF0000000000) >> 24) |
+//                    ((key & 0x00FF000000000000) >> 40) |
+//                    ((key & 0xFF00000000000000) >> 56));
+//        }
 
         void put(u_int64_t &bigEndkey, const u_int32_t &value) {
-            keys[nums] = swapEndian(bigEndkey);
+            keys[nums] = __builtin_bswap64(bigEndkey);
 //        keys[nums] = bigEndkey;
             values[nums] = value;
             nums++;
@@ -98,7 +110,7 @@ namespace polar_race {
 
         int find(u_int64_t &bigEndkey) {
 
-            u_int64_t key = swapEndian(bigEndkey);
+            u_int64_t key = __builtin_bswap64(bigEndkey);
 //        u_int64_t key = bigEndkey;
 
             int left = 0;
@@ -124,11 +136,11 @@ namespace polar_race {
         }
 
         u_int64_t findKeyByIndex(int index) {
-            return swapEndian(keys[index]);
+            return __builtin_bswap64(keys[index]);
         }
 
         int getMinIndexGreaterEqualThan(u_int64_t key) {
-            key = swapEndian(key);
+            key = __builtin_bswap64(key);
 
             int left = 0;
             int right = nums - 1;
@@ -145,7 +157,7 @@ namespace polar_race {
 
 
         int getMaxIndexLessThan(u_int64_t key) {
-            key = swapEndian(key);
+            key = __builtin_bswap64(key);
 
             int left = 0;
             int right = nums - 1;
