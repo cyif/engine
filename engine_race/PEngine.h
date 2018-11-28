@@ -100,23 +100,43 @@ namespace polar_race {
 
                 this->sortLogs = static_cast<SortLog **>(malloc(LOG_NUM * sizeof(SortLog *)));
 
-                // 考虑多线程恢复，同时sort
-                for (int logId = 0; logId < LOG_NUM; logId++) {
-                    *(sortLogs + logId) = new SortLog();
+                std::thread t[RECOVER_THREAD];
+                for (int i = 0; i < RECOVER_THREAD; i++) {
+                    t[i] = std::thread([i, this] {
+                        for (int logId = i; logId < LOG_NUM; logId += RECOVER_THREAD) {
+                            sortLogs[logId] = new SortLog();
 
-                    size_t fileId = logId % FILE_NUM;
-                    size_t slotId = logId / FILE_NUM;
+                            size_t fileId = logId % FILE_NUM;
+                            size_t slotId = logId / FILE_NUM;
 
-                    int valueFd = kvFiles[fileId]->getValueFd();
-                    u_int8_t *cacheBuffer = kvFiles[fileId]->getCacheBuffer() + slotId * BLOCK_SIZE;
-                    off_t globalOffset = slotId * VALUE_LOG_SIZE;
-                    u_int8_t *keyBuffer = kvFiles[fileId]->getKeyBuffer() + slotId * KEY_LOG_SIZE;
+                            int valueFd = this->kvFiles[fileId]->getValueFd();
+                            u_int8_t *cacheBuffer = this->kvFiles[fileId]->getCacheBuffer() + slotId * BLOCK_SIZE;
+                            off_t globalOffset = slotId * VALUE_LOG_SIZE;
+                            u_int8_t *keyBuffer = this->kvFiles[fileId]->getKeyBuffer() + slotId * KEY_LOG_SIZE;
 
-                    *(keyLogs + logId) = new KeyLog(keyBuffer);
-                    *(valueLogs + logId) = new ValueLog(valueFd, globalOffset, cacheBuffer);
+                            keyLogs[logId] = new KeyLog(keyBuffer);
+                            valueLogs[logId] = new ValueLog(valueFd, globalOffset, cacheBuffer);
+
+                            KeyLog *keyLog = keyLogs[logId];
+                            ValueLog *valueLog = valueLogs[logId];
+                            SortLog *sortLog = sortLogs[logId];
+
+                            u_int64_t k;
+                            u_int32_t cnt = 0;
+
+                            while (keyLog->getKey(k))
+                                sortLog->put(k, cnt++);
+
+                            sortLog->quicksort();
+                            keyLog->setKeyBufferPosition(cnt * 8);
+                            valueLog->recover(cnt);
+                        }
+                    });
                 }
 
-                recover();
+                for (auto &i : t) {
+                    i.join();
+                }
 
                 this->valueCache = static_cast<char *>(malloc(CACHE_SIZE * CACHE_NUM));
                 posix_memalign((void **) &valueCache, (size_t) getpagesize(), CACHE_SIZE * CACHE_NUM);
@@ -130,9 +150,7 @@ namespace polar_race {
 
             } else {
                 std::thread t[RECOVER_THREAD];
-
                 for (int i = 0; i < RECOVER_THREAD; i++) {
-
                     t[i] = std::thread([i, num_log_per_file, path, this] {
 
                         for (int fileId = i; fileId < FILE_NUM; fileId += RECOVER_THREAD) {
@@ -187,43 +205,6 @@ namespace polar_race {
             delete[] valueLogs;
 
             printf("Finish deleting engine, total life is %lims\n", (now() - start).count());
-        }
-
-        void recover() {
-            // recover
-            std::thread t[RECOVER_THREAD];
-            for (int i = 0; i < RECOVER_THREAD; i++) {
-                t[i] = std::thread(&PEngine::recoverAndSort, this, i);
-            }
-
-            for (auto &i : t) {
-                i.join();
-            }
-        }
-
-        void recoverAndSort(const int &thread_id) {
-
-            char log_per_thread = LOG_NUM / RECOVER_THREAD;
-            int id = thread_id * log_per_thread;
-
-            for (int i = 0; i < log_per_thread; i++) {
-
-                KeyLog *keyLog = keyLogs[id];
-                ValueLog *valueLog = valueLogs[id];
-                SortLog *sortLog = sortLogs[id];
-
-                u_int64_t k;
-                u_int32_t cnt = 0;
-
-                while (keyLog->getKey(k))
-                    sortLog->put(k, cnt++);
-
-                sortLog->quicksort();
-                keyLog->setKeyBufferPosition(cnt * 8);
-                valueLog->recover(cnt);
-
-                id++;
-            }
         }
 
         inline int getLogId(const char *k) {
@@ -323,23 +304,19 @@ namespace polar_race {
         }
 
         void readDisk() {
-            printf("Start Read Disk Thread!\n");
-            int logId = 0;
-            int rangeAllCount = 0;
-            while (true) {
+//            printf("Start Read Disk Thread %ld!\n", gettidv1());
+            for (int logId = 0; logId < LOG_NUM; logId++) {
 
                 auto cacheIndex = logId % CACHE_NUM;
 
                 if (!isCacheWritable[cacheIndex]) {
                     //等待获取可用的cache
-//                    printf("Cache is not writable. LogId : %d,  CacheIndex %d, ThreadId %ld\n", logId, cacheIndex, gettidv1());
                     rangeCacheFinishMtx[cacheIndex].lock();
                     while (!isCacheWritable[cacheIndex]) {
                         rangeCacheFinish[cacheIndex].wait(rangeCacheFinishMtx[cacheIndex]);
                     }
                     rangeCacheFinishMtx[cacheIndex].unlock();
                 }
-//                printf("Cache is writable. LogId : %d,  CacheIndex %d, ThreadId %ld\n", logId, cacheIndex, gettidv1());
                 isCacheWritable[cacheIndex] = false;
                 readDiskCount[cacheIndex] = 0;
                 currentCacheLogId[cacheIndex] = logId;
@@ -360,7 +337,6 @@ namespace polar_race {
                             valueLog->readValue(offset, (cache + offset), CACHE_BLOCK_SIZE);
                         }
 
-//                        std::unique_lock <std::mutex> lock(readDiskFinishMtx[cacheIndex]);
                         readDiskFinishMtx[cacheIndex].lock();
                         auto count = ++readDiskCount[cacheIndex];
                         if (count == maxIndex + 1) {
@@ -369,16 +345,6 @@ namespace polar_race {
                         }
                         readDiskFinishMtx[cacheIndex].unlock();
                     });
-                }
-
-                logId++;
-                if (logId >= LOG_NUM) {
-                    logId = 0;
-                    rangeAllCount++;
-                    if (rangeAllCount == MAX_RANGE_COUNT) {
-                        readDiskFlag.clear();
-                        break;
-                    }
                 }
             }
         }
@@ -420,6 +386,30 @@ namespace polar_race {
                 }
                 rangeCacheFinishMtx[cacheIndex].unlock();
 //                lock.unlock();
+            }
+
+            //重置参数
+            rangeAllFinishMtx.lock();
+
+            int finishCount = ++rangeAllFinishCount;
+            if (finishCount == 64) {
+                rangeAllFinishCount = 0;
+                rangeAllFinishFlag = true;
+                readDiskFlag.clear();
+                for (int i = 0; i < CACHE_NUM; i++) {
+                    readDiskCount[i] = 0;
+                    rangeCacheCount[i] = 0;
+                    isCacheWritable[i] = true;
+                    isCacheReadable[i] = false;
+                }
+
+                rangeAllFinish.notify_all();
+                rangeAllFinishMtx.unlock();
+            } else {
+                while (!rangeAllFinishFlag) {
+                    rangeAllFinish.wait(rangeAllFinishMtx);
+                }
+                rangeAllFinishMtx.unlock();
             }
         }
 
