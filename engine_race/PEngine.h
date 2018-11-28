@@ -136,19 +136,19 @@ namespace polar_race {
                 readDiskThreadPool = new ThreadPool(READDISK_THREAD);
                 recover();
             } else {
-
-                this->cacheBufferLimit = static_cast<u_int8_t *>(malloc(8 * 4096 * LOG_NUM));
-                posix_memalign((void **) &cacheBufferLimit, 4096, 8 * 4096 * LOG_NUM);
+                int blockSize = 16 * 4096;
+                this->cacheBufferLimit = static_cast<u_int8_t *>(malloc(blockSize * LOG_NUM));
+                posix_memalign((void **) &cacheBufferLimit, 4096, blockSize * LOG_NUM);
 
                 std::thread t[RECOVER_THREAD];
                 auto num = LOG_NUM / RECOVER_THREAD;
                 for (int i = 0; i < RECOVER_THREAD; i++) {
                     auto s = num * i;
-                    t[i] = std::thread([s, num, path, this] {
+                    t[i] = std::thread([s, num, path, blockSize, this] {
                         for (int id = s; id < s + num; id++) {
                             *(keyLogs + id) = new KeyLog(path, id, KEY_LOG_SIZE);
                             *(valueLogs + id) = new ValueLog(path, id, VALUE_LOG_SIZE,
-                                                             cacheBufferLimit + (8 * 4096) * id);
+                                                             cacheBufferLimit + blockSize * id);
                         }
                     });
                 }
