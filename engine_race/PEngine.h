@@ -25,31 +25,23 @@
 #include "value_log.h"
 #include "SortLog.h"
 #include "ThreadPool.h"
+#include "ValueLogFile.h"
 
-const int LOG_NUM = 2048;
-const int NUM_PER_SLOT = 1024 * 32;
-//const int NUM_PER_SLOT = 512;
-const size_t VALUE_LOG_SIZE = NUM_PER_SLOT * 4096;  //512mb
+const int LOG_NUM = 4096;
+const int NUM_PER_SLOT = 1024 * 20;
+
+const size_t VALUE_LOG_SIZE = NUM_PER_SLOT * 4096;  //80mb
 const size_t KEY_LOG_SIZE = NUM_PER_SLOT * 8;
-const size_t PER_MAP_SIZE = NUM_PER_SLOT;
+
+const size_t VALUE_FILE_NUM = 2048;
+
 const size_t CACHE_SIZE = VALUE_LOG_SIZE;
-const int CACHE_NUM = 8;
+const int CACHE_NUM = 14;
 const int CACHE_BLOCK_SIZE = 16 * 1024 * 1024;   //16mb
 
 const int RECOVER_THREAD = 64;
 const int READDISK_THREAD = 64;
-//const int LOG_NUM = 1024;
-//const int NUM_PER_SLOT = 1024 * 4;
-//const size_t VALUE_LOG_SIZE = NUM_PER_SLOT * 4096;
-//const size_t KEY_LOG_SIZE = NUM_PER_SLOT * 8;
-//const size_t PER_MAP_SIZE = NUM_PER_SLOT;
-//const int RECOVER_THREAD = 64;
-//const size_t CACHE_SIZE = VALUE_LOG_SIZE;
-//const int CACHE_NUM = 1;
-//const int CACHE_BLOCK_SIZE = 256 * 4096;
-//const int CACHE_BLOCK_NUM = (int) (CACHE_SIZE / CACHE_BLOCK_SIZE);
 
-#define gettidv1() syscall(__NR_gettid)
 
 using namespace std;
 using namespace std::chrono;
@@ -65,8 +57,7 @@ namespace polar_race {
         return duration_cast<milliseconds>(system_clock::now().time_since_epoch());
     }
 
-
-    static thread_local std::unique_ptr<char> readBuffer(static_cast<char *>(prepare()));
+    static thread_local std::unique_ptr<char> readBuffer(prepare());
 
     class PEngine {
 
@@ -74,13 +65,12 @@ namespace polar_race {
         KeyLog **keyLogs;
         ValueLog **valueLogs;
         SortLog **sortLogs;
+        ValueLogFile **valueLogFiles;
         std::mutex logMutex[LOG_NUM];
 
         char *valueCache;
         ThreadPool *readDiskThreadPool;
         std::atomic_flag readDiskFlag = ATOMIC_FLAG_INIT;
-
-//        std::atomic<int> threadCount = ATOMIC_VAR_INIT(0);
 
         std::condition_variable_any rangeCacheFinish[CACHE_NUM];
         std::mutex rangeCacheFinishMtx[CACHE_NUM];
@@ -94,7 +84,6 @@ namespace polar_race {
         bool isCacheWritable[CACHE_NUM];
         int currentCacheLogId[CACHE_NUM];
 
-
         std::condition_variable_any rangeAllFinish;
         bool rangeAllFinishFlag = false;
         std::mutex rangeAllFinishMtx;
@@ -103,8 +92,6 @@ namespace polar_race {
 
         milliseconds start;
 
-        u_int8_t *cacheBufferLimit;
-
     public:
         explicit PEngine(const string &path) {
             this->start = now();
@@ -112,21 +99,38 @@ namespace polar_race {
 
             this->keyLogs = static_cast<KeyLog **>(malloc(LOG_NUM * sizeof(KeyLog *)));
             this->valueLogs = static_cast<ValueLog **>(malloc(LOG_NUM * sizeof(ValueLog *)));
+            this->valueLogFiles = static_cast<ValueLogFile **>(malloc(VALUE_FILE_NUM * sizeof(ValueLogFile *)));
+
 
             std::ostringstream ss;
             ss << path << "/key-0";
             string filePath = ss.str();
 
+            int num_log_per_thread = LOG_NUM / RECOVER_THREAD;
+            int num_file_per_thread = VALUE_FILE_NUM / RECOVER_THREAD;
+            int num_log_per_file = LOG_NUM / VALUE_FILE_NUM;
+
             if (access(filePath.data(), 0) != -1) {
+
+                for (int fileId = 0; fileId < VALUE_FILE_NUM; fileId++) {
+                    *(valueLogFiles + fileId) = new ValueLogFile(path, fileId, VALUE_LOG_SIZE * num_log_per_file);
+                }
+
                 this->sortLogs = static_cast<SortLog **>(malloc(LOG_NUM * sizeof(SortLog *)));
+
+                for (int logId = 0; logId < LOG_NUM; logId++) {
+                    *(sortLogs + logId) = new SortLog(NUM_PER_SLOT);
+                    *(keyLogs + logId) = new KeyLog(path, logId, KEY_LOG_SIZE);
+
+                    int fd = valueLogFiles[logId / num_log_per_file]->getFd();
+                    off_t globalOffset = (logId % num_log_per_file) * VALUE_LOG_SIZE;
+                    *(valueLogs + logId) = new ValueLog(path, logId, fd, globalOffset);
+                }
+
+                recover();
+
                 this->valueCache = static_cast<char *>(malloc(CACHE_SIZE * CACHE_NUM));
                 posix_memalign((void **) &valueCache, (size_t) getpagesize(), CACHE_SIZE * CACHE_NUM);
-
-                for (int i = 0; i < LOG_NUM; i++) {
-                    *(sortLogs + i) = new SortLog(PER_MAP_SIZE);
-                    *(keyLogs + i) = new KeyLog(path, i, KEY_LOG_SIZE);
-                    *(valueLogs + i) = new ValueLog(path, i, VALUE_LOG_SIZE, nullptr);
-                }
 
                 for (int i = 0; i < CACHE_NUM; i++) {
                     isCacheReadable[i] = false;
@@ -134,21 +138,24 @@ namespace polar_race {
                     currentCacheLogId[i] = -1;
                 }
                 readDiskThreadPool = new ThreadPool(READDISK_THREAD);
-                recover();
-            } else {
-                int blockSize = 16 * 4096;
-                this->cacheBufferLimit = static_cast<u_int8_t *>(malloc(blockSize * LOG_NUM));
-                posix_memalign((void **) &cacheBufferLimit, 4096, blockSize * LOG_NUM);
 
+            } else {
                 std::thread t[RECOVER_THREAD];
-                auto num = LOG_NUM / RECOVER_THREAD;
+
                 for (int i = 0; i < RECOVER_THREAD; i++) {
-                    auto s = num * i;
-                    t[i] = std::thread([s, num, path, blockSize, this] {
-                        for (int id = s; id < s + num; id++) {
-                            *(keyLogs + id) = new KeyLog(path, id, KEY_LOG_SIZE);
-                            *(valueLogs + id) = new ValueLog(path, id, VALUE_LOG_SIZE,
-                                                             cacheBufferLimit + blockSize * id);
+                    t[i] = std::thread([i, num_log_per_thread, num_file_per_thread, num_log_per_file, path, this] {
+
+                        for (int fileId = i * num_file_per_thread; fileId < (i + 1) * num_file_per_thread; fileId++) {
+                            *(valueLogFiles + fileId) = new ValueLogFile(path, fileId,
+                                                                         VALUE_LOG_SIZE * num_log_per_file);
+                        }
+
+                        for (int logId = i * num_log_per_thread; logId < (i + 1) * num_log_per_thread; logId++) {
+                            *(keyLogs + logId) = new KeyLog(path, logId, KEY_LOG_SIZE);
+
+                            int fd = valueLogFiles[logId / num_log_per_file]->getFd();
+                            off_t globalOffset = (logId % num_log_per_file) * VALUE_LOG_SIZE;
+                            *(valueLogs + logId) = new ValueLog(path, logId, fd, globalOffset);
                         }
                     });
                 }
@@ -170,27 +177,19 @@ namespace polar_race {
                 delete[] sortLogs;
                 free(valueCache);
             }
-            std::thread t[RECOVER_THREAD];
-            auto num = LOG_NUM / RECOVER_THREAD;
-            for (int i = 0; i < RECOVER_THREAD; i++) {
-                auto s = num * i;
-                t[i] = std::thread([s, num, this] {
-                    for (int id = s; id < s + num; id++) {
-                        delete keyLogs[id];
-                        delete valueLogs[id];
-                    }
-                });
-            }
-            for (auto &i : t) {
-                i.join();
+
+            for (int fileId = 0; fileId < VALUE_FILE_NUM; fileId++) {
+                delete valueLogFiles[fileId];
             }
 
-            if (cacheBufferLimit != nullptr)
-                free(cacheBufferLimit);
+            for (int logId = 0; logId < LOG_NUM; logId++) {
+                delete keyLogs[logId];
+                delete valueLogs[logId];
+            }
 
             delete[] keyLogs;
             delete[] valueLogs;
-
+            delete[] valueLogFiles;
 
             printf("Finish deleting engine, total life is %lims\n", (now() - start).count());
         }
@@ -233,7 +232,7 @@ namespace polar_race {
         }
 
         inline int getLogId(const char *k) {
-            return ((u_int16_t) ((u_int8_t) k[0]) << 3) | ((u_int8_t) k[1] >> 5);
+            return ((u_int16_t) ((u_int8_t) k[0]) << 4) | ((u_int8_t) k[1] >> 4);
 //            return (*((u_int8_t *) k));
         }
 
@@ -422,7 +421,6 @@ namespace polar_race {
                 rangeAllFinishCount = 0;
                 rangeAllFinishFlag = true;
                 readDiskFlag.clear();
-
                 for (int i = 0; i < CACHE_NUM; i++) {
                     readDiskCount[i] = 0;
                     rangeCacheCount[i] = 0;
