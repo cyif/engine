@@ -288,9 +288,9 @@ namespace polar_race {
 //            }
 
             if (lower == "" && upper == "" && (sortLogs[0]->size() > 25000 / 2)) {
-//                rangeAll(visitor);
-//                return kSucc;
-//            }
+                rangeAll(visitor);
+                return kSucc;
+            }
 
             if (lowerLogId > upperLogId && !upperFlag) {
                 return kInvalidArgument;
