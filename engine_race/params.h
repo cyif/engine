@@ -9,15 +9,15 @@
 
 const int MAX_RANGE_COUNT = 2;
 
-const int LOG_NUM = 4096;
-const int NUM_PER_SLOT = 1024 * 20;
+const int LOG_NUM = 2048;
+const int NUM_PER_SLOT = 1024 * 32;
 const size_t VALUE_LOG_SIZE = NUM_PER_SLOT * 4096;  //80mb
 const size_t KEY_LOG_SIZE = NUM_PER_SLOT * 8;
 
-const size_t FILE_NUM = 256;
+const size_t FILE_NUM = 64;
 
 const size_t CACHE_SIZE = VALUE_LOG_SIZE;
-const int CACHE_NUM = 16;
+const int CACHE_NUM = 8;
 const int CACHE_BLOCK_SIZE = 16 * 1024 * 1024;   //16mb
 
 const size_t PAGE_PER_BLOCK = 8;
