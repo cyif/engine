@@ -218,6 +218,7 @@ namespace polar_race {
         inline int getLogId(const char *k) {
 //            return ((u_int16_t) ((u_int8_t) k[0]) << 4) | ((u_int8_t) k[1] >> 4);
             return ((u_int16_t) ((u_int8_t) k[0]) << 3) | ((u_int8_t) k[1] >> 5);
+//            return ((u_int16_t) ((u_int8_t) k[0]) << 1) | ((u_int8_t) k[1] >> 7);
 //            return (*((u_int8_t *) k));
         }
 
@@ -313,19 +314,23 @@ namespace polar_race {
         }
 
         void readDisk() {
-//            printf("Start Read Disk Thread %ld!\n", gettidv1());
-            for (int logId = 0; logId < LOG_NUM; logId++) {
+            printf("Start Read Disk Thread!\n");
+            int logId = 0;
+            int rangeAllCount = 0;
+            while (true) {
 
                 auto cacheIndex = logId % CACHE_NUM;
 
                 if (!isCacheWritable[cacheIndex]) {
                     //等待获取可用的cache
+//                    printf("Cache is not writable. LogId : %d,  CacheIndex %d, ThreadId %ld\n", logId, cacheIndex, gettidv1());
                     rangeCacheFinishMtx[cacheIndex].lock();
                     while (!isCacheWritable[cacheIndex]) {
                         rangeCacheFinish[cacheIndex].wait(rangeCacheFinishMtx[cacheIndex]);
                     }
                     rangeCacheFinishMtx[cacheIndex].unlock();
                 }
+//                printf("Cache is writable. LogId : %d,  CacheIndex %d, ThreadId %ld\n", logId, cacheIndex, gettidv1());
                 isCacheWritable[cacheIndex] = false;
                 readDiskCount[cacheIndex] = 0;
                 currentCacheLogId[cacheIndex] = logId;
@@ -346,6 +351,7 @@ namespace polar_race {
                             valueLog->readValue(offset, (cache + offset), CACHE_BLOCK_SIZE);
                         }
 
+//                        std::unique_lock <std::mutex> lock(readDiskFinishMtx[cacheIndex]);
                         readDiskFinishMtx[cacheIndex].lock();
                         auto count = ++readDiskCount[cacheIndex];
                         if (count == maxIndex + 1) {
@@ -354,6 +360,16 @@ namespace polar_race {
                         }
                         readDiskFinishMtx[cacheIndex].unlock();
                     });
+                }
+
+                logId++;
+                if (logId >= LOG_NUM) {
+                    logId = 0;
+                    rangeAllCount++;
+                    if (rangeAllCount == MAX_RANGE_COUNT) {
+                        readDiskFlag.clear();
+                        break;
+                    }
                 }
             }
         }
@@ -395,30 +411,6 @@ namespace polar_race {
                 }
                 rangeCacheFinishMtx[cacheIndex].unlock();
 //                lock.unlock();
-            }
-
-            //重置参数
-            rangeAllFinishMtx.lock();
-
-            int finishCount = ++rangeAllFinishCount;
-            if (finishCount == 64) {
-                rangeAllFinishCount = 0;
-                rangeAllFinishFlag = true;
-                readDiskFlag.clear();
-                for (int i = 0; i < CACHE_NUM; i++) {
-                    readDiskCount[i] = 0;
-                    rangeCacheCount[i] = 0;
-                    isCacheWritable[i] = true;
-                    isCacheReadable[i] = false;
-                }
-
-                rangeAllFinish.notify_all();
-                rangeAllFinishMtx.unlock();
-            } else {
-                while (!rangeAllFinishFlag) {
-                    rangeAllFinish.wait(rangeAllFinishMtx);
-                }
-                rangeAllFinishMtx.unlock();
             }
         }
 
