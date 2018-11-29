@@ -24,6 +24,6 @@ const size_t PAGE_PER_BLOCK = 8;
 const size_t BLOCK_SIZE = PAGE_PER_BLOCK * 4096;
 
 const int RECOVER_THREAD = 64;
-const int READDISK_THREAD = 2;
+const int READDISK_THREAD = 8;
 
 #endif //ENGINE_PARAMS_H
