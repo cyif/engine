@@ -344,6 +344,7 @@ namespace polar_race {
                 for (int index = 0; index <= maxIndex; index++) {
 
                     readDiskThreadPool->enqueue([index, cacheIndex, valueLog, cache, maxIndex, fileSize, this] {
+
                         size_t offset = (size_t) index * CACHE_BLOCK_SIZE;
                         if (index == maxIndex) {
                             valueLog->readValue(offset, (cache + offset), (size_t) fileSize % CACHE_BLOCK_SIZE);
