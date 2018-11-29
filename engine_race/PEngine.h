@@ -146,7 +146,6 @@ namespace polar_race {
                     i.join();
                 }
 
-                this->valueCache = static_cast<char *>(malloc(CACHE_SIZE * CACHE_NUM));
                 posix_memalign((void **) &valueCache, (size_t) getpagesize(), CACHE_SIZE * CACHE_NUM);
 
                 for (int i = 0; i < CACHE_NUM; i++) {
