@@ -27,7 +27,7 @@ namespace polar_race {
         }
 
         inline bool getKey(u_int64_t & key) {
-            key = *(u_int64_t*)(keyBuffer + keyBufferPosition);
+            key = *((u_int64_t*)(keyBuffer + keyBufferPosition));
             keyBufferPosition += 8;
             return key != 0;
         }
