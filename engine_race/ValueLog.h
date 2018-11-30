@@ -73,10 +73,6 @@ namespace polar_race {
 
         void recover(u_int32_t sum) {
             this->filePosition = (size_t) sum << 12;
-//            this->cacheBufferPosition = sum % PAGE_PER_BLOCK;
-//            auto offset = (size_t) cacheBufferPosition << 12;
-//            filePosition -= offset;
-//            pwrite(this->fd, cacheBuffer, offset, globalOffset + filePosition);
         }
 
 

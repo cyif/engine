@@ -193,18 +193,6 @@ namespace polar_race {
 
         ~PEngine() {
             printf("deleting engine, total life is %lims\n", (now() - start).count());
-            if (sortLogs != nullptr) {
-                for (int i = 0; i < LOG_NUM; i++)
-                    delete sortLogs[i];
-                delete[] sortLogs;
-                free(valueCache);
-            }
-
-            close(cacheFd);
-
-            for (int fileId = 0; fileId < FILE_NUM; fileId++)
-                delete kvFiles[fileId];
-            delete[] kvFiles;
 
             for (int logId = 0; logId < LOG_NUM; logId++) {
                 delete keyLogs[logId];
@@ -213,6 +201,17 @@ namespace polar_race {
             delete[] keyLogs;
             delete[] valueLogs;
 
+            for (int fileId = 0; fileId < FILE_NUM; fileId++)
+                delete kvFiles[fileId];
+            delete[] kvFiles;
+
+            close(cacheFd);
+            if (sortLogs != nullptr) {
+                for (int i = 0; i < LOG_NUM; i++)
+                    delete sortLogs[i];
+                delete[] sortLogs;
+                free(valueCache);
+            }
             printf("Finish deleting engine, total life is %lims\n", (now() - start).count());
         }
 
@@ -268,7 +267,7 @@ namespace polar_race {
 //                rangeAll(visitor);
 //                return kSucc;
 //            }
-//
+
             if (lower == "" && upper == "" && (sortLogs[0]->size() > 20000)) {
                 rangeAll(visitor);
                 return kSucc;
