@@ -32,17 +32,17 @@ using namespace std;
 using namespace std::chrono;
 
 namespace polar_race {
-    static char *prepare() {
-        auto buffer = static_cast<char *>(malloc(4096));
-        posix_memalign((void **) &buffer, (size_t) getpagesize(), 4096);
-        return buffer;
-    }
+//    static char *prepare() {
+//        auto buffer = static_cast<char *>(malloc(4096));
+//        posix_memalign((void **) &buffer, (size_t) getpagesize(), 4096);
+//        return buffer;
+//    }
 
     milliseconds now() {
         return duration_cast<milliseconds>(system_clock::now().time_since_epoch());
     }
 
-    static thread_local std::unique_ptr<char> readBuffer(prepare());
+    static thread_local std::unique_ptr<char> readBuffer(static_cast<char *> (memalign((size_t) getpagesize(), 4096)));
 
     class PEngine {
 
