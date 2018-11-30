@@ -86,7 +86,7 @@ namespace polar_race {
             values[left] ^= values[right] ^= values[left] ^= values[right];
         }
 
-        int find(u_int64_t &bigEndkey) {
+        long find(u_int64_t &bigEndkey) {
 
             u_int64_t key = __builtin_bswap64(bigEndkey);
 //        u_int64_t key = bigEndkey;

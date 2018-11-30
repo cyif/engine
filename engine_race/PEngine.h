@@ -32,11 +32,6 @@ using namespace std;
 using namespace std::chrono;
 
 namespace polar_race {
-//    static char *prepare() {
-//        auto buffer = static_cast<char *>(malloc(4096));
-//        posix_memalign((void **) &buffer, (size_t) getpagesize(), 4096);
-//        return buffer;
-//    }
 
     milliseconds now() {
         return duration_cast<milliseconds>(system_clock::now().time_since_epoch());
@@ -69,12 +64,6 @@ namespace polar_race {
         bool isCacheWritable[CACHE_NUM];
         int currentCacheLogId[CACHE_NUM];
 
-        std::condition_variable_any rangeAllFinish;
-        bool rangeAllFinishFlag = false;
-        std::mutex rangeAllFinishMtx;
-
-        int rangeAllFinishCount = 0;
-
         milliseconds start;
 
     public:
@@ -94,10 +83,6 @@ namespace polar_race {
 
             if (access(filePath.data(), 0) != -1) {
 
-//                for (int fileId = 0; fileId < FILE_NUM; fileId++)
-//                    *(kvFiles + fileId) = new KVFiles(path, fileId, VALUE_LOG_SIZE * num_log_per_file,
-//                                                      BLOCK_SIZE * num_log_per_file, KEY_LOG_SIZE * num_log_per_file);
-
                 this->sortLogs = static_cast<SortLog **>(malloc(LOG_NUM * sizeof(SortLog *)));
 
                 std::thread t[RECOVER_THREAD];
@@ -114,12 +99,12 @@ namespace polar_race {
                         for (int logId = i; logId < LOG_NUM; logId += RECOVER_THREAD) {
                             sortLogs[logId] = new SortLog();
 
-                            size_t fileId = logId % FILE_NUM;
-                            size_t slotId = logId / FILE_NUM;
+                            int fileId = logId % FILE_NUM;
+                            int slotId = logId / FILE_NUM;
 
                             int valueFd = this->kvFiles[fileId]->getValueFd();
                             char *cacheBuffer = this->kvFiles[fileId]->getCacheBuffer() + slotId * BLOCK_SIZE;
-                            off_t globalOffset = slotId * VALUE_LOG_SIZE;
+                            size_t globalOffset = slotId * VALUE_LOG_SIZE;
                             u_int64_t *keyBuffer = this->kvFiles[fileId]->getKeyBuffer() + slotId * NUM_PER_SLOT;
 
                             keyLogs[logId] = new KeyLog(keyBuffer);
@@ -146,7 +131,7 @@ namespace polar_race {
                     i.join();
                 }
 
-                posix_memalign((void **) &valueCache, (size_t) getpagesize(), CACHE_SIZE * CACHE_NUM);
+                this->valueCache = static_cast<char *> (memalign((size_t) getpagesize(), CACHE_SIZE * CACHE_NUM));
 
                 for (int i = 0; i < CACHE_NUM; i++) {
                     isCacheReadable[i] = false;
@@ -168,12 +153,12 @@ namespace polar_race {
 
                         for (int logId = i; logId < LOG_NUM; logId += RECOVER_THREAD) {
 
-                            size_t fileId = logId % FILE_NUM;
-                            size_t slotId = logId / FILE_NUM;
+                            int fileId = logId % FILE_NUM;
+                            int slotId = logId / FILE_NUM;
 
                             int valueFd = kvFiles[fileId]->getValueFd();
                             char *cacheBuffer = kvFiles[fileId]->getCacheBuffer() + slotId * BLOCK_SIZE;
-                            off_t globalOffset = slotId * VALUE_LOG_SIZE;
+                            size_t globalOffset = slotId * VALUE_LOG_SIZE;
                             u_int64_t *keyBuffer = kvFiles[fileId]->getKeyBuffer() + slotId * NUM_PER_SLOT;
 
                             *(keyLogs + logId) = new KeyLog(keyBuffer);
@@ -214,7 +199,7 @@ namespace polar_race {
             printf("Finish deleting engine, total life is %lims\n", (now() - start).count());
         }
 
-        inline int getLogId(const char *k) {
+        static inline int getLogId(const char *k) {
 //            return ((u_int16_t) ((u_int8_t) k[0]) << 4) | ((u_int8_t) k[1] >> 4);
             return ((u_int16_t) ((u_int8_t) k[0]) << 3) | ((u_int8_t) k[1] >> 5);
 //            return ((u_int16_t) ((u_int8_t) k[0]) << 2) | ((u_int8_t) k[1] >> 6);
@@ -222,18 +207,16 @@ namespace polar_race {
         }
 
         void put(const PolarString &key, const PolarString &value) {
-
             auto logId = getLogId(key.data());
             logMutex[logId].lock();
-//            lock_guard<mutex> lck(logMutex[logId]);
             valueLogs[logId]->putValue(value.data());
-            keyLogs[logId]->putValue(key.data());
+            keyLogs[logId]->putKey(key.data());
             logMutex[logId].unlock();
         }
 
         RetCode read(const PolarString &key, string *value) {
             auto logId = getLogId(key.data());
-            auto index = sortLogs[logId]->find(*(u_int64_t *) key.data());
+            auto index = sortLogs[logId]->find(*((u_int64_t *) key.data()));
 
             if (index == -1) {
                 return kNotFound;

@@ -25,8 +25,8 @@ namespace polar_race {
 
     private:
         int fd;
-        off_t filePosition;
-        off_t globalOffset;
+        size_t filePosition;
+        size_t globalOffset;
 
 
         int cacheBufferPosition;
@@ -35,14 +35,14 @@ namespace polar_race {
 
     public:
 
-        ValueLog(const int &fd, const off_t &globalOffset, char *cacheBuffer) : fd(fd),
+        ValueLog(const int &fd, const size_t &globalOffset, char *cacheBuffer) : fd(fd),
                                                                                     globalOffset(globalOffset),
                                                                                     cacheBuffer(cacheBuffer),
                                                                                     filePosition(0),
                                                                                     cacheBufferPosition(0) {
         }
 
-        off_t size() {
+        size_t size() {
             return filePosition + (cacheBufferPosition << 12);
         }
 
@@ -60,12 +60,12 @@ namespace polar_race {
             pread(this->fd, value, 4096, globalOffset + (index << 12));
         }
 
-        inline void readValue(off_t offset, char *value, size_t size) {
+        inline void readValue(size_t offset, char *value, size_t size) {
             pread(this->fd, value, size, globalOffset + offset);
         }
 
         void recover(u_int32_t sum) {
-            this->filePosition = (off_t) sum << 12;
+            this->filePosition = (size_t) sum << 12;
             this->cacheBufferPosition = sum % PAGE_PER_BLOCK;
             auto offset = (size_t) cacheBufferPosition << 12;
             filePosition -= offset;

@@ -13,7 +13,7 @@ namespace polar_race {
 
     class KeyLog {
     private:
-        long keyBufferPosition;
+        int keyBufferPosition;
         u_int64_t * keyBuffer;
 
     public:
@@ -21,18 +21,18 @@ namespace polar_race {
         explicit KeyLog(u_int64_t *keyBuffer) : keyBuffer(keyBuffer), keyBufferPosition(0) {
         }
 
-        inline void putValue(const char * key) {
+        inline void putKey(const char * key) {
             *(keyBuffer + keyBufferPosition) = *((u_int64_t *) key);
-            keyBufferPosition ++;
+            keyBufferPosition++;
         }
 
         inline bool getKey(u_int64_t & key) {
             key = *(keyBuffer + keyBufferPosition);
-            keyBufferPosition ++;
+            keyBufferPosition++;
             return key != 0;
         }
 
-        void setKeyBufferPosition(long position) {
+        void setKeyBufferPosition(int position) {
             this->keyBufferPosition = position;
         }
 

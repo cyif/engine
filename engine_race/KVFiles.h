@@ -22,18 +22,19 @@ namespace polar_race {
 
     class KVFiles {
     private:
-        int valueFd{};
+        int valueFd;
 
         int cacheFd;
         char *cacheBuffer;
         size_t cacheFileSize;
 
-        int keyFd{};
+        int keyFd;
         u_int64_t * keyBuffer;
         size_t keyFileSize;
 
     public:
-        KVFiles(const std::string &path, const int &id, const long &valueFileSize, const size_t &cacheFileSize, const size_t &keyFileSize) {
+        KVFiles(const std::string &path, const int &id, const size_t &valueFileSize, const size_t &cacheFileSize, const size_t &keyFileSize) :
+                cacheFileSize(cacheFileSize), keyFileSize(keyFileSize){
             //Value Log
             std::ostringstream fp;
             fp << path << "/value-" << id;
@@ -44,7 +45,6 @@ namespace polar_race {
             //Value Cache
             std::ostringstream cfp;
             cfp << path << "/value-cache-" << id;
-            this->cacheFileSize = cacheFileSize;
             //value cache file
             this->cacheFd = open(cfp.str().data(), O_CREAT | O_RDWR, 0777);
             fallocate(this->cacheFd, 0, 0, cacheFileSize);
@@ -56,7 +56,6 @@ namespace polar_race {
             std::ostringstream ss;
             ss << path << "/key-" << id;
             this->keyFd = open(ss.str().data(), O_CREAT | O_RDWR, 0777);
-            this->keyFileSize = keyFileSize;
             fallocate(this->keyFd, 0, 0, this->keyFileSize);
             this->keyBuffer = static_cast<u_int64_t *>(mmap(nullptr, this->keyFileSize, PROT_READ | PROT_WRITE,
                                                            MAP_SHARED | MAP_POPULATE, this->keyFd, 0));
