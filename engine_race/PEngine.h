@@ -118,9 +118,9 @@ namespace polar_race {
                             size_t slotId = logId / FILE_NUM;
 
                             int valueFd = this->kvFiles[fileId]->getValueFd();
-                            u_int8_t *cacheBuffer = this->kvFiles[fileId]->getCacheBuffer() + slotId * BLOCK_SIZE;
+                            char *cacheBuffer = this->kvFiles[fileId]->getCacheBuffer() + slotId * BLOCK_SIZE;
                             off_t globalOffset = slotId * VALUE_LOG_SIZE;
-                            u_int8_t *keyBuffer = this->kvFiles[fileId]->getKeyBuffer() + slotId * KEY_LOG_SIZE;
+                            u_int64_t *keyBuffer = this->kvFiles[fileId]->getKeyBuffer() + slotId * NUM_PER_SLOT;
 
                             keyLogs[logId] = new KeyLog(keyBuffer);
                             valueLogs[logId] = new ValueLog(valueFd, globalOffset, cacheBuffer);
@@ -136,7 +136,7 @@ namespace polar_race {
                                 sortLog->put(k, cnt++);
 
                             sortLog->quicksort();
-                            keyLog->setKeyBufferPosition(cnt * 8);
+                            keyLog->setKeyBufferPosition(cnt);
                             valueLog->recover(cnt);
                         }
                     });
@@ -172,9 +172,9 @@ namespace polar_race {
                             size_t slotId = logId / FILE_NUM;
 
                             int valueFd = kvFiles[fileId]->getValueFd();
-                            u_int8_t *cacheBuffer = kvFiles[fileId]->getCacheBuffer() + slotId * BLOCK_SIZE;
+                            char *cacheBuffer = kvFiles[fileId]->getCacheBuffer() + slotId * BLOCK_SIZE;
                             off_t globalOffset = slotId * VALUE_LOG_SIZE;
-                            u_int8_t *keyBuffer = kvFiles[fileId]->getKeyBuffer() + slotId * KEY_LOG_SIZE;
+                            u_int64_t *keyBuffer = kvFiles[fileId]->getKeyBuffer() + slotId * NUM_PER_SLOT;
 
                             *(keyLogs + logId) = new KeyLog(keyBuffer);
                             *(valueLogs + logId) = new ValueLog(valueFd, globalOffset, cacheBuffer);

@@ -30,12 +30,12 @@ namespace polar_race {
 
 
         int cacheBufferPosition;
-        u_int8_t *cacheBuffer{};
+        char *cacheBuffer;
 
 
     public:
 
-        ValueLog(const int &fd, const off_t &globalOffset, u_int8_t *cacheBuffer) : fd(fd),
+        ValueLog(const int &fd, const off_t &globalOffset, char *cacheBuffer) : fd(fd),
                                                                                     globalOffset(globalOffset),
                                                                                     cacheBuffer(cacheBuffer),
                                                                                     filePosition(0),

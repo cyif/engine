@@ -23,16 +23,13 @@ namespace polar_race {
     class KVFiles {
     private:
         int valueFd{};
-        std::string valuefilePath;
 
         int cacheFd;
-        std::string cacheFilePath;
-        u_int8_t *cacheBuffer{};
+        char *cacheBuffer;
         size_t cacheFileSize;
 
         int keyFd{};
-        std::string keyFilePath;
-        u_int8_t * keyBuffer{};
+        u_int64_t * keyBuffer;
         size_t keyFileSize;
 
     public:
@@ -40,34 +37,28 @@ namespace polar_race {
             //Value Log
             std::ostringstream fp;
             fp << path << "/value-" << id;
-            this->valuefilePath = fp.str();
-            auto mode = O_CREAT | O_RDWR | O_DIRECT;
-            this->valueFd = open(this->valuefilePath.data(), mode, 0777);
+            this->valueFd = open(fp.str().data(), O_CREAT | O_RDWR | O_DIRECT, 0777);
             fallocate(this->valueFd, 0, 0, valueFileSize);
 
 
             //Value Cache
             std::ostringstream cfp;
             cfp << path << "/value-cache-" << id;
-            this->cacheFilePath = cfp.str();
-
             this->cacheFileSize = cacheFileSize;
             //value cache file
-            this->cacheFd = open(this->cacheFilePath.data(), O_CREAT | O_RDWR, 0777);
+            this->cacheFd = open(cfp.str().data(), O_CREAT | O_RDWR, 0777);
             fallocate(this->cacheFd, 0, 0, cacheFileSize);
-            this->cacheBuffer = static_cast<u_int8_t *>(mmap(nullptr, cacheFileSize, PROT_READ | PROT_WRITE,
+            this->cacheBuffer = static_cast<char *>(mmap(nullptr, cacheFileSize, PROT_READ | PROT_WRITE,
                                                              MAP_SHARED | MAP_POPULATE, this->cacheFd, 0));
 
 
             //Key Log
             std::ostringstream ss;
             ss << path << "/key-" << id;
-            this->keyFilePath = ss.str();
-
-            this->keyFd = open(this->keyFilePath.data(), O_CREAT | O_RDWR, 0777);
+            this->keyFd = open(ss.str().data(), O_CREAT | O_RDWR, 0777);
             this->keyFileSize = keyFileSize;
             fallocate(this->keyFd, 0, 0, this->keyFileSize);
-            this->keyBuffer = static_cast<u_int8_t *>(mmap(nullptr, this->keyFileSize, PROT_READ | PROT_WRITE,
+            this->keyBuffer = static_cast<u_int64_t *>(mmap(nullptr, this->keyFileSize, PROT_READ | PROT_WRITE,
                                                            MAP_SHARED | MAP_POPULATE, this->keyFd, 0));
         }
 
@@ -79,7 +70,7 @@ namespace polar_race {
             close(this->keyFd);
         }
 
-        u_int8_t *getCacheBuffer() {
+        char *getCacheBuffer() {
             return cacheBuffer;
         }
 
@@ -87,7 +78,7 @@ namespace polar_race {
             return valueFd;
         }
 
-        u_int8_t *getKeyBuffer() const {
+        u_int64_t *getKeyBuffer() const {
             return keyBuffer;
         }
     };
