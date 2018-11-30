@@ -150,7 +150,7 @@ namespace polar_race {
             int right = nums;
             int middle;
             while (left < right) {
-                middle = left + (right - left) / 2;
+                middle = left + ((right - left) >> 1);
                 if (keys[middle] < kk)
                     left = middle + 1;
                 else
@@ -177,7 +177,7 @@ namespace polar_race {
             int right = nums - 1;
             int middle;
             while (left < right) {
-                middle = (left + right) / 2;
+                middle = (left + right) >> 1;
                 if (key > keys[middle])
                     left = middle + 1;
                 else
@@ -193,7 +193,7 @@ namespace polar_race {
             int left = 0;
             int right = nums - 1;
             while (left <= right) {
-                int middle = (left + right) / 2;
+                int middle = (left + right) >> 1;
                 if (key > keys[middle])
                     left = middle + 1;
                 else
