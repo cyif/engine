@@ -34,7 +34,6 @@ namespace polar_race {
 
         void put(u_int64_t &bigEndkey, const u_int32_t &value) {
             keys[nums] = __builtin_bswap64(bigEndkey);
-//        keys[nums] = bigEndkey;
             values[nums] = value;
             nums++;
         };
@@ -53,31 +52,68 @@ namespace polar_race {
             }
         }
 
-        void quicksort(int pLeft, int pRight) {
-            if (pLeft < pRight) {
-                int storeIndex = partition(pLeft, pRight);
-                quicksort(pLeft, storeIndex - 1);
-                quicksort(storeIndex + 1, pRight);
+        void quicksort(int low, int high) {
+
+            if ((high - low + 1) > MAX_LENGTH_INSERT_SORT) {
+                // 待排序数组长度大于临界值，则进行快速排序
+                int pivotLoc = partition(low, high);
+
+                quicksort(low, pivotLoc - 1);
+                quicksort(pivotLoc + 1, high);
+            } else {
+                // 2. 优化小数组时的排序方案，将快速排序改为插入排序
+                insertSort(low, high);
             }
         }
 
-        int partition(int pLeft, int pRight) {
+        bool lessThan(int &a, int &b) {
+            return (keys[a] < keys[b] || (keys[a] == keys[b] && values[a] < values[b]));
+        }
 
-            swap(pRight, (pLeft + pRight) / 2);
+        bool lessThanOrEqual(u_int64_t &key1, u_int32_t &value1, u_int64_t &key2, u_int32_t &value2) {
+            return (key1 < key2 || (key1 == key2 && value1 <= value2));
+        }
 
-            u_int64_t pivotKey = keys[pRight];
-            int pivotValue = values[pRight];
+        bool lessThan(u_int64_t &key1, u_int32_t &value1, u_int64_t &key2, u_int32_t &value2) {
+            return (key1 < key2 || (key1 == key2 && value1 < value2));
+        }
 
-            int storeIndex = pLeft;
-            for (int i = pLeft; i < pRight; i++) {
-                if (keys[i] < pivotKey || (keys[i] == pivotKey && values[i] < pivotValue)) {
-                    swap(i, storeIndex);
-                    storeIndex++;
+        int partition(int low, int high) {
+
+            // 1. 优化排序基准，使用三值取中获取中值
+            medianOfThree(low, high);
+            u_int64_t pivotKey = keys[low];
+            u_int32_t pivotValue = values[low];
+
+            while (low < high) { // 从数组的两端向中间扫描 // A
+                while (low < high && lessThanOrEqual(pivotKey, pivotValue, keys[high], values[high])) { // B
+                    high--;
                 }
 
+                keys[low] = keys[high];
+                values[low] = values[high];
+                while (low < high && lessThanOrEqual(keys[low], values[low], pivotKey, pivotValue)) { // D
+                    low++;
+                }
+
+                keys[high] = keys[low];
+                values[high] = values[low];
             }
-            swap(storeIndex, pRight);
-            return storeIndex;
+            keys[low] = pivotKey;
+            values[low] = pivotValue;
+
+            return low; // 返回一趟下来后枢轴pivot所在的位置
+        }
+
+
+        void medianOfThree(int low, int high) {
+            int mid = low + ((high - low) >> 1); // mid = low + (high-low)/2, 中间元素下标
+
+            if (lessThan(high, mid))
+                swap(mid, high);
+
+            if (lessThan(mid, low))
+                swap(low, mid);
         }
 
         void swap(int left, int right) {
@@ -86,27 +122,44 @@ namespace polar_race {
             values[left] ^= values[right] ^= values[left] ^= values[right];
         }
 
-        long find(u_int64_t &bigEndkey) {
-
-            u_int64_t key = __builtin_bswap64(bigEndkey);
-//        u_int64_t key = bigEndkey;
-
-            int left = 0;
-            int right = nums - 1;
-            int middle;
-            while (left <= right) {
-                middle = (left + right) / 2;
-                if (keys[middle] == key) {
-                    while (middle + 1 <= nums - 1 && keys[middle + 1] == key)
-                        middle++;
-                    return values[middle];
-                } else if (key < keys[middle]) {
-                    right = middle - 1;
-                } else {
-                    left = middle + 1;
+        void insertSort(int low, int high) {
+            int i, j;
+            for (i = low + 1; i <= high; i++) { // 从下标low+1开始遍历,因为下标为low的已经排好序
+                if (lessThan(keys[i], values[i], keys[i - 1], values[i - 1])) {
+                    // 如果当前下标对应的记录小于前一位记录,则需要插入,否则不需要插入，直接将记录数增加1
+                    u_int64_t tmpKey = keys[i];
+                    u_int32_t tmpValue = values[i];
+                    for (j = i - 1; j >= low && lessThan(tmpKey, tmpValue, keys[j], values[j]); j--) {
+                        keys[j + 1] = keys[j];
+                        values[j + 1] = values[j];
+                    }
+                    // 插入正确位置
+                    keys[j + 1] = tmpKey;
+                    values[j + 1] = tmpValue;
                 }
             }
-            return -1;
+        }
+
+
+        int find(u_int64_t &bigEndkey) {
+
+            u_int64_t key = __builtin_bswap64(bigEndkey);
+            u_int64_t kk = key + 1;
+
+            int left = 0;
+            int right = nums;
+            int middle;
+            while (left < right) {
+                middle = left + (right - left) / 2;
+                if (keys[middle] < kk)
+                    left = middle + 1;
+                else
+                    right = middle;
+            }
+            auto res = -1;
+            if (left > 0 && keys[left - 1] == key)
+                res = values[left - 1];
+            return res;
         }
 
         int findValueByIndex(int index) {
