@@ -24,32 +24,17 @@ namespace polar_race {
     private:
         int valueFd;
 
-        int cacheFd;
-        char *cacheBuffer;
-        size_t cacheFileSize;
-
         int keyFd;
         u_int64_t * keyBuffer;
         size_t keyFileSize;
 
     public:
-        KVFiles(const std::string &path, const int &id, const size_t &valueFileSize, const size_t &cacheFileSize, const size_t &keyFileSize) :
-                cacheFileSize(cacheFileSize), keyFileSize(keyFileSize){
+        KVFiles(const std::string &path, const int &id, const size_t &valueFileSize, const size_t &keyFileSize) : keyFileSize(keyFileSize){
             //Value Log
             std::ostringstream fp;
             fp << path << "/value-" << id;
             this->valueFd = open(fp.str().data(), O_CREAT | O_RDWR | O_DIRECT, 0777);
             fallocate(this->valueFd, 0, 0, valueFileSize);
-
-
-            //Value Cache
-            std::ostringstream cfp;
-            cfp << path << "/value-cache-" << id;
-            //value cache file
-            this->cacheFd = open(cfp.str().data(), O_CREAT | O_RDWR, 0777);
-            fallocate(this->cacheFd, 0, 0, cacheFileSize);
-            this->cacheBuffer = static_cast<char *>(mmap(nullptr, cacheFileSize, PROT_READ | PROT_WRITE,
-                                                             MAP_SHARED | MAP_POPULATE, this->cacheFd, 0));
 
 
             //Key Log
@@ -63,15 +48,10 @@ namespace polar_race {
 
         ~KVFiles() {
             close(this->valueFd);
-            munmap(cacheBuffer, cacheFileSize);
-            close(this->cacheFd);
-            munmap(keyBuffer, this->keyFileSize);
+//            munmap(keyBuffer, this->keyFileSize);
             close(this->keyFd);
         }
 
-        char *getCacheBuffer() {
-            return cacheBuffer;
-        }
 
         int getValueFd() const {
             return valueFd;
