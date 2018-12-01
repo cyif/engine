@@ -97,8 +97,6 @@ namespace polar_race {
 
                 this->sortLogs = static_cast<SortLog **>(malloc(LOG_NUM * sizeof(SortLog *)));
 
-
-
                 std::thread t[RECOVER_THREAD];
                 for (int i = 0; i < RECOVER_THREAD; i++) {
                     t[i] = std::thread([i, num_log_per_file, path, this] {
@@ -155,6 +153,7 @@ namespace polar_race {
                 readDiskThreadPool = new ThreadPool(READDISK_THREAD);
 
             } else {
+                this->sortLogs = nullptr;
 
                 std::thread t[RECOVER_THREAD];
                 for (int i = 0; i < RECOVER_THREAD; i++) {
@@ -205,7 +204,9 @@ namespace polar_race {
                 delete kvFiles[fileId];
             delete[] kvFiles;
 
+//            munmap(cacheBuffer, BLOCK_SIZE * LOG_NUM);
             close(cacheFd);
+
             if (sortLogs != nullptr) {
                 for (int i = 0; i < LOG_NUM; i++)
                     delete sortLogs[i];
@@ -217,8 +218,8 @@ namespace polar_race {
 
         static inline int getLogId(const char *k) {
 //            return ((u_int16_t) ((u_int8_t) k[0]) << 4) | ((u_int8_t) k[1] >> 4);
-            return ((u_int16_t) ((u_int8_t) k[0]) << 1) | ((u_int8_t) k[1] >> 7);
-//            return ((u_int16_t) ((u_int8_t) k[0]) << 2) | ((u_int8_t) k[1] >> 6);
+//            return (((u_int16_t) ((u_int8_t) k[0])) << 1) | ((u_int8_t) k[1] >> 7);
+            return ((u_int16_t) ((u_int8_t) k[0]) << 2) | ((u_int8_t) k[1] >> 6);
 //            return (*((u_int8_t *) k));
         }
 
@@ -268,7 +269,7 @@ namespace polar_race {
 //                return kSucc;
 //            }
 
-            if (lower == "" && upper == "" && (sortLogs[0]->size() > 20000 * 4)) {
+            if (lower == "" && upper == "" && (sortLogs[0]->size() > 50000)) {
                 rangeAll(visitor);
                 return kSucc;
             }
