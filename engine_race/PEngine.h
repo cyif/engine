@@ -82,13 +82,13 @@ namespace polar_race {
             std::ostringstream cfp;
             cfp << path << "/value-cache";
             //value cache file
-            this->cacheFd = open(cfp.str().data(), O_CREAT | O_RDWR | O_NOATIME, 0777);
+            this->cacheFd = open(cfp.str().data(), O_CREAT | O_RDWR | O_DIRECT | O_NOATIME, 0777);
             fallocate(this->cacheFd, 0, 0, BLOCK_SIZE * LOG_NUM);
             this->cacheBuffer = static_cast<char *>(mmap(nullptr, BLOCK_SIZE * LOG_NUM, PROT_READ | PROT_WRITE,
                                                          MAP_SHARED | MAP_POPULATE, this->cacheFd, 0));
 
             std::ostringstream ss;
-            ss << path << "/key-0";
+            ss << path << "/value-0";
             string filePath = ss.str();
 
             int num_log_per_file = LOG_NUM / FILE_NUM;

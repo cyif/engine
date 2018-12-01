@@ -23,33 +23,26 @@ namespace polar_race {
     class KVFiles {
     private:
         int valueFd;
+        size_t valueFileSize;
 
-        int keyFd;
         u_int64_t * keyBuffer;
         size_t keyFileSize;
 
     public:
-        KVFiles(const std::string &path, const int &id, const size_t &valueFileSize, const size_t &keyFileSize) : keyFileSize(keyFileSize){
+        KVFiles(const std::string &path, const int &id, const size_t &valueFileSize, const size_t &keyFileSize) : valueFileSize(valueFileSize), keyFileSize(keyFileSize){
             //Value Log
             std::ostringstream fp;
             fp << path << "/value-" << id;
             this->valueFd = open(fp.str().data(), O_CREAT | O_RDWR | O_DIRECT | O_NOATIME, 0777);
-            fallocate(this->valueFd, 0, 0, valueFileSize);
+            fallocate(this->valueFd, 0, 0, valueFileSize + keyFileSize);
 
-
-            //Key Log
-            std::ostringstream ss;
-            ss << path << "/key-" << id;
-            this->keyFd = open(ss.str().data(), O_CREAT | O_RDWR | O_NOATIME, 0777);
-            fallocate(this->keyFd, 0, 0, this->keyFileSize);
-            this->keyBuffer = static_cast<u_int64_t *>(mmap(nullptr, this->keyFileSize, PROT_READ | PROT_WRITE,
-                                                           MAP_SHARED | MAP_POPULATE, this->keyFd, 0));
+            this->keyBuffer = static_cast<u_int64_t *>(mmap(nullptr, keyFileSize, PROT_READ | PROT_WRITE,
+                                                           MAP_SHARED | MAP_POPULATE, this->valueFd,
+                                                            (off_t) valueFileSize));
         }
 
         ~KVFiles() {
             close(this->valueFd);
-//            munmap(keyBuffer, this->keyFileSize);
-            close(this->keyFd);
         }
 
 
