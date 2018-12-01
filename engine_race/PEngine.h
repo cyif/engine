@@ -205,7 +205,9 @@ namespace polar_race {
                 delete kvFiles[fileId];
             delete[] kvFiles;
 
+            munmap(cacheBuffer, BLOCK_SIZE * LOG_NUM);
             close(cacheFd);
+
             if (sortLogs != nullptr) {
                 for (int i = 0; i < LOG_NUM; i++)
                     delete sortLogs[i];
@@ -217,7 +219,7 @@ namespace polar_race {
 
         static inline int getLogId(const char *k) {
 //            return ((u_int16_t) ((u_int8_t) k[0]) << 4) | ((u_int8_t) k[1] >> 4);
-            return ((u_int16_t) ((u_int8_t) k[0]) << 1) | ((u_int8_t) k[1] >> 7);
+            return (((u_int16_t) ((u_int8_t) k[0])) << 1) | ((u_int8_t) k[1] >> 7);
 //            return ((u_int16_t) ((u_int8_t) k[0]) << 2) | ((u_int8_t) k[1] >> 6);
 //            return (*((u_int8_t *) k));
         }
