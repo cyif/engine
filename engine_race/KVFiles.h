@@ -33,14 +33,14 @@ namespace polar_race {
             //Value Log
             std::ostringstream fp;
             fp << path << "/value-" << id;
-            this->valueFd = open(fp.str().data(), O_CREAT | O_RDWR | O_DIRECT, 0777);
+            this->valueFd = open(fp.str().data(), O_CREAT | O_RDWR | O_DIRECT | O_NOATIME, 0777);
             fallocate(this->valueFd, 0, 0, valueFileSize);
 
 
             //Key Log
             std::ostringstream ss;
             ss << path << "/key-" << id;
-            this->keyFd = open(ss.str().data(), O_CREAT | O_RDWR, 0777);
+            this->keyFd = open(ss.str().data(), O_CREAT | O_RDWR | O_NOATIME, 0777);
             fallocate(this->keyFd, 0, 0, this->keyFileSize);
             this->keyBuffer = static_cast<u_int64_t *>(mmap(nullptr, this->keyFileSize, PROT_READ | PROT_WRITE,
                                                            MAP_SHARED | MAP_POPULATE, this->keyFd, 0));
