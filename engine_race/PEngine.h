@@ -25,6 +25,7 @@
 #include "ThreadPool.h"
 #include "KVFiles.h"
 #include "KeyValueLog.h"
+#include "SortArray.h"
 #include "params.h"
 
 using namespace std;
@@ -42,8 +43,11 @@ namespace polar_race {
 
     private:
         KeyValueLog **keyValueLogs;
-        SortLog **sortLogs;
         KVFiles **kvFiles;
+
+        SortLog **sortLogs;
+        SortArray **sortArray;
+
         std::mutex logMutex[LOG_NUM];
 
         char *valueCache;
@@ -75,6 +79,7 @@ namespace polar_race {
 
             this->keyValueLogs = static_cast<KeyValueLog **>(malloc(LOG_NUM * sizeof(KeyValueLog *)));
             this->kvFiles = static_cast<KVFiles **>(malloc(FILE_NUM * sizeof(KVFiles *)));
+            this->sortArray = static_cast<SortArray **>(malloc(FILE_NUM * sizeof(SortArray *)));
 
             std::ostringstream cfp;
             cfp << path << "/value-cache";
@@ -99,13 +104,13 @@ namespace polar_race {
                     t[i] = std::thread([i, num_log_per_file, path, this] {
 
                         for (int fileId = i; fileId < FILE_NUM; fileId += RECOVER_THREAD) {
-                            *(kvFiles + fileId) = new KVFiles(path, fileId, VALUE_LOG_SIZE * num_log_per_file,
+                            kvFiles[fileId] = new KVFiles(path, fileId, VALUE_LOG_SIZE * num_log_per_file,
                                                               KEY_LOG_SIZE * num_log_per_file);
+                            sortArray[fileId] = new SortArray();
                         }
 
 
                         for (int logId = i; logId < LOG_NUM; logId += RECOVER_THREAD) {
-                            sortLogs[logId] = new SortLog();
 
                             int fileId = logId % FILE_NUM;
 
@@ -116,6 +121,7 @@ namespace polar_race {
                                 slotId = (logId - LOG_NUM / 2) / FILE_NUM * 2 + 1;
                             }
 
+                            sortLogs[logId] = new SortLog(sortArray[fileId]->getKeyArray(slotId), sortArray[fileId]->getValueArray(slotId));
 
                             int valueFd = this->kvFiles[fileId]->getValueFd();
 //                            char *cacheBuffer = this->kvFiles[fileId]->getCacheBuffer() + slotId * BLOCK_SIZE;
@@ -208,9 +214,12 @@ namespace polar_race {
             }
             delete[] keyValueLogs;
 
-            for (int fileId = 0; fileId < FILE_NUM; fileId++)
+            for (int fileId = 0; fileId < FILE_NUM; fileId++) {
                 delete kvFiles[fileId];
+                delete sortArray[fileId];
+            }
             delete[] kvFiles;
+            delete[] sortArray;
 
             munmap(cacheBuffer, BLOCK_SIZE * LOG_NUM);
             close(cacheFd);

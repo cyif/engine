@@ -15,17 +15,21 @@ namespace polar_race {
     class SortLog {
 
     private:
-//        u_int64_t keys[NUM_PER_SLOT];
-//        u_int32_t values[NUM_PER_SLOT];
-        vector <u_int64_t> keys;
-        vector <u_int32_t> values;
+//        u_int64_t keys[SORT_LOG_SIZE];
+//        u_int32_t values[SORT_LOG_SIZE];
+//        vector <u_int64_t> keys;
+//        vector <u_int32_t> values;
+        u_int64_t * keys;
+        u_int32_t * values;
         int nums = 0;
 
     public:
 
-        SortLog() {
-            keys.reserve(SORT_LOG_SIZE);
-            values.reserve(SORT_LOG_SIZE);
+        SortLog(u_int64_t * keys, u_int32_t * values) {
+//            keys.reserve(SORT_LOG_SIZE);
+//            values.reserve(SORT_LOG_SIZE);
+            this->keys = keys;
+            this->values = values;
         }
 
         int size() {
@@ -41,8 +45,10 @@ namespace polar_race {
         }
 
         void put(u_int64_t &bigEndkey, const u_int32_t &value) {
-            keys.push_back(__builtin_bswap64(bigEndkey));
-            values.push_back(value);
+//            keys.push_back(__builtin_bswap64(bigEndkey));
+//            values.push_back(value);
+            keys[nums] = __builtin_bswap64(bigEndkey);
+            values[nums] = value;
             nums++;
         };
 
