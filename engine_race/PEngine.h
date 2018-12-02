@@ -113,18 +113,11 @@ namespace polar_race {
                         for (int logId = i; logId < LOG_NUM; logId += RECOVER_THREAD) {
 
                             int fileId = logId % FILE_NUM;
-
                             int slotId = logId / FILE_NUM;
-//                            if (logId < LOG_NUM / 2){
-//                                slotId = logId / FILE_NUM * 2;
-//                            } else{
-//                                slotId = (logId - LOG_NUM / 2) / FILE_NUM * 2 + 1;
-//                            }
 
                             sortLogs[logId] = new SortLog(sortArray[fileId]->getKeyArray(slotId), sortArray[fileId]->getValueArray(slotId));
 
                             int valueFd = this->kvFiles[fileId]->getValueFd();
-//                            char *cacheBuffer = this->kvFiles[fileId]->getCacheBuffer() + slotId * BLOCK_SIZE;
                             char *cacheBuffer = this->cacheBuffer + BLOCK_SIZE * logId;
                             size_t globalOffset = slotId * VALUE_LOG_SIZE;
                             u_int64_t *keyBuffer = this->kvFiles[fileId]->getKeyBuffer() + slotId * NUM_PER_SLOT;
@@ -180,14 +173,8 @@ namespace polar_race {
 
                             int fileId = logId % FILE_NUM;
                             int slotId = logId / FILE_NUM;
-//                            if (logId < LOG_NUM / 2){
-//                                slotId = logId / FILE_NUM * 2;
-//                            } else{
-//                                slotId = (logId - LOG_NUM / 2) / FILE_NUM * 2 + 1;
-//                            }
 
                             int valueFd = kvFiles[fileId]->getValueFd();
-//                            char *cacheBuffer = kvFiles[fileId]->getCacheBuffer() + slotId * BLOCK_SIZE;
                             char *cacheBuffer = this->cacheBuffer + BLOCK_SIZE * logId;
                             size_t globalOffset = slotId * VALUE_LOG_SIZE;
                             u_int64_t *keyBuffer = kvFiles[fileId]->getKeyBuffer() + slotId * NUM_PER_SLOT;
@@ -283,15 +270,15 @@ namespace polar_race {
                 upperLogId = LOG_NUM - 1;
             }
 
-            if (lower == "" && upper == "") {
-                rangeAll(visitor);
-                return kSucc;
-            }
-
-//            if (lower == "" && upper == "" && (sortLogs[0]->size() > 12000)) {
+//            if (lower == "" && upper == "") {
 //                rangeAll(visitor);
 //                return kSucc;
 //            }
+
+            if (lower == "" && upper == "" && (sortLogs[0]->size() > 12000)) {
+                rangeAll(visitor);
+                return kSucc;
+            }
 
             if (lowerLogId > upperLogId && !upperFlag) {
                 return kInvalidArgument;
