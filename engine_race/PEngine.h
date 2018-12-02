@@ -214,12 +214,9 @@ namespace polar_race {
             }
             delete[] keyValueLogs;
 
-            for (int fileId = 0; fileId < FILE_NUM; fileId++) {
+            for (int fileId = 0; fileId < FILE_NUM; fileId++)
                 delete kvFiles[fileId];
-                delete sortArray[fileId];
-            }
             delete[] kvFiles;
-            delete[] sortArray;
 
             munmap(cacheBuffer, BLOCK_SIZE * LOG_NUM);
             close(cacheFd);
@@ -228,6 +225,11 @@ namespace polar_race {
                 for (int i = 0; i < LOG_NUM; i++)
                     delete sortLogs[i];
                 delete[] sortLogs;
+
+                for (int fileId = 0; fileId < FILE_NUM; fileId++)
+                    delete sortArray[fileId];
+                delete[] sortArray;
+
                 free(valueCache);
             }
             printf("Finish deleting engine, total life is %lims\n", (now() - start).count());
