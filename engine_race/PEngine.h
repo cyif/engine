@@ -135,6 +135,10 @@ namespace polar_race {
                                 sortLog->put(k, cnt++);
 
                             sortLog->quicksort();
+
+                            if (sortLog->size() > 0)
+                                printf("logId:%d,size:%d,fileId:%d,slotId:%d\n", logId, sortLog->size(), fileId, slotId);
+
                             keyValueLog->setKeyBufferPosition(cnt);
                             keyValueLog->recover(cnt);
                         }
