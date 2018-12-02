@@ -136,8 +136,8 @@ namespace polar_race {
 
                             sortLog->quicksort();
 
-                            if (sortLog->size() > 0)
-                                printf("logId:%d,size:%d,fileId:%d,slotId:%d\n", logId, sortLog->size(), fileId, slotId);
+//                            if (sortLog->size() > 0)
+//                                printf("logId:%d,size:%d,fileId:%d,slotId:%d\n", logId, sortLog->size(), fileId, slotId);
 
                             keyValueLog->setKeyBufferPosition(cnt);
                             keyValueLog->recover(cnt);
@@ -290,6 +290,10 @@ namespace polar_race {
                 for (int logId = lowerLogId; logId <= upperLogId; logId++) {
                     SortLog *sortLog = sortLogs[logId];
                     KeyValueLog *keyValueLog = keyValueLogs[logId];
+
+                    if (sortLog->size() < 8000)
+                        break;
+
                     if ((!lowerFlag && !sortLog->hasGreaterEqualKey(lowerKey))
                         || (!upperFlag && !sortLog->hasLessKey(upperKey)))
                         break;
