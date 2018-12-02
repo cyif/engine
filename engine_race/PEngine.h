@@ -204,7 +204,7 @@ namespace polar_race {
                 delete kvFiles[fileId];
             delete[] kvFiles;
 
-//            munmap(cacheBuffer, BLOCK_SIZE * LOG_NUM);
+            munmap(cacheBuffer, BLOCK_SIZE * LOG_NUM);
             close(cacheFd);
 
             if (sortLogs != nullptr) {
@@ -217,9 +217,9 @@ namespace polar_race {
         }
 
         static inline int getLogId(const char *k) {
-//            return ((u_int16_t) ((u_int8_t) k[0]) << 4) | ((u_int8_t) k[1] >> 4);
+            return ((u_int16_t) ((u_int8_t) k[0]) << 4) | ((u_int8_t) k[1] >> 4);
 //            return (((u_int16_t) ((u_int8_t) k[0])) << 1) | ((u_int8_t) k[1] >> 7);
-            return ((u_int16_t) ((u_int8_t) k[0]) << 2) | ((u_int8_t) k[1] >> 6);
+//            return ((u_int16_t) ((u_int8_t) k[0]) << 2) | ((u_int8_t) k[1] >> 6);
 //            return (*((u_int8_t *) k));
         }
 
@@ -269,7 +269,7 @@ namespace polar_race {
 //                return kSucc;
 //            }
 
-            if (lower == "" && upper == "" && (sortLogs[0]->size() > 50000)) {
+            if (lower == "" && upper == "" && (sortLogs[0]->size() > 12000)) {
                 rangeAll(visitor);
                 return kSucc;
             }
@@ -321,6 +321,7 @@ namespace polar_race {
                 auto cacheIndex = logId % CACHE_NUM;
 
                 if (!isCacheWritable[cacheIndex]) {
+                    printf("wait for range log: %d \n",logId);
                     //等待获取可用的cache
 //                    printf("Cache is not writable. LogId : %d,  CacheIndex %d, ThreadId %ld\n", logId, cacheIndex, gettidv1());
                     rangeCacheFinishMtx[cacheIndex].lock();

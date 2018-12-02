@@ -42,7 +42,7 @@ namespace polar_race {
         }
 
         ~KVFiles() {
-//            munmap(keyBuffer, this->keyFileSize);
+            munmap(keyBuffer, this->keyFileSize);
             close(this->valueFd);
         }
 
