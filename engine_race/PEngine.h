@@ -114,12 +114,12 @@ namespace polar_race {
 
                             int fileId = logId % FILE_NUM;
 
-                            int slotId;
-                            if (logId < LOG_NUM / 2){
-                                slotId = logId / FILE_NUM * 2;
-                            } else{
-                                slotId = (logId - LOG_NUM / 2) / FILE_NUM * 2 + 1;
-                            }
+                            int slotId = logId / FILE_NUM;
+//                            if (logId < LOG_NUM / 2){
+//                                slotId = logId / FILE_NUM * 2;
+//                            } else{
+//                                slotId = (logId - LOG_NUM / 2) / FILE_NUM * 2 + 1;
+//                            }
 
                             sortLogs[logId] = new SortLog(sortArray[fileId]->getKeyArray(slotId), sortArray[fileId]->getValueArray(slotId));
 
@@ -179,12 +179,12 @@ namespace polar_race {
                         for (int logId = i; logId < LOG_NUM; logId += RECOVER_THREAD) {
 
                             int fileId = logId % FILE_NUM;
-                            int slotId;
-                            if (logId < LOG_NUM / 2){
-                                slotId = logId / FILE_NUM * 2;
-                            } else{
-                                slotId = (logId - LOG_NUM / 2) / FILE_NUM * 2 + 1;
-                            }
+                            int slotId = logId / FILE_NUM;
+//                            if (logId < LOG_NUM / 2){
+//                                slotId = logId / FILE_NUM * 2;
+//                            } else{
+//                                slotId = (logId - LOG_NUM / 2) / FILE_NUM * 2 + 1;
+//                            }
 
                             int valueFd = kvFiles[fileId]->getValueFd();
 //                            char *cacheBuffer = kvFiles[fileId]->getCacheBuffer() + slotId * BLOCK_SIZE;
@@ -302,8 +302,8 @@ namespace polar_race {
                     SortLog *sortLog = sortLogs[logId];
                     KeyValueLog *keyValueLog = keyValueLogs[logId];
 
-                    if (sortLog->size() < 8000)
-                        continue;
+//                    if (sortLog->size() < 8000)
+//                        continue;
 
                     if ((!lowerFlag && !sortLog->hasGreaterEqualKey(lowerKey))
                         || (!upperFlag && !sortLog->hasLessKey(upperKey)))
