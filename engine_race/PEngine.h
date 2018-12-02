@@ -283,15 +283,15 @@ namespace polar_race {
                 upperLogId = LOG_NUM - 1;
             }
 
-//            if (lower == "" && upper == "") {
-//                rangeAll(visitor);
-//                return kSucc;
-//            }
-
-            if (lower == "" && upper == "" && (sortLogs[0]->size() > 12000)) {
+            if (lower == "" && upper == "") {
                 rangeAll(visitor);
                 return kSucc;
             }
+
+//            if (lower == "" && upper == "" && (sortLogs[0]->size() > 12000)) {
+//                rangeAll(visitor);
+//                return kSucc;
+//            }
 
             if (lowerLogId > upperLogId && !upperFlag) {
                 return kInvalidArgument;

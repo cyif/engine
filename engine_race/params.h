@@ -6,6 +6,9 @@
 #define ENGINE_PARAMS_H
 
 #include <string>
+#include <mutex>
+
+using namespace std;
 
 const int MAX_RANGE_COUNT = 2;
 
@@ -16,8 +19,10 @@ const size_t KEY_LOG_SIZE = NUM_PER_SLOT * 8;
 
 const int FILE_NUM = 128;
 
-const int SORT_LOG_SIZE = 1024 * 20;
+const int SORT_LOG_SIZE = 3;
 const int SORT_FILE_SIZE = SORT_LOG_SIZE * (LOG_NUM / FILE_NUM);
+const int SORT_ENLARGE_SIZE = NUM_PER_SLOT;
+
 
 const size_t CACHE_SIZE = 1024 * 16 * 4096;
 const int CACHE_NUM = 12;
@@ -29,5 +34,9 @@ const int RECOVER_THREAD = 64;
 const int READDISK_THREAD = 2;
 
 const int MAX_LENGTH_INSERT_SORT = 12;
+
+std::mutex sortLogEnlargeMtx;
+std::mutex keyLogEnlargeMtx;
+std::mutex valueLogEnlargeMtx;
 
 #endif //ENGINE_PARAMS_H

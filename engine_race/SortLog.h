@@ -15,21 +15,23 @@ namespace polar_race {
     class SortLog {
 
     private:
-//        u_int64_t keys[SORT_LOG_SIZE];
-//        u_int32_t values[SORT_LOG_SIZE];
-//        vector <u_int64_t> keys;
-//        vector <u_int32_t> values;
         u_int64_t * keys;
         u_int32_t * values;
         int nums = 0;
+        bool enlarge = false;
 
     public:
 
         SortLog(u_int64_t * keys, u_int32_t * values) {
-//            keys.reserve(SORT_LOG_SIZE);
-//            values.reserve(SORT_LOG_SIZE);
             this->keys = keys;
             this->values = values;
+        }
+
+        ~SortLog() {
+            if (enlarge) {
+                free(keys);
+                free(values);
+            }
         }
 
         int size() {
@@ -45,11 +47,23 @@ namespace polar_race {
         }
 
         void put(u_int64_t &bigEndkey, const u_int32_t &value) {
-//            keys.push_back(__builtin_bswap64(bigEndkey));
-//            values.push_back(value);
             keys[nums] = __builtin_bswap64(bigEndkey);
             values[nums] = value;
             nums++;
+
+            if (nums >= SORT_LOG_SIZE) {
+                this->enlarge = true;
+                sortLogEnlargeMtx.lock();
+                auto * keysEnlarge = static_cast<u_int64_t *>(malloc(SORT_ENLARGE_SIZE * sizeof(u_int64_t)));
+                auto * valuesEnlarge = static_cast<u_int32_t *>(malloc(SORT_ENLARGE_SIZE * sizeof(u_int32_t)));
+                for (int i = 0; i < nums; i++) {
+                    keysEnlarge[i] = keys[i];
+                    valuesEnlarge[i] = values[i];
+                }
+                keys = keysEnlarge;
+                values = valuesEnlarge;
+                sortLogEnlargeMtx.unlock();
+            }
         };
 
         void quicksort() {
