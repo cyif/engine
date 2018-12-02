@@ -21,11 +21,10 @@
 #include <condition_variable>
 #include "../include/polar_string.h"
 #include "../include/engine.h"
-#include "KeyLog.h"
-#include "ValueLog.h"
 #include "SortLog.h"
 #include "ThreadPool.h"
 #include "KVFiles.h"
+#include "KeyValueLog.h"
 #include "params.h"
 
 using namespace std;
@@ -42,8 +41,7 @@ namespace polar_race {
     class PEngine {
 
     private:
-        KeyLog **keyLogs;
-        ValueLog **valueLogs;
+        KeyValueLog **keyValueLogs;
         SortLog **sortLogs;
         KVFiles **kvFiles;
         std::mutex logMutex[LOG_NUM];
@@ -75,8 +73,7 @@ namespace polar_race {
             this->start = now();
             // init
 
-            this->keyLogs = static_cast<KeyLog **>(malloc(LOG_NUM * sizeof(KeyLog *)));
-            this->valueLogs = static_cast<ValueLog **>(malloc(LOG_NUM * sizeof(ValueLog *)));
+            this->keyValueLogs = static_cast<KeyValueLog **>(malloc(LOG_NUM * sizeof(KeyValueLog *)));
             this->kvFiles = static_cast<KVFiles **>(malloc(FILE_NUM * sizeof(KVFiles *)));
 
             std::ostringstream cfp;
@@ -119,22 +116,20 @@ namespace polar_race {
                             size_t globalOffset = slotId * VALUE_LOG_SIZE;
                             u_int64_t *keyBuffer = this->kvFiles[fileId]->getKeyBuffer() + slotId * NUM_PER_SLOT;
 
-                            keyLogs[logId] = new KeyLog(keyBuffer);
-                            valueLogs[logId] = new ValueLog(valueFd, globalOffset, cacheBuffer);
+                            keyValueLogs[logId] = new KeyValueLog(valueFd, globalOffset, cacheBuffer, keyBuffer);
 
-                            KeyLog *keyLog = keyLogs[logId];
-                            ValueLog *valueLog = valueLogs[logId];
+                            KeyValueLog *keyValueLog = keyValueLogs[logId];
                             SortLog *sortLog = sortLogs[logId];
 
                             u_int64_t k;
                             u_int32_t cnt = 0;
 
-                            while (keyLog->getKey(k))
+                            while (keyValueLog->getKey(k))
                                 sortLog->put(k, cnt++);
 
                             sortLog->quicksort();
-                            keyLog->setKeyBufferPosition(cnt);
-                            valueLog->recover(cnt);
+                            keyValueLog->setKeyBufferPosition(cnt);
+                            keyValueLog->recover(cnt);
                         }
                     });
                 }
@@ -175,8 +170,7 @@ namespace polar_race {
                             size_t globalOffset = slotId * VALUE_LOG_SIZE;
                             u_int64_t *keyBuffer = kvFiles[fileId]->getKeyBuffer() + slotId * NUM_PER_SLOT;
 
-                            *(keyLogs + logId) = new KeyLog(keyBuffer);
-                            *(valueLogs + logId) = new ValueLog(valueFd, globalOffset, cacheBuffer);
+                            keyValueLogs[logId] = new KeyValueLog(valueFd, globalOffset, cacheBuffer, keyBuffer);
                         }
                     });
                 }
@@ -194,11 +188,9 @@ namespace polar_race {
             printf("deleting engine, total life is %lims\n", (now() - start).count());
 
             for (int logId = 0; logId < LOG_NUM; logId++) {
-                delete keyLogs[logId];
-                delete valueLogs[logId];
+                delete keyValueLogs[logId];
             }
-            delete[] keyLogs;
-            delete[] valueLogs;
+            delete[] keyValueLogs;
 
             for (int fileId = 0; fileId < FILE_NUM; fileId++)
                 delete kvFiles[fileId];
@@ -226,8 +218,8 @@ namespace polar_race {
         void put(const PolarString &key, const PolarString &value) {
             auto logId = getLogId(key.data());
             logMutex[logId].lock();
-            valueLogs[logId]->putValue(value.data());
-            keyLogs[logId]->putKey(key.data());
+            keyValueLogs[logId]->putValue(value.data());
+            keyValueLogs[logId]->putKey(key.data());
             logMutex[logId].unlock();
         }
 
@@ -239,7 +231,7 @@ namespace polar_race {
                 return kNotFound;
             } else {
                 auto buffer = readBuffer.get();
-                valueLogs[logId]->readValue(index, buffer);
+                keyValueLogs[logId]->readValue(index, buffer);
                 value->assign(buffer, 4096);
                 return kSucc;
             }
@@ -281,7 +273,7 @@ namespace polar_race {
 
                 for (int logId = lowerLogId; logId <= upperLogId; logId++) {
                     SortLog *sortLog = sortLogs[logId];
-                    ValueLog *valueLog = valueLogs[logId];
+                    KeyValueLog *keyValueLog = keyValueLogs[logId];
                     if ((!lowerFlag && !sortLog->hasGreaterEqualKey(lowerKey))
                         || (!upperFlag && !sortLog->hasLessKey(upperKey)))
                         break;
@@ -294,18 +286,18 @@ namespace polar_race {
                     if (!upperFlag && logId == upperLogId) {
                         r = sortLog->getMaxIndexLessThan(upperKey);
                     }
-                    range(l, r, sortLog, valueLog, visitor, buffer);
+                    range(l, r, sortLog, keyValueLog, visitor, buffer);
                 }
             }
             return kSucc;
         }
 
         void
-        range(int lowerIndex, int upperIndex, SortLog *sortLog, ValueLog *valueLog, Visitor &visitor, char *buffer) {
+        range(int lowerIndex, int upperIndex, SortLog *sortLog, KeyValueLog *keyValueLog, Visitor &visitor, char *buffer) {
             for (int i = lowerIndex; i <= upperIndex; i++) {
                 auto offset = sortLog->findValueByIndex(i);
                 if (offset >= 0) {
-                    valueLog->readValue(offset, buffer);
+                    keyValueLog->readValue(offset, buffer);
                     u_int64_t k = sortLog->findKeyByIndex(i);
                     visitor.Visit(PolarString(((char *) (&k)), 8), PolarString(buffer, 4096));
                 }
@@ -321,11 +313,11 @@ namespace polar_race {
                 auto cacheIndex = logId % CACHE_NUM;
 
                 if (!isCacheWritable[cacheIndex]) {
-                    printf("wait for range log: %d \n",logId);
                     //等待获取可用的cache
 //                    printf("Cache is not writable. LogId : %d,  CacheIndex %d, ThreadId %ld\n", logId, cacheIndex, gettidv1());
                     rangeCacheFinishMtx[cacheIndex].lock();
                     while (!isCacheWritable[cacheIndex]) {
+                        printf("wait for range log: %d \n",logId);
                         rangeCacheFinish[cacheIndex].wait(rangeCacheFinishMtx[cacheIndex]);
                     }
                     rangeCacheFinishMtx[cacheIndex].unlock();
@@ -369,7 +361,7 @@ namespace polar_race {
                 auto cache = valueCache + cacheIndex * CACHE_SIZE;
 
                     readDiskThreadPool->enqueue([cacheIndex, cache, logId, this] {
-                        valueLogs[logId]->readValue(0, cache, (size_t) valueLogs[logId]->size());
+                        keyValueLogs[logId]->readValue(0, cache, (size_t) keyValueLogs[logId]->size());
                         readDiskFinishMtx[cacheIndex].lock();
                         isCacheReadable[cacheIndex] = true;
                         readDiskFinish[cacheIndex].notify_all();

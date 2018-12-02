@@ -16,9 +16,9 @@ const size_t KEY_LOG_SIZE = NUM_PER_SLOT * 8;
 
 const int FILE_NUM = 128;
 
-const size_t CACHE_SIZE = VALUE_LOG_SIZE;
-const int CACHE_NUM = 3;
-const size_t CACHE_BLOCK_SIZE = VALUE_LOG_SIZE;   //64mb
+const size_t CACHE_SIZE = 1024 * 32;
+const int CACHE_NUM = 8;
+const size_t CACHE_BLOCK_SIZE = CACHE_SIZE;   //64mb
 
 const int PAGE_PER_BLOCK = 2;
 const size_t BLOCK_SIZE = PAGE_PER_BLOCK * 4096;
