@@ -20,6 +20,9 @@
 
 class KeyValueLog {
 private:
+    int id;
+    string path;
+
     int fd;
     size_t filePosition;
     size_t globalOffset;
@@ -29,8 +32,13 @@ private:
 
     int keyBufferPosition;
     u_int64_t *keyBuffer;
+
+    bool enlarge = false;
 public:
-    KeyValueLog(const int &fd, const size_t &globalOffset, char *cacheBuffer, u_int64_t *keyBuffer) {
+    KeyValueLog(const std::string &path, const int &id, const int &fd, const size_t &globalOffset, char *cacheBuffer, u_int64_t *keyBuffer) {
+        this->id = id;
+        this->path = path;
+
         this->fd = fd;
         this->globalOffset = globalOffset;
         this->cacheBuffer = cacheBuffer;
@@ -39,12 +47,37 @@ public:
 
         this->keyBuffer = keyBuffer;
         this->keyBufferPosition = 0;
+
+        std::ostringstream fp;
+        fp << path << "/enlarge-" << id;
+        string filePath = fp.str();
+
+        if (access(filePath.data(), 0) != -1) {
+            valueLogEnlargeMtx.lock();
+            this->enlarge = true;
+
+            std::ostringstream fp;
+            fp << path << "/enlarge-" << id;
+
+            this->fd = open(fp.str().data(), O_CREAT | O_RDWR | O_DIRECT | O_NOATIME, 0777);
+            fallocate(this->fd, 0, 0, VALUE_ENLARGE_SIZE + KEY_ENLARGE_SIZE);
+            this->globalOffset = 0;
+
+            this->keyBuffer = static_cast<u_int64_t *>(mmap(nullptr, KEY_ENLARGE_SIZE, PROT_READ | PROT_WRITE,
+                                                            MAP_SHARED | MAP_POPULATE, this->fd,
+                                                            (off_t) VALUE_ENLARGE_SIZE));
+            valueLogEnlargeMtx.unlock();
+        }
     }
 
     ~KeyValueLog() {
         if (this->cacheBufferPosition != 0) {
             auto remainSize = (size_t ) cacheBufferPosition << 12;
             pwrite(this->fd, cacheBuffer, remainSize, globalOffset + filePosition);
+        }
+        if (this->enlarge) {
+            munmap(keyBuffer, KEY_ENLARGE_SIZE);
+            close(this->fd);
         }
     }
 
@@ -59,6 +92,35 @@ public:
             pwrite(this->fd, cacheBuffer, BLOCK_SIZE, globalOffset + filePosition);
             filePosition += BLOCK_SIZE;
             cacheBufferPosition = 0;
+            if (filePosition <= VALUE_LOG_SIZE && filePosition + BLOCK_SIZE > VALUE_LOG_SIZE) {
+                //Enlarge Log
+                valueLogEnlargeMtx.lock();
+                this->enlarge = true;
+
+                std::ostringstream fp;
+                fp << path << "/enlarge-" << id;
+
+                int fdEnlarge = open(fp.str().data(), O_CREAT | O_RDWR | O_DIRECT | O_NOATIME, 0777);
+                fallocate(fdEnlarge, 0, 0, VALUE_ENLARGE_SIZE + KEY_ENLARGE_SIZE);
+
+                u_int64_t * keyBufferEnlarge = static_cast<u_int64_t *>(mmap(nullptr, KEY_ENLARGE_SIZE, PROT_READ | PROT_WRITE,
+                                                                MAP_SHARED | MAP_POPULATE, fdEnlarge,
+                                                                (off_t) VALUE_ENLARGE_SIZE));
+
+                // 复制原来的log内容到新的文件
+                for (int pos = 0; pos < filePosition; pos += BLOCK_SIZE) {
+                    pread(this->fd, cacheBuffer, BLOCK_SIZE, globalOffset + pos);
+                    pwrite(fdEnlarge, cacheBuffer, BLOCK_SIZE, pos);
+                }
+
+                memcpy(keyBufferEnlarge, keyBuffer, KEY_LOG_SIZE);
+
+                this->fd = fdEnlarge;
+                this->globalOffset = 0;
+                this->keyBuffer = keyBufferEnlarge;
+
+                valueLogEnlargeMtx.unlock();
+            }
         }
     }
 

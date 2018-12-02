@@ -13,15 +13,18 @@ using namespace std;
 const int MAX_RANGE_COUNT = 2;
 
 const int LOG_NUM = 4096;
-const int NUM_PER_SLOT = 1024 * 16;
+const int NUM_PER_SLOT = 5;
 const size_t VALUE_LOG_SIZE = NUM_PER_SLOT * 4096;  //128mb
 const size_t KEY_LOG_SIZE = NUM_PER_SLOT * 8;
 
 const int FILE_NUM = 128;
 
-const int SORT_LOG_SIZE = 3;
+const int SORT_LOG_SIZE = NUM_PER_SLOT;
 const int SORT_FILE_SIZE = SORT_LOG_SIZE * (LOG_NUM / FILE_NUM);
-const int SORT_ENLARGE_SIZE = NUM_PER_SLOT;
+
+const int KEY_ENLARGE_SIZE = 10000 * 8;
+const int VALUE_ENLARGE_SIZE = 10000 * 4096;
+const int SORT_ENLARGE_SIZE = 10000;
 
 
 const size_t CACHE_SIZE = 1024 * 16 * 4096;

@@ -129,7 +129,7 @@ namespace polar_race {
                             size_t globalOffset = slotId * VALUE_LOG_SIZE;
                             u_int64_t *keyBuffer = this->kvFiles[fileId]->getKeyBuffer() + slotId * NUM_PER_SLOT;
 
-                            keyValueLogs[logId] = new KeyValueLog(valueFd, globalOffset, cacheBuffer, keyBuffer);
+                            keyValueLogs[logId] = new KeyValueLog(path, logId, valueFd, globalOffset, cacheBuffer, keyBuffer);
 
                             KeyValueLog *keyValueLog = keyValueLogs[logId];
                             SortLog *sortLog = sortLogs[logId];
@@ -192,7 +192,7 @@ namespace polar_race {
                             size_t globalOffset = slotId * VALUE_LOG_SIZE;
                             u_int64_t *keyBuffer = kvFiles[fileId]->getKeyBuffer() + slotId * NUM_PER_SLOT;
 
-                            keyValueLogs[logId] = new KeyValueLog(valueFd, globalOffset, cacheBuffer, keyBuffer);
+                            keyValueLogs[logId] = new KeyValueLog(path, logId, valueFd, globalOffset, cacheBuffer, keyBuffer);
                         }
                     });
                 }
