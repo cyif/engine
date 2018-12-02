@@ -292,7 +292,7 @@ namespace polar_race {
                     KeyValueLog *keyValueLog = keyValueLogs[logId];
 
                     if (sortLog->size() < 8000)
-                        break;
+                        continue;
 
                     if ((!lowerFlag && !sortLog->hasGreaterEqualKey(lowerKey))
                         || (!upperFlag && !sortLog->hasLessKey(upperKey)))
