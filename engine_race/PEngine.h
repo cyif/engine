@@ -1,7 +1,7 @@
 #ifndef ENGINE_RACE_PENGINE_H
 #define ENGINE_RACE_PENGINE_H
 
-
+#include <malloc.h>
 #include <iostream>
 #include <sys/mman.h>
 #include <sys/syscall.h>
@@ -256,15 +256,15 @@ namespace polar_race {
                 upperLogId = LOG_NUM - 1;
             }
 
-//            if (lower == "" && upper == "") {
-//                rangeAll(visitor);
-//                return kSucc;
-//            }
-
-            if (lower == "" && upper == "" && (sortLogs[0]->size() > 12000)) {
+            if (lower == "" && upper == "") {
                 rangeAll(visitor);
                 return kSucc;
             }
+
+//            if (lower == "" && upper == "" && (sortLogs[0]->size() > 12000)) {
+//                rangeAll(visitor);
+//                return kSucc;
+//            }
 
             if (lowerLogId > upperLogId && !upperFlag) {
                 return kInvalidArgument;
@@ -317,44 +317,11 @@ namespace polar_race {
 //                    printf("Cache is not writable. LogId : %d,  CacheIndex %d, ThreadId %ld\n", logId, cacheIndex, gettidv1());
                     rangeCacheFinishMtx[cacheIndex].lock();
                     while (!isCacheWritable[cacheIndex]) {
-                        printf("wait for range log: %d \n",logId);
+//                        printf("wait for range log: %d \n",logId);
                         rangeCacheFinish[cacheIndex].wait(rangeCacheFinishMtx[cacheIndex]);
                     }
                     rangeCacheFinishMtx[cacheIndex].unlock();
                 }
-//                printf("Cache is writable. LogId : %d,  CacheIndex %d, ThreadId %ld\n", logId, cacheIndex, gettidv1());
-//                isCacheWritable[cacheIndex] = false;
-//                readDiskCount[cacheIndex] = 0;
-//                currentCacheLogId[cacheIndex] = logId;
-
-//                auto fileSize = valueLogs[logId]->size();
-//                int maxIndex = (int) (fileSize / CACHE_BLOCK_SIZE);
-//                auto valueLog = valueLogs[logId];
-//                auto cache = valueCache + cacheIndex * CACHE_SIZE;
-//
-//                //这里换成线程池可能好一些
-//                for (int index = 0; index <= maxIndex; index++) {
-//
-//                    readDiskThreadPool->enqueue([index, cacheIndex, valueLog, cache, maxIndex, fileSize, this] {
-//
-//                        size_t offset = (size_t) index * CACHE_BLOCK_SIZE;
-//                        if (index == maxIndex) {
-//                            valueLog->readValue(offset, (cache + offset), (size_t) fileSize % CACHE_BLOCK_SIZE);
-//                        } else {
-//                            valueLog->readValue(offset, (cache + offset), CACHE_BLOCK_SIZE);
-//                        }
-//
-////                        std::unique_lock <std::mutex> lock(readDiskFinishMtx[cacheIndex]);
-//                        readDiskFinishMtx[cacheIndex].lock();
-//                        auto count = ++readDiskCount[cacheIndex];
-//                        if (count == maxIndex + 1) {
-//                            isCacheReadable[cacheIndex] = true;
-//                            readDiskFinish[cacheIndex].notify_all();
-//                        }
-//                        readDiskFinishMtx[cacheIndex].unlock();
-//                    });
-//                }
-
 
                 isCacheWritable[cacheIndex] = false;
                 currentCacheLogId[cacheIndex] = logId;

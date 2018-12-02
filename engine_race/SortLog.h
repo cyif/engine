@@ -5,20 +5,28 @@
 #ifndef ENGINE_SORT_LOG_H
 #define ENGINE_SORT_LOG_H
 
-#include <malloc.h>
 #include <iostream>
 #include "params.h"
+#include <vector>
 
+using namespace std;
 
 namespace polar_race {
     class SortLog {
 
     private:
-        u_int64_t keys[NUM_PER_SLOT];
-        u_int32_t values[NUM_PER_SLOT];
+//        u_int64_t keys[NUM_PER_SLOT];
+//        u_int32_t values[NUM_PER_SLOT];
+        vector <u_int64_t> keys;
+        vector <u_int32_t> values;
         int nums = 0;
 
     public:
+
+        SortLog() {
+            keys.reserve(SORT_LOG_SIZE);
+            values.reserve(SORT_LOG_SIZE);
+        }
 
         int size() {
             return nums;
@@ -33,15 +41,15 @@ namespace polar_race {
         }
 
         void put(u_int64_t &bigEndkey, const u_int32_t &value) {
-            keys[nums] = __builtin_bswap64(bigEndkey);
-            values[nums] = value;
+            keys.push_back(__builtin_bswap64(bigEndkey));
+            values.push_back(value);
             nums++;
         };
 
         void quicksort() {
             if (nums > 0) {
                 quicksort(0, nums - 1);
-                if (nums < 25000){
+                if (nums < 25000) {
                     int k = 0;
                     for (int i = 0; i < nums; i++)
                         if (i == nums - 1 || keys[i] != keys[i + 1]) {
