@@ -336,7 +336,7 @@ namespace polar_race {
 //                    printf("Cache is not writable. LogId : %d,  CacheIndex %d, ThreadId %ld\n", logId, cacheIndex, gettidv1());
                     rangeCacheFinishMtx[cacheIndex].lock();
                     while (!isCacheWritable[cacheIndex]) {
-//                        printf("wait for range log: %d \n",logId);
+                        printf("wait for range log: %d \n",logId);
                         rangeCacheFinish[cacheIndex].wait(rangeCacheFinishMtx[cacheIndex]);
                     }
                     rangeCacheFinishMtx[cacheIndex].unlock();
