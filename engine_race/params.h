@@ -40,4 +40,33 @@ const int MAX_LENGTH_INSERT_SORT = 12;
 std::mutex sortLogEnlargeMtx;
 std::mutex valueLogEnlargeMtx;
 
+struct PMutex {
+    pthread_mutex_t m = PTHREAD_MUTEX_INITIALIZER;
+
+    void lock() { pthread_mutex_lock(&m); }
+
+    void unlock() { pthread_mutex_unlock(&m); }
+};
+
+struct PCond {
+    PMutex pm;
+    pthread_cond_t c = PTHREAD_COND_INITIALIZER;
+
+    void lock() { pm.lock(); }
+
+    void unlock() { pm.unlock(); }
+
+    void wait() {
+        pthread_cond_wait(&c, &pm.m);
+    }
+
+    void notify_all() {
+        pthread_cond_broadcast(&c);
+    }
+
+    void notify_one() {
+        pthread_cond_signal(&c);
+    }
+};
+
 #endif //ENGINE_PARAMS_H
