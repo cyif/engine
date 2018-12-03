@@ -389,7 +389,7 @@ namespace polar_race {
 
                 for (int i = 0, total = sortLogs[logId]->size(); i < total; i++) {
                     auto k = sortLogs[logId]->findKeyByIndex(i);
-                    auto offset = 4096L * sortLogs[logId]->findValueByIndex(i);
+                    auto offset = sortLogs[logId]->findValueByIndex(i) << 12;
                     visitor.Visit(PolarString(((char *) (&k)), 8), PolarString((cache + offset), 4096));
                 }
 

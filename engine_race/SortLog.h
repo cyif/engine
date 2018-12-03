@@ -69,7 +69,7 @@ namespace polar_race {
         void quicksort() {
             if (nums > 0) {
                 quicksort(0, nums - 1);
-                if (nums < 25000) {
+                if (nums > 19000) {
                     int k = 0;
                     for (int i = 0; i < nums; i++)
                         if (i == nums - 1 || keys[i] != keys[i + 1]) {

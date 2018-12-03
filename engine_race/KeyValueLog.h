@@ -92,7 +92,7 @@ public:
             pwrite(this->fd, cacheBuffer, BLOCK_SIZE, globalOffset + filePosition);
             filePosition += BLOCK_SIZE;
             cacheBufferPosition = 0;
-            if (filePosition <= VALUE_LOG_SIZE && filePosition + BLOCK_SIZE > VALUE_LOG_SIZE) {
+            if (filePosition + BLOCK_SIZE > VALUE_LOG_SIZE && filePosition <= VALUE_LOG_SIZE) {
                 //Enlarge Log
                 valueLogEnlargeMtx.lock();
                 this->enlarge = true;

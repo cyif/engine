@@ -29,7 +29,7 @@ const int SORT_ENLARGE_SIZE = 20010;
 const size_t CACHE_SIZE = VALUE_LOG_SIZE;
 const int CACHE_NUM = 12;
 
-const int PAGE_PER_BLOCK = 4;
+const int PAGE_PER_BLOCK = 2;
 const size_t BLOCK_SIZE = PAGE_PER_BLOCK * 4096;
 
 const int RECOVER_THREAD = 64;
