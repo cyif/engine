@@ -383,9 +383,10 @@ namespace polar_race {
                 }
                 if (rangeAllCount == MAX_RANGE_COUNT) {
                     readDiskFlag.clear();
+                    readDiskLogIdMtx.unlock();
                     break;
                 }
-                readDiskLogIdMtx.lock();
+                readDiskLogIdMtx.unlock();
 
 
                 auto cacheIndex = logId % CACHE_NUM;
