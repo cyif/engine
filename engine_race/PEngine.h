@@ -148,8 +148,8 @@ namespace polar_race {
                     i.join();
                 }
 
-                this->valueCache = static_cast<char *> (memalign((size_t) getpagesize(), CACHE_SIZE * CACHE_NUM));
-
+//                this->valueCache = static_cast<char *> (memalign((size_t) getpagesize(), CACHE_SIZE * CACHE_NUM));
+                this->valueCache = nullptr;
                 for (int i = 0; i < CACHE_NUM; i++) {
                     isCacheReadable[i] = false;
                     isCacheWritable[i] = true;
@@ -217,7 +217,8 @@ namespace polar_race {
                     delete sortArray[fileId];
                 delete[] sortArray;
 
-                free(valueCache);
+                if (valueCache != nullptr)
+                    free(valueCache);
             }
             printf("Finish deleting engine, total life is %lims\n", (now() - start).count());
         }
@@ -369,6 +370,7 @@ namespace polar_race {
 
         void rangeAll(Visitor &visitor) {
             if (!readDiskFlag.test_and_set()) {
+                this->valueCache = static_cast<char *> (memalign((size_t) getpagesize(), CACHE_SIZE * CACHE_NUM));
                 std::thread t = std::thread(&PEngine::readDisk, this);
                 t.detach();
             }
