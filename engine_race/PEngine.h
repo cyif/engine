@@ -51,7 +51,6 @@ namespace polar_race {
         std::mutex logMutex[LOG_NUM];
 
         char *valueCache;
-        ThreadPool *readDiskThreadPool;
         std::atomic_flag readDiskFlag = ATOMIC_FLAG_INIT;
 
         std::condition_variable rangeCacheFinish[CACHE_NUM];
@@ -159,8 +158,6 @@ namespace polar_race {
                     isCacheWritable[i] = true;
                     currentCacheLogId[i] = -1;
                 }
-                readDiskThreadPool = new ThreadPool(READDISK_THREAD);
-
             } else {
                 this->sortLogs = nullptr;
 
@@ -345,12 +342,14 @@ namespace polar_race {
                 }
 
                 // unlock提前，应该没什么影响
-                readDiskLogIdMtx.unlock();
+//                readDiskLogIdMtx.unlock();
 
                 auto cacheIndex = logId % CACHE_NUM;
 
+//                printf("==================== \n");
+//                printf("wait logId: %d, cacheIndex: %d\n", logId, cacheIndex);
+
                 if (!isCacheWritable[cacheIndex]) {
-                    rangeCacheFinishMtx[cacheIndex].lock();
                     unique_lock<mutex> lck(rangeCacheFinishMtx[cacheIndex]);
                     while (!isCacheWritable[cacheIndex]) {
 //                        printf("wait for range log: %d \n", logId);
@@ -359,15 +358,11 @@ namespace polar_race {
                     lck.unlock();
                 }
 
-//                printf("==================== \n");
-//                printf("logId: %d, cacheIndex: %d\n", logId, cacheIndex);
-
                 isCacheWritable[cacheIndex] = false;
                 currentCacheLogId[cacheIndex] = logId;
-
-//                readDiskLogIdMtx.unlock();
-
                 auto cache = valueCache + cacheIndex * CACHE_SIZE;
+
+                readDiskLogIdMtx.unlock();
 
                 keyValueLogs[logId]->readValue(0, cache, (size_t) keyValueLogs[logId]->size());
 
@@ -376,7 +371,6 @@ namespace polar_race {
                 isCacheReadable[cacheIndex] = true;
                 readDiskFinish[cacheIndex].notify_all();
                 lck.unlock();
-
             }
         }
 
