@@ -53,11 +53,11 @@ namespace polar_race {
         char *valueCache;
         std::atomic_flag readDiskFlag = ATOMIC_FLAG_INIT;
 
-        std::condition_variable_any rangeCacheFinish[CACHE_NUM];
+        std::condition_variable rangeCacheFinish[CACHE_NUM];
         std::mutex rangeCacheFinishMtx[CACHE_NUM];
         int rangeCacheCount[CACHE_NUM] = {0};
 
-        std::condition_variable_any readDiskFinish[CACHE_NUM];
+        std::condition_variable readDiskFinish[CACHE_NUM];
         std::mutex readDiskFinishMtx[CACHE_NUM];
 //        int readDiskCount[CACHE_NUM] = {0};
 
@@ -271,15 +271,15 @@ namespace polar_race {
                 upperLogId = LOG_NUM - 1;
             }
 
-            if (lower == "" && upper == "") {
-                rangeAll(visitor);
-                return kSucc;
-            }
-
-//            if (lower == "" && upper == "" && (sortLogs[0]->size() > 12000)) {
+//            if (lower == "" && upper == "") {
 //                rangeAll(visitor);
 //                return kSucc;
 //            }
+
+            if (lower == "" && upper == "" && (sortLogs[0]->size() > 12000)) {
+                rangeAll(visitor);
+                return kSucc;
+            }
 
             if (lowerLogId > upperLogId && !upperFlag) {
                 return kInvalidArgument;
@@ -376,12 +376,12 @@ namespace polar_race {
                 if (!isCacheWritable[cacheIndex]) {
                     //等待获取可用的cache
 //                    printf("Cache is not writable. LogId : %d,  CacheIndex %d, ThreadId %ld\n", logId, cacheIndex, gettidv1());
-                    rangeCacheFinishMtx[cacheIndex].lock();
+                    unique_lock<mutex> lck(rangeCacheFinishMtx[cacheIndex]);
                     while (!isCacheWritable[cacheIndex]) {
                         printf("wait for range log: %d \n", logId);
-                        rangeCacheFinish[cacheIndex].wait(rangeCacheFinishMtx[cacheIndex]);
+                        rangeCacheFinish[cacheIndex].wait(lck);
                     }
-                    rangeCacheFinishMtx[cacheIndex].unlock();
+                    lck.unlock();
                 }
 
                 isCacheWritable[cacheIndex] = false;
@@ -389,10 +389,10 @@ namespace polar_race {
                 auto cache = valueCache + cacheIndex * CACHE_SIZE;
 
                 keyValueLogs[logId]->readValue(0, cache, (size_t) keyValueLogs[logId]->size());
-                readDiskFinishMtx[cacheIndex].lock();
+                unique_lock<mutex> lck(readDiskFinishMtx[cacheIndex]);
                 isCacheReadable[cacheIndex] = true;
                 readDiskFinish[cacheIndex].notify_all();
-                readDiskFinishMtx[cacheIndex].unlock();
+                lck.unlock();
 
 
                 logId += READDISK_THREAD;
@@ -411,7 +411,7 @@ namespace polar_race {
         void rangeAll(Visitor &visitor) {
             if (!readDiskFlag.test_and_set()) {
                 this->valueCache = static_cast<char *> (memalign((size_t) getpagesize(), CACHE_SIZE * CACHE_NUM));
-                
+
                 for (int i = 0; i < READDISK_THREAD; i++) {
                     std::thread t = std::thread(&PEngine::readDisk, this, i);
                     t.detach();
@@ -423,11 +423,11 @@ namespace polar_race {
                 // 等待读磁盘线程读完当前valueLog
                 auto cacheIndex = logId % CACHE_NUM;
                 if (!isCacheReadable[cacheIndex] || currentCacheLogId[cacheIndex] != logId) {
-                    readDiskFinishMtx[cacheIndex].lock();
+                    unique_lock<mutex> lck(readDiskFinishMtx[cacheIndex]);
                     while (!isCacheReadable[cacheIndex] || currentCacheLogId[cacheIndex] != logId) {
-                        readDiskFinish[cacheIndex].wait(readDiskFinishMtx[cacheIndex]);
+                        readDiskFinish[cacheIndex].wait(lck);
                     }
-                    readDiskFinishMtx[cacheIndex].unlock();
+                    lck.unlock();
                 }
 
                 auto cache = valueCache + cacheIndex * CACHE_SIZE;
@@ -438,7 +438,7 @@ namespace polar_race {
                     visitor.Visit(PolarString(((char *) (&k)), 8), PolarString((cache + offset), 4096));
                 }
 
-                rangeCacheFinishMtx[cacheIndex].lock();
+                unique_lock<mutex> lck(rangeCacheFinishMtx[cacheIndex]);
                 auto rangeCount = ++rangeCacheCount[cacheIndex];
                 if (rangeCount == 64) {
                     isCacheWritable[cacheIndex] = true;
@@ -446,8 +446,7 @@ namespace polar_race {
                     rangeCacheCount[cacheIndex] = 0;
                     rangeCacheFinish[cacheIndex].notify_all();
                 }
-                rangeCacheFinishMtx[cacheIndex].unlock();
-//                lock.unlock();
+                lck.unlock();
             }
         }
 
