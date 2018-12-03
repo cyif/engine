@@ -71,6 +71,11 @@ namespace polar_race {
         char *cacheBuffer;
         size_t cacheFileSize;
 
+        int readDiskLogId = 0;
+        std::mutex readDiskLogIdMtx;
+        int rangeAllCount = 0;
+
+
     public:
         explicit PEngine(const string &path) {
             this->start = now();
@@ -365,11 +370,23 @@ namespace polar_race {
 //            }
 //        }
 
-        void readDisk(const int& threadId) {
+        void readDisk() {
             printf("Start Read Disk Thread!\n");
-            int logId = threadId;
-            int rangeAllCount = 0;
             while (true) {
+
+                readDiskLogIdMtx.lock();
+                int logId = readDiskLogId;
+                readDiskLogId++;
+                if (readDiskLogId >= LOG_NUM) {
+                    readDiskLogId = 0;
+                    rangeAllCount++;
+                }
+                if (rangeAllCount == MAX_RANGE_COUNT) {
+                    readDiskFlag.clear();
+                    break;
+                }
+                readDiskLogIdMtx.lock();
+
 
                 auto cacheIndex = logId % CACHE_NUM;
 
@@ -394,16 +411,6 @@ namespace polar_race {
                 readDiskFinish[cacheIndex].notify_all();
                 lck.unlock();
 
-
-                logId += READDISK_THREAD;
-                if (logId >= LOG_NUM) {
-                    logId = threadId;
-                    rangeAllCount++;
-                    if (rangeAllCount == MAX_RANGE_COUNT) {
-                        readDiskFlag.clear();
-                        break;
-                    }
-                }
             }
         }
 
@@ -413,7 +420,7 @@ namespace polar_race {
                 this->valueCache = static_cast<char *> (memalign((size_t) getpagesize(), CACHE_SIZE * CACHE_NUM));
 
                 for (int i = 0; i < READDISK_THREAD; i++) {
-                    std::thread t = std::thread(&PEngine::readDisk, this, i);
+                    std::thread t = std::thread(&PEngine::readDisk, this);
                     t.detach();
                 }
             }
