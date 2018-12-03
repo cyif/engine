@@ -190,12 +190,12 @@ namespace polar_race {
                 }
             }
 
-            printf("Open database complete. time spent is %lims\n", (now() - start).count());
+//            printf("Open database complete. time spent is %lims\n", (now() - start).count());
 //            printf("============================Engine Start!========================\n");
         }
 
         ~PEngine() {
-            printf("deleting engine, total life is %lims\n", (now() - start).count());
+//            printf("deleting engine, total life is %lims\n", (now() - start).count());
 
             for (int logId = 0; logId < LOG_NUM; logId++) {
                 delete keyValueLogs[logId];
@@ -221,7 +221,7 @@ namespace polar_race {
                 if (valueCache != nullptr)
                     free(valueCache);
             }
-            printf("Finish deleting engine, total life is %lims\n", (now() - start).count());
+//            printf("Finish deleting engine, total life is %lims\n", (now() - start).count());
         }
 
         static inline int getLogId(const char *k) {
@@ -322,7 +322,7 @@ namespace polar_race {
         }
 
         void readDisk() {
-            printf("Start Read Disk Thread!\n");
+//            printf("Start Read Disk Thread!\n");
             while (true) {
 
                 readDiskLogIdMtx.lock();
