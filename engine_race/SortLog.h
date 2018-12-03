@@ -51,7 +51,7 @@ namespace polar_race {
             values[nums] = value;
             nums++;
 
-            if (nums >= SORT_LOG_SIZE) {
+            if (nums == SORT_LOG_SIZE) {
                 this->enlarge = true;
                 sortLogEnlargeMtx.lock();
                 auto * keysEnlarge = static_cast<u_int64_t *>(malloc(SORT_ENLARGE_SIZE * sizeof(u_int64_t)));
