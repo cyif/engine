@@ -33,7 +33,7 @@ const int PAGE_PER_BLOCK = 4;
 const size_t BLOCK_SIZE = PAGE_PER_BLOCK * 4096;
 
 const int RECOVER_THREAD = 64;
-const int READDISK_THREAD = 2;
+const int READDISK_THREAD = 3;
 
 const int MAX_LENGTH_INSERT_SORT = 12;
 
