@@ -16,15 +16,13 @@ namespace polar_race {
 
     private:
         u_int64_t * keys;
-        u_int32_t * values;
-        int nums = 0;
-        bool enlarge = false;
+        u_int16_t * values;
+        u_int16_t nums;
+        bool enlarge;
 
     public:
 
-        SortLog(u_int64_t * keys, u_int32_t * values) {
-            this->keys = keys;
-            this->values = values;
+        SortLog(u_int64_t * keys, u_int16_t * values) : nums(0), enlarge(false), keys(keys), values(values){
         }
 
         ~SortLog() {
@@ -46,16 +44,16 @@ namespace polar_race {
             return __builtin_bswap64(key) > keys[0];
         }
 
-        void put(u_int64_t &bigEndkey, const u_int32_t &value) {
+        void put(u_int64_t &bigEndkey) {
             keys[nums] = __builtin_bswap64(bigEndkey);
-            values[nums] = value;
+            values[nums] = nums;
             nums++;
 
             if (nums == SORT_LOG_SIZE) {
                 this->enlarge = true;
                 sortLogEnlargeMtx.lock();
                 auto * keysEnlarge = static_cast<u_int64_t *>(malloc(SORT_ENLARGE_SIZE * sizeof(u_int64_t)));
-                auto * valuesEnlarge = static_cast<u_int32_t *>(malloc(SORT_ENLARGE_SIZE * sizeof(u_int32_t)));
+                auto * valuesEnlarge = static_cast<u_int16_t *>(malloc(SORT_ENLARGE_SIZE * sizeof(u_int16_t)));
                 for (int i = 0; i < nums; i++) {
                     keysEnlarge[i] = keys[i];
                     valuesEnlarge[i] = values[i];
@@ -70,7 +68,7 @@ namespace polar_race {
             if (nums > 0) {
                 quicksort(0, nums - 1);
                 if (nums > 19000) {
-                    int k = 0;
+                    u_int16_t k = 0;
                     for (int i = 0; i < nums; i++)
                         if (i == nums - 1 || keys[i] != keys[i + 1]) {
                             keys[k] = keys[i];
@@ -96,15 +94,15 @@ namespace polar_race {
             }
         }
 
-        bool lessThan(int &a, int &b) {
+        inline bool lessThan(int &a, int &b) {
             return (keys[a] < keys[b] || (keys[a] == keys[b] && values[a] < values[b]));
         }
 
-        bool lessThanOrEqual(u_int64_t &key1, u_int32_t &value1, u_int64_t &key2, u_int32_t &value2) {
+        inline bool lessThanOrEqual(u_int64_t &key1, u_int16_t &value1, u_int64_t &key2, u_int16_t &value2) {
             return (key1 < key2 || (key1 == key2 && value1 <= value2));
         }
 
-        bool lessThan(u_int64_t &key1, u_int32_t &value1, u_int64_t &key2, u_int32_t &value2) {
+        inline bool lessThan(u_int64_t &key1, u_int16_t &value1, u_int64_t &key2, u_int16_t &value2) {
             return (key1 < key2 || (key1 == key2 && value1 < value2));
         }
 
@@ -113,7 +111,7 @@ namespace polar_race {
             // 1. 优化排序基准，使用三值取中获取中值
             medianOfThree(low, high);
             u_int64_t pivotKey = keys[low];
-            u_int32_t pivotValue = values[low];
+            u_int16_t pivotValue = values[low];
 
             while (low < high) { // 从数组的两端向中间扫描 // A
                 while (low < high && lessThanOrEqual(pivotKey, pivotValue, keys[high], values[high])) { // B
@@ -136,7 +134,7 @@ namespace polar_race {
         }
 
 
-        void medianOfThree(int low, int high) {
+        inline void medianOfThree(int low, int high) {
             int mid = low + ((high - low) >> 1); // mid = low + (high-low)/2, 中间元素下标
 
             if (lessThan(high, mid))
@@ -146,7 +144,7 @@ namespace polar_race {
                 swap(low, mid);
         }
 
-        void swap(int left, int right) {
+        inline void swap(int left, int right) {
             if (left == right) return;
             keys[left] ^= keys[right] ^= keys[left] ^= keys[right];
             values[left] ^= values[right] ^= values[left] ^= values[right];
@@ -158,7 +156,7 @@ namespace polar_race {
                 if (lessThan(keys[i], values[i], keys[i - 1], values[i - 1])) {
                     // 如果当前下标对应的记录小于前一位记录,则需要插入,否则不需要插入，直接将记录数增加1
                     u_int64_t tmpKey = keys[i];
-                    u_int32_t tmpValue = values[i];
+                    u_int16_t tmpValue = values[i];
                     for (j = i - 1; j >= low && lessThan(tmpKey, tmpValue, keys[j], values[j]); j--) {
                         keys[j + 1] = keys[j];
                         values[j + 1] = values[j];

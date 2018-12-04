@@ -27,26 +27,17 @@ private:
     size_t filePosition;
     size_t globalOffset;
 
-    int cacheBufferPosition;
+    size_t cacheBufferPosition;
     char *cacheBuffer;
 
-    int keyBufferPosition;
+    size_t keyBufferPosition;
     u_int64_t *keyBuffer;
 
-    bool enlarge = false;
+    bool enlarge;
 public:
-    KeyValueLog(const std::string &path, const int &id, const int &fd, const size_t &globalOffset, char *cacheBuffer, u_int64_t *keyBuffer) {
-        this->id = id;
-        this->path = path;
-
-        this->fd = fd;
-        this->globalOffset = globalOffset;
-        this->cacheBuffer = cacheBuffer;
-        this->filePosition = 0;
-        this->cacheBufferPosition = 0;
-
-        this->keyBuffer = keyBuffer;
-        this->keyBufferPosition = 0;
+    KeyValueLog(const std::string &path, const int &id, const int &fd, const size_t &globalOffset, char *cacheBuffer, u_int64_t *keyBuffer) :
+        id(id), path(path), fd(fd), filePosition(0), globalOffset(globalOffset), cacheBufferPosition(0),
+        cacheBuffer(cacheBuffer), keyBufferPosition(0), keyBuffer(keyBuffer), enlarge(false){
 
         std::ostringstream fp;
         fp << path << "/enlarge-" << id;
@@ -55,14 +46,9 @@ public:
         if (access(filePath.data(), 0) != -1) {
             valueLogEnlargeMtx.lock();
             this->enlarge = true;
-
-            std::ostringstream fp;
-            fp << path << "/enlarge-" << id;
-
             this->fd = open(fp.str().data(), O_CREAT | O_RDWR | O_DIRECT | O_NOATIME, 0777);
             fallocate(this->fd, 0, 0, VALUE_ENLARGE_SIZE + KEY_ENLARGE_SIZE);
             this->globalOffset = 0;
-
             this->keyBuffer = static_cast<u_int64_t *>(mmap(nullptr, KEY_ENLARGE_SIZE, PROT_READ | PROT_WRITE,
                                                             MAP_SHARED | MAP_POPULATE, this->fd,
                                                             (off_t) VALUE_ENLARGE_SIZE));
@@ -72,7 +58,7 @@ public:
 
     ~KeyValueLog() {
         if (this->cacheBufferPosition != 0) {
-            auto remainSize = (size_t ) cacheBufferPosition << 12;
+            auto remainSize = cacheBufferPosition << 12;
             pwrite(this->fd, cacheBuffer, remainSize, globalOffset + filePosition);
         }
         if (this->enlarge) {
@@ -85,7 +71,7 @@ public:
         return filePosition + (cacheBufferPosition << 12);
     }
 
-    inline void putValue(const char *value) {
+    inline void putValueKey(const char *value, const char * key) {
         memcpy(cacheBuffer + (cacheBufferPosition << 12), value, 4096);
         cacheBufferPosition++;
         if (cacheBufferPosition == PAGE_PER_BLOCK) {
@@ -103,7 +89,7 @@ public:
                 int fdEnlarge = open(fp.str().data(), O_CREAT | O_RDWR | O_DIRECT | O_NOATIME, 0777);
                 fallocate(fdEnlarge, 0, 0, VALUE_ENLARGE_SIZE + KEY_ENLARGE_SIZE);
 
-                u_int64_t * keyBufferEnlarge = static_cast<u_int64_t *>(mmap(nullptr, KEY_ENLARGE_SIZE, PROT_READ | PROT_WRITE,
+                auto * keyBufferEnlarge = static_cast<u_int64_t *>(mmap(nullptr, KEY_ENLARGE_SIZE, PROT_READ | PROT_WRITE,
                                                                 MAP_SHARED | MAP_POPULATE, fdEnlarge,
                                                                 (off_t) VALUE_ENLARGE_SIZE));
 
@@ -112,19 +98,19 @@ public:
                     pread(this->fd, cacheBuffer, BLOCK_SIZE, globalOffset + pos);
                     pwrite(fdEnlarge, cacheBuffer, BLOCK_SIZE, pos);
                 }
-
                 memcpy(keyBufferEnlarge, keyBuffer, KEY_LOG_SIZE);
-
                 this->fd = fdEnlarge;
                 this->globalOffset = 0;
                 this->keyBuffer = keyBufferEnlarge;
-
                 valueLogEnlargeMtx.unlock();
             }
         }
+
+        *(keyBuffer + keyBufferPosition) = *((u_int64_t *) key);
+        keyBufferPosition++;
     }
 
-    inline void readValue(long index, char *value) {
+    inline void readValue(int index, char *value) {
         pread(this->fd, value, 4096, globalOffset + (index << 12));
     }
 
@@ -132,13 +118,8 @@ public:
         pread(this->fd, value, size, globalOffset + offset);
     }
 
-    void recover(u_int32_t sum) {
-        this->filePosition = (size_t) sum << 12;
-    }
-
-    inline void putKey(const char * key) {
-        *(keyBuffer + keyBufferPosition) = *((u_int64_t *) key);
-        keyBufferPosition++;
+    void recover(size_t sum) {
+        this->filePosition = sum << 12;
     }
 
     inline bool getKey(u_int64_t & key) {
@@ -147,7 +128,7 @@ public:
         return key != 0;
     }
 
-    void setKeyBufferPosition(int position) {
+    void setKeyBufferPosition(size_t position) {
         this->keyBufferPosition = position;
     }
 };

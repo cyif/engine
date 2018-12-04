@@ -44,42 +44,34 @@ namespace polar_race {
     private:
         KeyValueLog **keyValueLogs;
         KVFiles **kvFiles;
-
         SortLog **sortLogs;
         SortArray **sortArray;
-
-        std::mutex logMutex[LOG_NUM];
+        int cacheFd;
+        char *cacheBuffer;
+        PMutex logMutex[LOG_NUM];
 
         char *valueCache;
         std::atomic_flag readDiskFlag = ATOMIC_FLAG_INIT;
 
-        std::condition_variable rangeCacheFinish[CACHE_NUM];
-        std::mutex rangeCacheFinishMtx[CACHE_NUM];
+        PCond rangeCacheFinish[CACHE_NUM];
         int rangeCacheCount[CACHE_NUM] = {0};
 
-        std::condition_variable readDiskFinish[CACHE_NUM];
-        std::mutex readDiskFinishMtx[CACHE_NUM];
-//        int readDiskCount[CACHE_NUM] = {0};
+        PCond readDiskFinish[CACHE_NUM];
 
         bool isCacheReadable[CACHE_NUM];
         bool isCacheWritable[CACHE_NUM];
         int currentCacheLogId[CACHE_NUM];
 
-        std::mutex readDiskLogIdMtx;
+        PMutex readDiskLogIdMtx;
         int readDiskLogId=0;
         int rangeAllCount=0;
 
         milliseconds start;
 
-        int cacheFd;
-        char *cacheBuffer;
-        size_t cacheFileSize;
-
     public:
         explicit PEngine(const string &path) {
             this->start = now();
             // init
-
             this->keyValueLogs = static_cast<KeyValueLog **>(malloc(LOG_NUM * sizeof(KeyValueLog *)));
             this->kvFiles = static_cast<KVFiles **>(malloc(FILE_NUM * sizeof(KVFiles *)));
             this->sortArray = static_cast<SortArray **>(malloc(FILE_NUM * sizeof(SortArray *)));
@@ -91,7 +83,6 @@ namespace polar_race {
             fallocate(this->cacheFd, 0, 0, BLOCK_SIZE * LOG_NUM);
             this->cacheBuffer = static_cast<char *>(mmap(nullptr, BLOCK_SIZE * LOG_NUM, PROT_READ | PROT_WRITE,
                                                          MAP_SHARED | MAP_POPULATE, this->cacheFd, 0));
-
             std::ostringstream ss;
             ss << path << "/value-0";
             string filePath = ss.str();
@@ -105,53 +96,35 @@ namespace polar_race {
                 std::thread t[RECOVER_THREAD];
                 for (int i = 0; i < RECOVER_THREAD; i++) {
                     t[i] = std::thread([i, num_log_per_file, path, this] {
-
+                        
+                        u_int64_t k;
+                        
                         for (int fileId = i; fileId < FILE_NUM; fileId += RECOVER_THREAD) {
                             kvFiles[fileId] = new KVFiles(path, fileId, VALUE_LOG_SIZE * num_log_per_file,
                                                           KEY_LOG_SIZE * num_log_per_file);
                             sortArray[fileId] = new SortArray();
                         }
-
-
                         for (int logId = i; logId < LOG_NUM; logId += RECOVER_THREAD) {
-
                             int fileId = logId % FILE_NUM;
                             int slotId = logId / FILE_NUM;
-
                             sortLogs[logId] = new SortLog(sortArray[fileId]->getKeyArray(slotId), sortArray[fileId]->getValueArray(slotId));
-
-                            int valueFd = this->kvFiles[fileId]->getValueFd();
-                            char *cacheBuffer = this->cacheBuffer + BLOCK_SIZE * logId;
-                            size_t globalOffset = slotId * VALUE_LOG_SIZE;
-                            u_int64_t *keyBuffer = this->kvFiles[fileId]->getKeyBuffer() + slotId * NUM_PER_SLOT;
-
-                            keyValueLogs[logId] = new KeyValueLog(path, logId, valueFd, globalOffset, cacheBuffer, keyBuffer);
-
-                            KeyValueLog *keyValueLog = keyValueLogs[logId];
-                            SortLog *sortLog = sortLogs[logId];
-
-                            u_int64_t k;
-                            u_int32_t cnt = 0;
-
-                            while (keyValueLog->getKey(k))
-                                sortLog->put(k, cnt++);
-
-                            sortLog->quicksort();
-
-//                            if (sortLog->size() > 0)
-//                                printf("logId:%d,size:%d,fileId:%d,slotId:%d\n", logId, sortLog->size(), fileId, slotId);
-
-                            keyValueLog->setKeyBufferPosition(cnt);
-                            keyValueLog->recover(cnt);
+//                            int valueFd = this->kvFiles[fileId]->getValueFd();
+//                            char *cacheBuffer = this->cacheBuffer + BLOCK_SIZE * logId;
+//                            size_t globalOffset = slotId * VALUE_LOG_SIZE;
+//                            u_int64_t *keyBuffer = this->kvFiles[fileId]->getKeyBuffer() + slotId * NUM_PER_SLOT;
+//                            keyValueLogs[logId] = new KeyValueLog(path, logId, valueFd, globalOffset, cacheBuffer, keyBuffer);
+                            keyValueLogs[logId] = new KeyValueLog(path, logId, this->kvFiles[fileId]->getValueFd(), slotId * VALUE_LOG_SIZE, cacheBuffer, this->kvFiles[fileId]->getKeyBuffer() + slotId * NUM_PER_SLOT);
+                            while (keyValueLogs[logId]->getKey(k))
+                                sortLogs[logId]->put(k);
+                            sortLogs[logId]->quicksort();
+                            keyValueLogs[logId]->setKeyBufferPosition((size_t) sortLogs[logId]->size());
+                            keyValueLogs[logId]->recover((size_t) sortLogs[logId]->size());
                         }
                     });
                 }
-
                 for (auto &i : t) {
                     i.join();
                 }
-
-//                this->valueCache = static_cast<char *> (memalign((size_t) getpagesize(), CACHE_SIZE * CACHE_NUM));
                 this->valueCache = nullptr;
                 for (int i = 0; i < CACHE_NUM; i++) {
                     isCacheReadable[i] = false;
@@ -164,23 +137,14 @@ namespace polar_race {
                 std::thread t[RECOVER_THREAD];
                 for (int i = 0; i < RECOVER_THREAD; i++) {
                     t[i] = std::thread([i, num_log_per_file, path, this] {
-
                         for (int fileId = i; fileId < FILE_NUM; fileId += RECOVER_THREAD) {
                             *(kvFiles + fileId) = new KVFiles(path, fileId, VALUE_LOG_SIZE * num_log_per_file,
                                                               KEY_LOG_SIZE * num_log_per_file);
                         }
-
                         for (int logId = i; logId < LOG_NUM; logId += RECOVER_THREAD) {
-
                             int fileId = logId % FILE_NUM;
                             int slotId = logId / FILE_NUM;
-
-                            int valueFd = kvFiles[fileId]->getValueFd();
-                            char *cacheBuffer = this->cacheBuffer + BLOCK_SIZE * logId;
-                            size_t globalOffset = slotId * VALUE_LOG_SIZE;
-                            u_int64_t *keyBuffer = kvFiles[fileId]->getKeyBuffer() + slotId * NUM_PER_SLOT;
-
-                            keyValueLogs[logId] = new KeyValueLog(path, logId, valueFd, globalOffset, cacheBuffer, keyBuffer);
+                            keyValueLogs[logId] = new KeyValueLog(path, logId, kvFiles[fileId]->getValueFd(), slotId * VALUE_LOG_SIZE, this->cacheBuffer + BLOCK_SIZE * logId, kvFiles[fileId]->getKeyBuffer() + slotId * NUM_PER_SLOT);
                         }
                     });
                 }
@@ -190,12 +154,12 @@ namespace polar_race {
                 }
             }
 
-//            printf("Open database complete. time spent is %lims\n", (now() - start).count());
+            printf("Open database complete. time spent is %lims\n", (now() - start).count());
 //            printf("============================Engine Start!========================\n");
         }
 
         ~PEngine() {
-//            printf("deleting engine, total life is %lims\n", (now() - start).count());
+            printf("deleting engine, total life is %lims\n", (now() - start).count());
 
             for (int logId = 0; logId < LOG_NUM; logId++) {
                 delete keyValueLogs[logId];
@@ -221,21 +185,17 @@ namespace polar_race {
                 if (valueCache != nullptr)
                     free(valueCache);
             }
-//            printf("Finish deleting engine, total life is %lims\n", (now() - start).count());
+            printf("Finish deleting engine, total life is %lims\n", (now() - start).count());
         }
 
         static inline int getLogId(const char *k) {
             return ((u_int16_t) ((u_int8_t) k[0]) << 4) | ((u_int8_t) k[1] >> 4);
-//            return (((u_int16_t) ((u_int8_t) k[0])) << 1) | ((u_int8_t) k[1] >> 7);
-//            return ((u_int16_t) ((u_int8_t) k[0]) << 2) | ((u_int8_t) k[1] >> 6);
-//            return (*((u_int8_t *) k));
         }
 
         void put(const PolarString &key, const PolarString &value) {
             auto logId = getLogId(key.data());
             logMutex[logId].lock();
-            keyValueLogs[logId]->putValue(value.data());
-            keyValueLogs[logId]->putKey(key.data());
+            keyValueLogs[logId]->putValueKey(value.data(), key.data());
             logMutex[logId].unlock();
         }
 
@@ -341,21 +301,15 @@ namespace polar_race {
                     rangeAllCount++;
                 }
 
-                // unlock提前，应该没什么影响
-//                readDiskLogIdMtx.unlock();
-
                 auto cacheIndex = logId % CACHE_NUM;
 
-//                printf("==================== \n");
-//                printf("wait logId: %d, cacheIndex: %d\n", logId, cacheIndex);
-
                 if (!isCacheWritable[cacheIndex]) {
-                    unique_lock<mutex> lck(rangeCacheFinishMtx[cacheIndex]);
+                    rangeCacheFinish[cacheIndex].lock();
                     while (!isCacheWritable[cacheIndex]) {
 //                        printf("wait for range log: %d \n", logId);
-                        rangeCacheFinish[cacheIndex].wait(lck);
+                        rangeCacheFinish[cacheIndex].wait();
                     }
-                    lck.unlock();
+                    rangeCacheFinish[cacheIndex].unlock();
                 }
 
                 isCacheWritable[cacheIndex] = false;
@@ -367,10 +321,10 @@ namespace polar_race {
                 keyValueLogs[logId]->readValue(0, cache, (size_t) keyValueLogs[logId]->size());
 
                 //这里可能不用lock
-                unique_lock<mutex> lck(readDiskFinishMtx[cacheIndex]);
+                readDiskFinish[cacheIndex].lock();
                 isCacheReadable[cacheIndex] = true;
                 readDiskFinish[cacheIndex].notify_all();
-                lck.unlock();
+                readDiskFinish[cacheIndex].unlock();
             }
         }
 
@@ -390,11 +344,11 @@ namespace polar_race {
                 // 等待读磁盘线程读完当前valueLog
                 auto cacheIndex = logId % CACHE_NUM;
                 if (!isCacheReadable[cacheIndex] || currentCacheLogId[cacheIndex] != logId) {
-                    unique_lock<mutex> lck(readDiskFinishMtx[cacheIndex]);
+                    readDiskFinish[cacheIndex].lock();
                     while (!isCacheReadable[cacheIndex] || currentCacheLogId[cacheIndex] != logId) {
-                        readDiskFinish[cacheIndex].wait(lck);
+                        readDiskFinish[cacheIndex].wait();
                     }
-                    lck.unlock();
+                    readDiskFinish[cacheIndex].unlock();
                 }
 
                 auto cache = valueCache + cacheIndex * CACHE_SIZE;
@@ -405,7 +359,7 @@ namespace polar_race {
                     visitor.Visit(PolarString(((char *) (&k)), 8), PolarString((cache + offset), 4096));
                 }
 
-                unique_lock<mutex> lck(rangeCacheFinishMtx[cacheIndex]);
+                rangeCacheFinish[cacheIndex].lock();
                 auto rangeCount = ++rangeCacheCount[cacheIndex];
                 if (rangeCount == 64) {
                     isCacheWritable[cacheIndex] = true;
@@ -413,7 +367,7 @@ namespace polar_race {
                     rangeCacheCount[cacheIndex] = 0;
                     rangeCacheFinish[cacheIndex].notify_all();
                 }
-                lck.unlock();
+                rangeCacheFinish[cacheIndex].unlock();
             }
         }
 

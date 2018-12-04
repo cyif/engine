@@ -11,7 +11,7 @@
 class SortArray {
 private:
     u_int64_t keys[SORT_FILE_SIZE];
-    u_int32_t values[SORT_FILE_SIZE];
+    u_int16_t values[SORT_FILE_SIZE];
 
 public:
 
@@ -19,7 +19,7 @@ public:
         return &keys[SORT_LOG_SIZE * i];
     }
 
-    u_int32_t * getValueArray(int &i) {
+    u_int16_t * getValueArray(int &i) {
         return &values[SORT_LOG_SIZE * i];
     }
 
