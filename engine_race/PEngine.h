@@ -50,6 +50,7 @@ namespace polar_race {
         char *cacheBuffer;
         PMutex logMutex[LOG_NUM];
 
+        ThreadPool *readDiskThreadPool;
         char *valueCache;
         std::atomic_flag readDiskFlag = ATOMIC_FLAG_INIT;
 
@@ -61,10 +62,6 @@ namespace polar_race {
         bool isCacheReadable[CACHE_NUM];
         bool isCacheWritable[CACHE_NUM];
         int currentCacheLogId[CACHE_NUM];
-
-        PMutex readDiskLogIdMtx;
-        int readDiskLogId=0;
-        int rangeAllCount=0;
 
         milliseconds start;
 
@@ -96,9 +93,9 @@ namespace polar_race {
                 std::thread t[RECOVER_THREAD];
                 for (int i = 0; i < RECOVER_THREAD; i++) {
                     t[i] = std::thread([i, num_log_per_file, path, this] {
-                        
+
                         u_int64_t k;
-                        
+
                         for (int fileId = i; fileId < FILE_NUM; fileId += RECOVER_THREAD) {
                             kvFiles[fileId] = new KVFiles(path, fileId, VALUE_LOG_SIZE * num_log_per_file,
                                                           KEY_LOG_SIZE * num_log_per_file);
@@ -282,31 +279,15 @@ namespace polar_race {
         }
 
         void readDisk() {
-//            printf("Start Read Disk Thread!\n");
+            int logId = 0;
+            int rangeAllCount = 0;
             while (true) {
-
-                readDiskLogIdMtx.lock();
-
-                if (rangeAllCount == MAX_RANGE_COUNT) {
-                    readDiskFlag.clear();
-                    readDiskLogIdMtx.unlock();
-                    break;
-                }
-
-                int logId = readDiskLogId;
-                readDiskLogId++;
-
-                if (readDiskLogId >= LOG_NUM) {
-                    readDiskLogId = 0;
-                    rangeAllCount++;
-                }
-
                 auto cacheIndex = logId % CACHE_NUM;
 
                 if (!isCacheWritable[cacheIndex]) {
+                    //等待获取可用的cache
                     rangeCacheFinish[cacheIndex].lock();
                     while (!isCacheWritable[cacheIndex]) {
-//                        printf("wait for range log: %d \n", logId);
                         rangeCacheFinish[cacheIndex].wait();
                     }
                     rangeCacheFinish[cacheIndex].unlock();
@@ -316,15 +297,23 @@ namespace polar_race {
                 currentCacheLogId[cacheIndex] = logId;
                 auto cache = valueCache + cacheIndex * CACHE_SIZE;
 
-                readDiskLogIdMtx.unlock();
+                readDiskThreadPool->enqueue([cacheIndex, cache, logId, this] {
+                    keyValueLogs[logId]->readValue(0, cache, (size_t) keyValueLogs[logId]->size());
+                    readDiskFinish[cacheIndex].lock();
+                    isCacheReadable[cacheIndex] = true;
+                    readDiskFinish[cacheIndex].notify_all();
+                    readDiskFinish[cacheIndex].unlock();
+                });
 
-                keyValueLogs[logId]->readValue(0, cache, (size_t) keyValueLogs[logId]->size());
-
-                //这里可能不用lock
-                readDiskFinish[cacheIndex].lock();
-                isCacheReadable[cacheIndex] = true;
-                readDiskFinish[cacheIndex].notify_all();
-                readDiskFinish[cacheIndex].unlock();
+                logId++;
+                if (logId >= LOG_NUM) {
+                    logId = 0;
+                    rangeAllCount++;
+                    if (rangeAllCount == MAX_RANGE_COUNT) {
+                        readDiskFlag.clear();
+                        break;
+                    }
+                }
             }
         }
 
@@ -332,11 +321,9 @@ namespace polar_race {
         void rangeAll(Visitor &visitor) {
             if (!readDiskFlag.test_and_set()) {
                 this->valueCache = static_cast<char *> (memalign((size_t) getpagesize(), CACHE_SIZE * CACHE_NUM));
-
-                for (int i = 0; i < READDISK_THREAD; i++) {
-                    std::thread t = std::thread(&PEngine::readDisk, this);
-                    t.detach();
-                }
+                readDiskThreadPool = new ThreadPool(READDISK_THREAD);
+                std::thread t = std::thread(&PEngine::readDisk, this);
+                t.detach();
             }
 
             for (int logId = 0; logId < LOG_NUM; logId++) {
