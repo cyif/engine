@@ -17,7 +17,7 @@ const int NUM_PER_SLOT = 1024 * 16;
 const size_t VALUE_LOG_SIZE = NUM_PER_SLOT * 4096;  //128mb
 const size_t KEY_LOG_SIZE = NUM_PER_SLOT * 8;
 
-const int FILE_NUM = 128;
+const int FILE_NUM = 256;
 
 const int SORT_LOG_SIZE = NUM_PER_SLOT;
 const int SORT_FILE_SIZE = SORT_LOG_SIZE * (LOG_NUM / FILE_NUM);
