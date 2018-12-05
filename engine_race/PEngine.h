@@ -42,12 +42,10 @@ namespace polar_race {
     class PEngine {
 
     private:
-        KeyValueLog **keyValueLogs;
-        KVFiles **kvFiles;
+        KeyValueLog *(keyValueLogs[LOG_NUM]);
+        KVFiles *(kvFiles[FILE_NUM]);
         SortLog **sortLogs;
         SortArray **sortArray;
-//        int cacheFd;
-//        char *cacheBuffer;
         PMutex logMutex[LOG_NUM];
 
         ThreadPool *readDiskThreadPool;
@@ -55,7 +53,7 @@ namespace polar_race {
         std::atomic_flag readDiskFlag = ATOMIC_FLAG_INIT;
 
         PCond rangeCacheFinish[CACHE_NUM];
-        int rangeCacheCount[CACHE_NUM] = {0};
+        int rangeCacheCount[CACHE_NUM];
 
         PCond readDiskFinish[CACHE_NUM];
 
@@ -69,10 +67,6 @@ namespace polar_race {
         explicit PEngine(const string &path) {
             this->start = now();
             // init
-            this->keyValueLogs = static_cast<KeyValueLog **>(malloc(LOG_NUM * sizeof(KeyValueLog *)));
-            this->kvFiles = static_cast<KVFiles **>(malloc(FILE_NUM * sizeof(KVFiles *)));
-            this->sortArray = static_cast<SortArray **>(malloc(FILE_NUM * sizeof(SortArray *)));
-
             //value cache file
             std::ostringstream ss;
             ss << path << "/value-0";
@@ -83,6 +77,8 @@ namespace polar_race {
             if (access(filePath.data(), 0) != -1) {
 
                 this->sortLogs = static_cast<SortLog **>(malloc(LOG_NUM * sizeof(SortLog *)));
+                this->sortArray = static_cast<SortArray **>(malloc(FILE_NUM * sizeof(SortArray *)));
+                this->valueCache = nullptr;
 
                 std::thread t[RECOVER_THREAD];
                 for (int i = 0; i < RECOVER_THREAD; i++) {
@@ -117,15 +113,13 @@ namespace polar_race {
                 for (auto &i : t) {
                     i.join();
                 }
-                this->valueCache = nullptr;
-                for (int i = 0; i < CACHE_NUM; i++) {
-                    isCacheReadable[i] = false;
-                    isCacheWritable[i] = true;
-                    currentCacheLogId[i] = -1;
-                }
-            } else {
-                this->sortLogs = nullptr;
 
+            }
+
+            else {
+                this->sortLogs = nullptr;
+                this->sortArray = nullptr;
+                this->valueCache = nullptr;
                 std::thread t[RECOVER_THREAD];
                 for (int i = 0; i < RECOVER_THREAD; i++) {
                     t[i] = std::thread([i, num_log_per_file, path, this] {
@@ -159,26 +153,24 @@ namespace polar_race {
         ~PEngine() {
             printf("deleting engine, total life is %lims\n", (now() - start).count());
 
-            for (int logId = 0; logId < LOG_NUM; logId++) {
-                delete keyValueLogs[logId];
-            }
-            delete[] keyValueLogs;
+            for (auto keyValueLogsi : keyValueLogs)
+                delete keyValueLogsi;
 
-            for (int fileId = 0; fileId < FILE_NUM; fileId++)
-                delete kvFiles[fileId];
-            delete[] kvFiles;
+            for (auto kvFilesi : kvFiles)
+                delete kvFilesi;
 
-            if (sortLogs != nullptr) {
+
+            if (sortLogs != nullptr && sortArray != nullptr) {
                 for (int i = 0; i < LOG_NUM; i++)
                     delete sortLogs[i];
-                delete[] sortLogs;
-
+                free(sortLogs);
                 for (int fileId = 0; fileId < FILE_NUM; fileId++)
                     delete sortArray[fileId];
-                delete[] sortArray;
+                free(sortArray);
 
-                if (valueCache != nullptr)
+                if (valueCache != nullptr){
                     free(valueCache);
+                }
             }
             printf("Finish deleting engine, total life is %lims\n", (now() - start).count());
         }
@@ -320,6 +312,12 @@ namespace polar_race {
             if (!readDiskFlag.test_and_set()) {
                 this->valueCache = static_cast<char *> (memalign((size_t) getpagesize(), CACHE_SIZE * CACHE_NUM));
                 readDiskThreadPool = new ThreadPool(READDISK_THREAD);
+                for (int i = 0; i < CACHE_NUM; i++) {
+                    rangeCacheCount[i] = 0;
+                    isCacheReadable[i] = false;
+                    isCacheWritable[i] = true;
+                    currentCacheLogId[i] = -1;
+                }
                 std::thread t = std::thread(&PEngine::readDisk, this);
                 t.detach();
             }
