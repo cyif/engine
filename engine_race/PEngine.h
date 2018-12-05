@@ -33,9 +33,9 @@ using namespace std::chrono;
 
 namespace polar_race {
 
-    milliseconds now() {
-        return duration_cast<milliseconds>(system_clock::now().time_since_epoch());
-    }
+//    milliseconds now() {
+//        return duration_cast<milliseconds>(system_clock::now().time_since_epoch());
+//    }
 
     static thread_local std::unique_ptr<char> readBuffer(static_cast<char *> (memalign((size_t) getpagesize(), 4096)));
 
@@ -63,11 +63,11 @@ namespace polar_race {
         bool isCacheWritable[CACHE_NUM];
         int currentCacheLogId[CACHE_NUM];
 
-        milliseconds start;
+//        milliseconds start;
 
     public:
         explicit PEngine(const string &path) {
-            this->start = now();
+//            this->start = now();
             // init
             this->keyValueLogs = static_cast<KeyValueLog **>(malloc(LOG_NUM * sizeof(KeyValueLog *)));
             this->kvFiles = static_cast<KVFiles **>(malloc(FILE_NUM * sizeof(KVFiles *)));
@@ -151,12 +151,12 @@ namespace polar_race {
                 }
             }
 
-            printf("Open database complete. time spent is %lims\n", (now() - start).count());
+//            printf("Open database complete. time spent is %lims\n", (now() - start).count());
 //            printf("============================Engine Start!========================\n");
         }
 
         ~PEngine() {
-            printf("deleting engine, total life is %lims\n", (now() - start).count());
+//            printf("deleting engine, total life is %lims\n", (now() - start).count());
 
             for (int logId = 0; logId < LOG_NUM; logId++) {
                 delete keyValueLogs[logId];
@@ -182,7 +182,7 @@ namespace polar_race {
                 if (valueCache != nullptr)
                     free(valueCache);
             }
-            printf("Finish deleting engine, total life is %lims\n", (now() - start).count());
+//            printf("Finish deleting engine, total life is %lims\n", (now() - start).count());
         }
 
         static inline int getLogId(const char *k) {
