@@ -39,30 +39,31 @@ namespace polar_race {
 
     static thread_local std::unique_ptr<char> readBuffer(static_cast<char *> (memalign((size_t) getpagesize(), 4096)));
 
+    KeyValueLog * keyValueLogs[LOG_NUM];
+    KVFiles * kvFiles[FILE_NUM];
+    SortLog **sortLogs;
+
+    u_int64_t * sortKeysArray;
+    u_int16_t * sortValuesArray;
+
+    PMutex logMutex[LOG_NUM];
+
+    ThreadPool *readDiskThreadPool;
+    char *valueCache;
+    std::atomic_flag readDiskFlag = ATOMIC_FLAG_INIT;
+
+    PCond rangeCacheFinish[CACHE_NUM];
+    int rangeCacheCount[CACHE_NUM];
+
+    PCond readDiskFinish[CACHE_NUM];
+
+    bool isCacheReadable[CACHE_NUM];
+    bool isCacheWritable[CACHE_NUM];
+    int currentCacheLogId[CACHE_NUM];
+
     class PEngine {
 
     private:
-        KeyValueLog * keyValueLogs[LOG_NUM];
-        KVFiles * kvFiles[FILE_NUM];
-        SortLog **sortLogs;
-
-        u_int64_t * sortKeysArray;
-        u_int16_t * sortValuesArray;
-
-        PMutex logMutex[LOG_NUM];
-
-        ThreadPool *readDiskThreadPool;
-        char *valueCache;
-        std::atomic_flag readDiskFlag = ATOMIC_FLAG_INIT;
-
-        PCond rangeCacheFinish[CACHE_NUM];
-        int rangeCacheCount[CACHE_NUM];
-
-        PCond readDiskFinish[CACHE_NUM];
-
-        bool isCacheReadable[CACHE_NUM];
-        bool isCacheWritable[CACHE_NUM];
-        int currentCacheLogId[CACHE_NUM];
 
         milliseconds start;
 
@@ -77,14 +78,14 @@ namespace polar_race {
             ss << path << "/value-0";
             string filePath = ss.str();
 
-            this->valueCache = nullptr;
-            this->sortLogs = nullptr;
+            valueCache = nullptr;
+            sortLogs = nullptr;
 
             int num_log_per_file = LOG_NUM / FILE_NUM;
 
             if (access(filePath.data(), 0) != -1) {
 
-                this->sortLogs = static_cast<SortLog **>(malloc(LOG_NUM * sizeof(SortLog *)));
+                sortLogs = static_cast<SortLog **>(malloc(LOG_NUM * sizeof(SortLog *)));
 
                 for (int fileId = 0; fileId < FILE_NUM; fileId++) {
                     kvFiles[fileId] = new KVFiles(path, fileId,
@@ -94,30 +95,24 @@ namespace polar_race {
                                                   BLOCK_SIZE * num_log_per_file);
                 }
 
-                printf("Open files complete. time spent is %lims\n", (now() - t0).count());
-                milliseconds t1 = now();
-
                 for (int logId = 0; logId < LOG_NUM; logId++) {
                     int fileId = logId % FILE_NUM;
                     int slotId = logId / FILE_NUM;
                     keyValueLogs[logId] = new KeyValueLog(path, logId,
-                                                          this->kvFiles[fileId]->getValueFd(),
+                                                          kvFiles[fileId]->getValueFd(),
                                                           slotId * VALUE_LOG_SIZE,
-                                                          this->kvFiles[fileId]->getBlockBuffer() + slotId * BLOCK_SIZE,
-                                                          this->kvFiles[fileId]->getKeyBuffer() + slotId * NUM_PER_SLOT);
+                                                          kvFiles[fileId]->getBlockBuffer() + slotId * BLOCK_SIZE,
+                                                          kvFiles[fileId]->getKeyBuffer() + slotId * NUM_PER_SLOT);
                 }
 
-                this->sortKeysArray = (u_int64_t*)malloc(SORT_LOG_SIZE * LOG_NUM * sizeof(u_int64_t));
-                this->sortValuesArray = (u_int16_t*)malloc(SORT_LOG_SIZE * LOG_NUM * sizeof(u_int16_t));
+                sortKeysArray = (u_int64_t*)malloc(SORT_LOG_SIZE * LOG_NUM * sizeof(u_int64_t));
+                sortValuesArray = (u_int16_t*)malloc(SORT_LOG_SIZE * LOG_NUM * sizeof(u_int16_t));
 
                 for (int logId = 0; logId < LOG_NUM; logId++) {
                     int fileId = logId % FILE_NUM;
                     int slotId = logId / FILE_NUM;
                     sortLogs[logId] = new SortLog(sortKeysArray + SORT_LOG_SIZE * logId, sortValuesArray + SORT_LOG_SIZE * logId);
                 }
-
-                printf("Open logs complete. time spent is %lims\n", (now() - t1).count());
-                milliseconds t3 = now();
 
                 std::thread t[RECOVER_THREAD];
                 for (int i = 0; i < RECOVER_THREAD; i++) {
@@ -135,9 +130,6 @@ namespace polar_race {
                 for (auto &i : t) {
                     i.join();
                 }
-
-                printf("Recover sortlogs complete. time spent is %lims\n", (now() - t3).count());
-
             }
 
             else {
@@ -149,22 +141,16 @@ namespace polar_race {
                                                   BLOCK_SIZE * num_log_per_file);
                 }
 
-                printf("Open files complete. time spent is %lims\n", (now() - t0).count());
-                milliseconds t1 = now();
-
                 for (int logId = 0; logId < LOG_NUM; logId++) {
                     int fileId = logId % FILE_NUM;
                     int slotId = logId / FILE_NUM;
                     keyValueLogs[logId] = new KeyValueLog(path, logId,
-                                                          this->kvFiles[fileId]->getValueFd(),
+                                                          kvFiles[fileId]->getValueFd(),
                                                           slotId * VALUE_LOG_SIZE,
-                                                          this->kvFiles[fileId]->getBlockBuffer() + slotId * BLOCK_SIZE,
-                                                          this->kvFiles[fileId]->getKeyBuffer() + slotId * NUM_PER_SLOT);
+                                                          kvFiles[fileId]->getBlockBuffer() + slotId * BLOCK_SIZE,
+                                                          kvFiles[fileId]->getKeyBuffer() + slotId * NUM_PER_SLOT);
                 }
             }
-
-            printf("Open database complete. time spent is %lims\n", (now() - start).count());
-//            printf("============================Engine Start!========================\n");
         }
 
         ~PEngine() {
@@ -327,7 +313,7 @@ namespace polar_race {
 
         void rangeAll(Visitor &visitor) {
             if (!readDiskFlag.test_and_set()) {
-                this->valueCache = static_cast<char *> (memalign((size_t) getpagesize(), CACHE_SIZE * CACHE_NUM));
+                valueCache = static_cast<char *> (memalign((size_t) getpagesize(), CACHE_SIZE * CACHE_NUM));
                 readDiskThreadPool = new ThreadPool(READDISK_THREAD);
                 for (int i = 0; i < CACHE_NUM; i++) {
                     rangeCacheCount[i] = 0;
