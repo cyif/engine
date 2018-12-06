@@ -343,55 +343,55 @@ namespace polar_race {
                 t.detach();
             }
 
-            for (int logId = 0; logId < LOG_NUM; logId++) {
-
-                if (logId < RESERVE_CACHE_NUM) {
-                    // 等待读磁盘线程读完当前valueLog
-                    auto cacheIndex = logId + ACTIVE_CACHE_NUM;
-                    if (!isCacheReadable[cacheIndex]) {
-                        readDiskFinish[cacheIndex].lock();
-                        while (!isCacheReadable[cacheIndex]) {
-                            readDiskFinish[cacheIndex].wait();
-                        }
-                        readDiskFinish[cacheIndex].unlock();
+            for (int logId = 0; logId < RESERVE_CACHE_NUM; logId++) {
+                auto cacheIndex = logId + ACTIVE_CACHE_NUM;
+                if (!isCacheReadable[cacheIndex]) {
+                    readDiskFinish[cacheIndex].lock();
+                    while (!isCacheReadable[cacheIndex]) {
+                        readDiskFinish[cacheIndex].wait();
                     }
-
-                    auto cache = valueCache + cacheIndex * CACHE_SIZE;
-
-                    for (int i = 0, total = sortLogs[logId]->size(); i < total; i++) {
-                        auto k = sortLogs[logId]->findKeyByIndex(i);
-                        auto offset = sortLogs[logId]->findValueByIndex(i) << 12;
-                        visitor.Visit(PolarString(((char *) (&k)), 8), PolarString((cache + offset), 4096));
-                    }
-                } else {
-                    // 等待读磁盘线程读完当前valueLog
-                    auto cacheIndex = logId % ACTIVE_CACHE_NUM;
-                    if (!isCacheReadable[cacheIndex] || currentCacheLogId[cacheIndex] != logId) {
-                        readDiskFinish[cacheIndex].lock();
-                        while (!isCacheReadable[cacheIndex] || currentCacheLogId[cacheIndex] != logId) {
-                            readDiskFinish[cacheIndex].wait();
-                        }
-                        readDiskFinish[cacheIndex].unlock();
-                    }
-
-                    auto cache = valueCache + cacheIndex * CACHE_SIZE;
-
-                    for (int i = 0, total = sortLogs[logId]->size(); i < total; i++) {
-                        auto k = sortLogs[logId]->findKeyByIndex(i);
-                        auto offset = sortLogs[logId]->findValueByIndex(i) << 12;
-                        visitor.Visit(PolarString(((char *) (&k)), 8), PolarString((cache + offset), 4096));
-                    }
-
-                    rangeCacheFinish[cacheIndex].lock();
-                    auto rangeCount = ++rangeCacheCount[cacheIndex];
-                    if (rangeCount == 64) {
-                        isCacheWritable[cacheIndex] = true;
-                        isCacheReadable[cacheIndex] = false;
-                        rangeCacheCount[cacheIndex] = 0;
-                        rangeCacheFinish[cacheIndex].notify_all();
-                    }
-                    rangeCacheFinish[cacheIndex].unlock();
+                    readDiskFinish[cacheIndex].unlock();
                 }
+
+                auto cache = valueCache + cacheIndex * CACHE_SIZE;
+
+                for (int i = 0, total = sortLogs[logId]->size(); i < total; i++) {
+                    auto k = sortLogs[logId]->findKeyByIndex(i);
+                    auto offset = sortLogs[logId]->findValueByIndex(i) << 12;
+                    visitor.Visit(PolarString(((char *) (&k)), 8), PolarString((cache + offset), 4096));
+                }
+            }
+
+            for (int logId = RESERVE_CACHE_NUM; logId < LOG_NUM; logId++) {
+
+                // 等待读磁盘线程读完当前valueLog
+                auto cacheIndex = logId % ACTIVE_CACHE_NUM;
+                if (!isCacheReadable[cacheIndex] || currentCacheLogId[cacheIndex] != logId) {
+                    readDiskFinish[cacheIndex].lock();
+                    while (!isCacheReadable[cacheIndex] || currentCacheLogId[cacheIndex] != logId) {
+                        readDiskFinish[cacheIndex].wait();
+                    }
+                    readDiskFinish[cacheIndex].unlock();
+                }
+
+                auto cache = valueCache + cacheIndex * CACHE_SIZE;
+
+                for (int i = 0, total = sortLogs[logId]->size(); i < total; i++) {
+                    auto k = sortLogs[logId]->findKeyByIndex(i);
+                    auto offset = sortLogs[logId]->findValueByIndex(i) << 12;
+                    visitor.Visit(PolarString(((char *) (&k)), 8), PolarString((cache + offset), 4096));
+                }
+
+                rangeCacheFinish[cacheIndex].lock();
+                auto rangeCount = ++rangeCacheCount[cacheIndex];
+                if (rangeCount == 64) {
+                    isCacheWritable[cacheIndex] = true;
+                    isCacheReadable[cacheIndex] = false;
+                    rangeCacheCount[cacheIndex] = 0;
+                    rangeCacheFinish[cacheIndex].notify_all();
+                }
+                rangeCacheFinish[cacheIndex].unlock();
+
             }
         }
 
