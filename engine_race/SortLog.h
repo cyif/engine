@@ -16,13 +16,15 @@ namespace polar_race {
 
     private:
         u_int64_t * keys;
+        u_int64_t * swapKeys;
         u_int16_t * values;
         u_int16_t nums;
         bool enlarge;
 
     public:
 
-        SortLog(u_int64_t * keys, u_int16_t * values) : nums(0), enlarge(false), keys(keys), values(values){
+        SortLog(u_int64_t * keys, u_int64_t * swapKeys, u_int16_t * values) :
+        nums(0), enlarge(false), keys(keys), swapKeys(swapKeys), values(values) {
         }
 
         ~SortLog() {
@@ -68,15 +70,16 @@ namespace polar_race {
             if (nums > 0) {
                 quicksort(0, nums - 1);
 
-                    u_int16_t k = 0;
-                    for (int i = 0; i < nums; i++)
-                        if (i == nums - 1 || keys[i] != keys[i + 1]) {
-                            keys[k] = keys[i];
-                            values[k] = values[i];
-                            k++;
-                        }
-                    nums = k;
+                u_int16_t k = 0;
+                for (int i = 0; i < nums; i++)
+                    if (i == nums - 1 || keys[i] != keys[i + 1]) {
+                        keys[k] = keys[i];
+                        values[k] = values[i];
+                        k++;
+                    }
+                nums = k;
 
+                for (int i = 0; i < nums; i++) swapKeys[i] = __builtin_bswap64(keys[i]);
             }
         }
 
@@ -195,7 +198,8 @@ namespace polar_race {
         }
 
         u_int64_t findKeyByIndex(int index) {
-            return __builtin_bswap64(keys[index]);
+//            return __builtin_bswap64(keys[index]);
+            return swapKeys[index];
         }
 
         int getMinIndexGreaterEqualThan(u_int64_t key) {

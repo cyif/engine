@@ -44,6 +44,7 @@ namespace polar_race {
     SortLog **sortLogs;
 
     u_int64_t * sortKeysArray;
+    u_int64_t * sortSwapKeysArray;
     u_int16_t * sortValuesArray;
 
     PMutex logMutex[LOG_NUM];
@@ -53,11 +54,10 @@ namespace polar_race {
     std::atomic_flag readDiskFlag = ATOMIC_FLAG_INIT;
 
     PCond rangeCacheFinish[CACHE_NUM];
-    int rangeCacheCount[CACHE_NUM];
+    std::atomic<int> rangeCacheCount[CACHE_NUM];
 
     PCond readDiskFinish[CACHE_NUM];
 
-    bool isCacheReadable[CACHE_NUM];
     bool isCacheWritable[CACHE_NUM];
     int currentCacheLogId[CACHE_NUM];
 
@@ -106,12 +106,15 @@ namespace polar_race {
                 }
 
                 sortKeysArray = (u_int64_t*)malloc(SORT_LOG_SIZE * LOG_NUM * sizeof(u_int64_t));
+                sortSwapKeysArray = (u_int64_t *)malloc(SORT_LOG_SIZE * LOG_NUM * sizeof(u_int64_t));
                 sortValuesArray = (u_int16_t*)malloc(SORT_LOG_SIZE * LOG_NUM * sizeof(u_int16_t));
 
                 for (int logId = 0; logId < LOG_NUM; logId++) {
                     int fileId = logId % FILE_NUM;
                     int slotId = logId / FILE_NUM;
-                    sortLogs[logId] = new SortLog(sortKeysArray + SORT_LOG_SIZE * logId, sortValuesArray + SORT_LOG_SIZE * logId);
+                    sortLogs[logId] = new SortLog(sortKeysArray + SORT_LOG_SIZE * logId,
+                            sortSwapKeysArray + SORT_LOG_SIZE * logId,
+                            sortValuesArray + SORT_LOG_SIZE * logId);
                 }
 
                 std::thread t[RECOVER_THREAD];
@@ -169,6 +172,7 @@ namespace polar_race {
                 free(sortLogs);
 
                 free(sortKeysArray);
+                free(sortSwapKeysArray);
                 free(sortValuesArray);
 
                 if (valueCache != nullptr){
@@ -287,22 +291,19 @@ namespace polar_race {
                 }
 
                 isCacheWritable[cacheIndex] = false;
-                currentCacheLogId[cacheIndex] = logId;
                 auto cache = valueCache + cacheIndex * CACHE_SIZE;
 
                 readDiskThreadPool->enqueue([cacheIndex, cache, logId, this] {
                     keyValueLogs[logId]->readValue(0, cache, (size_t) keyValueLogs[logId]->size());
                     readDiskFinish[cacheIndex].lock();
-                    isCacheReadable[cacheIndex] = true;
+                    currentCacheLogId[cacheIndex] = logId;
                     readDiskFinish[cacheIndex].notify_all();
                     readDiskFinish[cacheIndex].unlock();
                 });
 
-                logId++;
-                if (logId >= LOG_NUM) {
+                if (++logId >= LOG_NUM) {
                     logId = 0;
-                    rangeAllCount++;
-                    if (rangeAllCount == MAX_RANGE_COUNT) {
+                    if (++rangeAllCount == MAX_RANGE_COUNT) {
                         readDiskFlag.clear();
                         break;
                     }
@@ -317,7 +318,6 @@ namespace polar_race {
                 readDiskThreadPool = new ThreadPool(READDISK_THREAD);
                 for (int i = 0; i < CACHE_NUM; i++) {
                     rangeCacheCount[i] = 0;
-                    isCacheReadable[i] = false;
                     isCacheWritable[i] = true;
                     currentCacheLogId[i] = -1;
                 }
@@ -329,31 +329,30 @@ namespace polar_race {
 
                 // 等待读磁盘线程读完当前valueLog
                 auto cacheIndex = logId % CACHE_NUM;
-                if (!isCacheReadable[cacheIndex] || currentCacheLogId[cacheIndex] != logId) {
+                if (currentCacheLogId[cacheIndex] != logId) {
                     readDiskFinish[cacheIndex].lock();
-                    while (!isCacheReadable[cacheIndex] || currentCacheLogId[cacheIndex] != logId) {
+                    while (currentCacheLogId[cacheIndex] != logId) {
                         readDiskFinish[cacheIndex].wait();
                     }
                     readDiskFinish[cacheIndex].unlock();
                 }
 
                 auto cache = valueCache + cacheIndex * CACHE_SIZE;
+                auto sortLog = sortLogs[logId];
 
-                for (int i = 0, total = sortLogs[logId]->size(); i < total; i++) {
-                    auto k = sortLogs[logId]->findKeyByIndex(i);
-                    auto offset = sortLogs[logId]->findValueByIndex(i) << 12;
+                for (int i = 0, total = sortLog->size(); i < total; i++) {
+                    auto k = sortLog->findKeyByIndex(i);
+                    auto offset = sortLog->findValueByIndex(i) << 12;
                     visitor.Visit(PolarString(((char *) (&k)), 8), PolarString((cache + offset), 4096));
                 }
 
-                rangeCacheFinish[cacheIndex].lock();
-                auto rangeCount = ++rangeCacheCount[cacheIndex];
-                if (rangeCount == 64) {
+                if (++rangeCacheCount[cacheIndex] == 64) {
+                    rangeCacheFinish[cacheIndex].lock();
                     isCacheWritable[cacheIndex] = true;
-                    isCacheReadable[cacheIndex] = false;
                     rangeCacheCount[cacheIndex] = 0;
                     rangeCacheFinish[cacheIndex].notify_all();
+                    rangeCacheFinish[cacheIndex].unlock();
                 }
-                rangeCacheFinish[cacheIndex].unlock();
             }
         }
 

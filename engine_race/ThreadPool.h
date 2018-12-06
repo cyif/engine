@@ -25,10 +25,7 @@ private:
     // the task queue
     std::queue< std::function<void()> > tasks;
 
-    // synchronization
     PCond cond;
-//    std::mutex queue_mutex;
-    std::condition_variable_any condition;
     bool stop;
 };
 
