@@ -41,10 +41,10 @@ namespace polar_race {
             fallocate(this->valueFd, 0, 0, valueFileSize + keyFileSize + blockFileSize);
 
             this->keyBuffer = static_cast<u_int64_t *>(mmap(nullptr, keyFileSize, PROT_READ | PROT_WRITE,
-                                                           MAP_SHARED | MAP_POPULATE, this->valueFd,
+                                                           MAP_SHARED | MAP_POPULATE | MAP_NONBLOCK, this->valueFd,
                                                             (off_t) valueFileSize));
             this->blockBuffer = static_cast<char *>(mmap(nullptr, blockFileSize, PROT_READ | PROT_WRITE,
-                                                            MAP_SHARED | MAP_POPULATE, this->valueFd,
+                                                            MAP_SHARED | MAP_POPULATE | MAP_NONBLOCK, this->valueFd,
                                                             (off_t) valueFileSize + keyFileSize));
         }
 

@@ -220,9 +220,9 @@ namespace polar_race {
             }
 //
 //            if (lower == "" && upper == "") {
-//                rangeAll(visitor);
-//                return kSucc;
-//            }
+////                rangeAll(visitor);
+////                return kSucc;
+////            }
 
             if (lower == "" && upper == "" && (sortLogs[0]->size() > 12000)) {
                 rangeAll(visitor);
