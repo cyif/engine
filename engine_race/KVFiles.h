@@ -32,13 +32,15 @@ namespace polar_race {
         size_t blockFileSize;
 
     public:
-        KVFiles(const std::string &path, const int &id, const size_t &valueFileSize, const size_t &keyFileSize, const size_t &blockFileSize)
+        KVFiles(const std::string &path, const int &id, const bool &exist, const size_t &valueFileSize, const size_t &keyFileSize, const size_t &blockFileSize)
             : valueFileSize(valueFileSize), keyFileSize(keyFileSize), blockFileSize(blockFileSize){
             //Value Log
             std::ostringstream fp;
             fp << path << "/value-" << id;
             this->valueFd = open(fp.str().data(), O_CREAT | O_RDWR | O_DIRECT | O_NOATIME, 0777);
-            fallocate(this->valueFd, 0, 0, valueFileSize + keyFileSize + blockFileSize);
+
+            if (!exist)
+                fallocate(this->valueFd, 0, 0, valueFileSize + keyFileSize + blockFileSize);
 
             this->keyBuffer = static_cast<u_int64_t *>(mmap(nullptr, keyFileSize, PROT_READ | PROT_WRITE,
                                                            MAP_SHARED | MAP_POPULATE | MAP_NONBLOCK, this->valueFd,

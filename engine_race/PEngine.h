@@ -87,6 +87,7 @@ namespace polar_race {
 
                 for (int fileId = 0; fileId < FILE_NUM; fileId++) {
                     kvFiles[fileId] = new KVFiles(path, fileId,
+                                                  true,
                                                   VALUE_LOG_SIZE * num_log_per_file,
                                                   KEY_LOG_SIZE * num_log_per_file,
                                                   BLOCK_SIZE * num_log_per_file);
@@ -153,6 +154,7 @@ namespace polar_race {
                     t[i] = std::thread([i, num_log_per_file, path, this] {
                         for (int fileId = i; fileId < FILE_NUM; fileId += RECOVER_THREAD) {
                             kvFiles[fileId] = new KVFiles(path, fileId,
+                                                          false,
                                                           VALUE_LOG_SIZE * num_log_per_file,
                                                           KEY_LOG_SIZE * num_log_per_file,
                                                           BLOCK_SIZE * num_log_per_file);
