@@ -101,7 +101,7 @@ namespace polar_race {
                     int slotId = logId / FILE_NUM;
                     keyValueLogs[logId] = new KeyValueLog(path, logId,
                                                           this->kvFiles[fileId]->getValueFd(),
-                                                          KEY_LOG_SIZE * num_log_per_file + BLOCK_SIZE * num_log_per_file + slotId * VALUE_LOG_SIZE,
+                                                          slotId * VALUE_LOG_SIZE,
                                                           this->kvFiles[fileId]->getBlockBuffer() + slotId * BLOCK_SIZE,
                                                           this->kvFiles[fileId]->getKeyBuffer() + slotId * NUM_PER_SLOT);
                 }
@@ -147,33 +147,27 @@ namespace polar_race {
             }
 
             else {
-                this->sortLogs = nullptr;
-                this->valueCache = nullptr;
-                std::thread t[RECOVER_THREAD];
-                for (int i = 0; i < RECOVER_THREAD; i++) {
-                    t[i] = std::thread([i, num_log_per_file, path, this] {
-                        for (int fileId = i; fileId < FILE_NUM; fileId += RECOVER_THREAD) {
-                            kvFiles[fileId] = new KVFiles(path, fileId,
-                                                          false,
-                                                          VALUE_LOG_SIZE * num_log_per_file,
-                                                          KEY_LOG_SIZE * num_log_per_file,
-                                                          BLOCK_SIZE * num_log_per_file);
-                        }
-                        for (int logId = i; logId < LOG_NUM; logId += RECOVER_THREAD) {
-                            int fileId = logId % FILE_NUM;
-                            int slotId = logId / FILE_NUM;
-                            keyValueLogs[logId] = new KeyValueLog(path, logId,
-                                                                  this->kvFiles[fileId]->getValueFd(),
-                                                                  KEY_LOG_SIZE * num_log_per_file + BLOCK_SIZE * num_log_per_file + slotId * VALUE_LOG_SIZE,
-                                                                  this->kvFiles[fileId]->getBlockBuffer() + slotId * BLOCK_SIZE,
-                                                                  this->kvFiles[fileId]->getKeyBuffer() + slotId * NUM_PER_SLOT);
-                        }
-                    });
+                for (int fileId = 0; fileId < FILE_NUM; fileId++) {
+                    kvFiles[fileId] = new KVFiles(path, fileId,
+                                                  false,
+                                                  VALUE_LOG_SIZE * num_log_per_file,
+                                                  KEY_LOG_SIZE * num_log_per_file,
+                                                  BLOCK_SIZE * num_log_per_file);
                 }
 
-                for (auto &i : t) {
-                    i.join();
+                printf("Open files complete. time spent is %lims\n", (now() - t0).count());
+                milliseconds t1 = now();
+
+                for (int logId = 0; logId < LOG_NUM; logId++) {
+                    int fileId = logId % FILE_NUM;
+                    int slotId = logId / FILE_NUM;
+                    keyValueLogs[logId] = new KeyValueLog(path, logId,
+                                                          this->kvFiles[fileId]->getValueFd(),
+                                                          slotId * VALUE_LOG_SIZE,
+                                                          this->kvFiles[fileId]->getBlockBuffer() + slotId * BLOCK_SIZE,
+                                                          this->kvFiles[fileId]->getKeyBuffer() + slotId * NUM_PER_SLOT);
                 }
+                printf("Open KeyValueLogs complete. time spent is %lims\n", (now() - t1).count());
             }
 
             printf("Open database complete. time spent is %lims\n", (now() - start).count());
