@@ -41,28 +41,28 @@ namespace polar_race {
             fp << path << "/value-" << id;
             this->valueFd = open(fp.str().data(), O_CREAT | O_RDWR | O_DIRECT | O_NOATIME, 0777);
 
-            ftruncate(this->valueFd, valueFileSize);
+            if (exist)
+                fallocate(this->mapFd, 0, 0, valueFileSize);
 
             //Map Log
             std::ostringstream mp;
             mp << path << "/map-" << id;
             this->mapFd = open(mp.str().data(), O_CREAT | O_RDWR | O_DIRECT | O_NOATIME, 0777);
-//            fallocate(this->mapFd, 0, 0, keyFileSize + blockFileSize);
+
             ftruncate(this->mapFd, keyFileSize + blockFileSize);
 
-
             this->keyBuffer = static_cast<u_int64_t *>(mmap(nullptr, keyFileSize, PROT_READ | PROT_WRITE,
-                                                           MAP_SHARED, this->mapFd,
+                                                           MAP_SHARED | MAP_POPULATE | MAP_NONBLOCK, this->mapFd,
                                                             0));
 
             this->blockBuffer = static_cast<char *>(mmap(nullptr, blockFileSize, PROT_READ | PROT_WRITE,
-                                                            MAP_PRIVATE, this->mapFd,
+                                                            MAP_PRIVATE | MAP_POPULATE | MAP_NONBLOCK, this->mapFd,
                                                             keyFileSize));
         }
 
         ~KVFiles() {
-            munmap(blockBuffer, this->blockFileSize);
-            munmap(keyBuffer, this->keyFileSize);
+//            munmap(blockBuffer, this->blockFileSize);
+//            munmap(keyBuffer, this->keyFileSize);
             close(this->mapFd);
             close(this->valueFd);
         }

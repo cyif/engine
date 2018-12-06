@@ -42,10 +42,9 @@ namespace polar_race {
     class PEngine {
 
     private:
-        KeyValueLog *(keyValueLogs[LOG_NUM]);
-        KVFiles *(kvFiles[FILE_NUM]);
+        KeyValueLog * keyValueLogs[LOG_NUM];
+        KVFiles * kvFiles[FILE_NUM];
         SortLog **sortLogs;
-//        SortArray *sortArray;
 
         u_int64_t * sortKeysArray;
         u_int16_t * sortValuesArray;
@@ -78,12 +77,14 @@ namespace polar_race {
             ss << path << "/value-0";
             string filePath = ss.str();
 
+            this->valueCache = nullptr;
+            this->sortLogs = nullptr;
+
             int num_log_per_file = LOG_NUM / FILE_NUM;
 
             if (access(filePath.data(), 0) != -1) {
 
                 this->sortLogs = static_cast<SortLog **>(malloc(LOG_NUM * sizeof(SortLog *)));
-                this->valueCache = nullptr;
 
                 for (int fileId = 0; fileId < FILE_NUM; fileId++) {
                     kvFiles[fileId] = new KVFiles(path, fileId,
@@ -106,9 +107,6 @@ namespace polar_race {
                                                           this->kvFiles[fileId]->getKeyBuffer() + slotId * NUM_PER_SLOT);
                 }
 
-                printf("Open KeyValueLogs complete. time spent is %lims\n", (now() - t1).count());
-                milliseconds t2 = now();
-
                 this->sortKeysArray = (u_int64_t*)malloc(SORT_LOG_SIZE * LOG_NUM * sizeof(u_int64_t));
                 this->sortValuesArray = (u_int16_t*)malloc(SORT_LOG_SIZE * LOG_NUM * sizeof(u_int16_t));
 
@@ -118,7 +116,7 @@ namespace polar_race {
                     sortLogs[logId] = new SortLog(sortKeysArray + SORT_LOG_SIZE * logId, sortValuesArray + SORT_LOG_SIZE * logId);
                 }
 
-                printf("Open sortlogs complete. time spent is %lims\n", (now() - t2).count());
+                printf("Open logs complete. time spent is %lims\n", (now() - t1).count());
                 milliseconds t3 = now();
 
                 std::thread t[RECOVER_THREAD];
@@ -163,7 +161,6 @@ namespace polar_race {
                                                           this->kvFiles[fileId]->getBlockBuffer() + slotId * BLOCK_SIZE,
                                                           this->kvFiles[fileId]->getKeyBuffer() + slotId * NUM_PER_SLOT);
                 }
-                printf("Open KeyValueLogs complete. time spent is %lims\n", (now() - t1).count());
             }
 
             printf("Open database complete. time spent is %lims\n", (now() - start).count());
