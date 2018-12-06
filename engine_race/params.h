@@ -13,12 +13,12 @@ using namespace std;
 const int MAX_RANGE_COUNT = 2;
 
 const int LOG_NUM = 4096;
-const int NUM_PER_SLOT = 16384;
+const int NUM_PER_SLOT = 1024 * 16;
 //const int NUM_PER_SLOT = 256;
 const size_t VALUE_LOG_SIZE = NUM_PER_SLOT << 12;  //128mb
 const size_t KEY_LOG_SIZE = NUM_PER_SLOT << 3;
 
-const int FILE_NUM = 16;
+const int FILE_NUM = 4;
 
 const int SORT_LOG_SIZE = NUM_PER_SLOT;
 const int SORT_FILE_SIZE = SORT_LOG_SIZE * (LOG_NUM / FILE_NUM);
