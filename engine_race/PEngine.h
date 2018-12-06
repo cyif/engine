@@ -45,7 +45,11 @@ namespace polar_race {
         KeyValueLog *(keyValueLogs[LOG_NUM]);
         KVFiles *(kvFiles[FILE_NUM]);
         SortLog **sortLogs;
-        SortArray *sortArray;
+//        SortArray *sortArray;
+
+        u_int64_t * sortKeysArray;
+        u_int16_t * sortValuesArray;
+
         PMutex logMutex[LOG_NUM];
 
         ThreadPool *readDiskThreadPool;
@@ -104,16 +108,21 @@ namespace polar_race {
                 printf("Open KeyValueLogs complete. time spent is %lims\n", (now() - t1).count());
                 milliseconds t2 = now();
 
-                sortArray = new SortArray();
+//                sortArray = new SortArray();
+                this->sortKeysArray = (u_int64_t*)malloc(SORT_LOG_SIZE * LOG_NUM * sizeof(u_int64_t));
+                this->sortValuesArray = (u_int16_t*)malloc(SORT_LOG_SIZE * LOG_NUM * sizeof(u_int16_t));
+
+                printf("malloc sortarray complete. time spent is %lims\n", (now() - t2).count());
+                milliseconds t3 = now();
 
                 for (int logId = 0; logId < LOG_NUM; logId++) {
                     int fileId = logId % FILE_NUM;
                     int slotId = logId / FILE_NUM;
-                    sortLogs[logId] = new SortLog(sortArray->getKeyArray(logId), sortArray->getValueArray(logId));
+                    sortLogs[logId] = new SortLog(sortKeysArray + SORT_LOG_SIZE * logId, sortValuesArray + SORT_LOG_SIZE * logId);
                 }
 
-                printf("Open sortlogs complete. time spent is %lims\n", (now() - t2).count());
-                milliseconds t3 = now();
+                printf("Open sortlogs complete. time spent is %lims\n", (now() - t3).count());
+                milliseconds t4 = now();
 
                 std::thread t[RECOVER_THREAD];
                 for (int i = 0; i < RECOVER_THREAD; i++) {
@@ -132,13 +141,12 @@ namespace polar_race {
                     i.join();
                 }
 
-                printf("Recover sortlogs complete. time spent is %lims\n", (now() - t3).count());
+                printf("Recover sortlogs complete. time spent is %lims\n", (now() - t4).count());
 
             }
 
             else {
                 this->sortLogs = nullptr;
-                this->sortArray = nullptr;
                 this->valueCache = nullptr;
                 std::thread t[RECOVER_THREAD];
                 for (int i = 0; i < RECOVER_THREAD; i++) {
@@ -180,12 +188,13 @@ namespace polar_race {
                 delete kvFilesi;
 
 
-            if (sortLogs != nullptr && sortArray != nullptr) {
+            if (sortLogs != nullptr) {
                 for (int i = 0; i < LOG_NUM; i++)
                     delete sortLogs[i];
                 free(sortLogs);
 
-                free(sortArray);
+                free(sortKeysArray);
+                free(sortValuesArray);
 
                 if (valueCache != nullptr){
                     free(valueCache);
@@ -237,7 +246,7 @@ namespace polar_race {
                 upperFlag = true;
                 upperLogId = LOG_NUM - 1;
             }
-//
+
 //            if (lower == "" && upper == "") {
 //                rangeAll(visitor);
 //                return kSucc;
