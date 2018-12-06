@@ -42,7 +42,7 @@ namespace polar_race {
             this->valueFd = open(fp.str().data(), O_CREAT | O_RDWR | O_DIRECT | O_NOATIME, 0777);
 
             if (exist)
-                fallocate(this->mapFd, 0, 0, valueFileSize);
+                fallocate(this->valueFd, 0, 0, valueFileSize);
 
             //Map Log
             std::ostringstream mp;
