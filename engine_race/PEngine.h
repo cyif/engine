@@ -45,7 +45,7 @@ namespace polar_race {
         KeyValueLog *(keyValueLogs[LOG_NUM]);
         KVFiles *(kvFiles[FILE_NUM]);
         SortLog **sortLogs;
-        SortArray **sortArray;
+        SortArray *sortArray;
         PMutex logMutex[LOG_NUM];
 
         ThreadPool *readDiskThreadPool;
@@ -79,7 +79,6 @@ namespace polar_race {
             if (access(filePath.data(), 0) != -1) {
 
                 this->sortLogs = static_cast<SortLog **>(malloc(LOG_NUM * sizeof(SortLog *)));
-                this->sortArray = static_cast<SortArray **>(malloc(FILE_NUM * sizeof(SortArray *)));
                 this->valueCache = nullptr;
 
                 for (int fileId = 0; fileId < FILE_NUM; fileId++) {
@@ -87,7 +86,6 @@ namespace polar_race {
                                                   VALUE_LOG_SIZE * num_log_per_file,
                                                   KEY_LOG_SIZE * num_log_per_file,
                                                   BLOCK_SIZE * num_log_per_file);
-                    sortArray[fileId] = new SortArray();
                 }
 
                 printf("Open files complete. time spent is %lims\n", (now() - t0).count());
@@ -106,15 +104,12 @@ namespace polar_race {
                 printf("Open KeyValueLogs complete. time spent is %lims\n", (now() - t1).count());
                 milliseconds t2 = now();
 
-
-                for (int fileId = 0; fileId < FILE_NUM; fileId++) {
-                    sortArray[fileId] = new SortArray();
-                }
+                sortArray = new SortArray();
 
                 for (int logId = 0; logId < LOG_NUM; logId++) {
                     int fileId = logId % FILE_NUM;
                     int slotId = logId / FILE_NUM;
-                    sortLogs[logId] = new SortLog(sortArray[fileId]->getKeyArray(slotId), sortArray[fileId]->getValueArray(slotId));
+                    sortLogs[logId] = new SortLog(sortArray->getKeyArray(logId), sortArray->getValueArray(logId));
                 }
 
                 printf("Open sortlogs complete. time spent is %lims\n", (now() - t2).count());
@@ -189,8 +184,7 @@ namespace polar_race {
                 for (int i = 0; i < LOG_NUM; i++)
                     delete sortLogs[i];
                 free(sortLogs);
-                for (int fileId = 0; fileId < FILE_NUM; fileId++)
-                    delete sortArray[fileId];
+
                 free(sortArray);
 
                 if (valueCache != nullptr){

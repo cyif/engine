@@ -10,8 +10,8 @@
 
 class SortArray {
 private:
-    u_int64_t keys[SORT_FILE_SIZE];
-    u_int16_t values[SORT_FILE_SIZE];
+    u_int64_t keys[SORT_LOG_SIZE * LOG_NUM];
+    u_int16_t values[SORT_LOG_SIZE * LOG_NUM];
 
 public:
 
