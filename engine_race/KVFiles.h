@@ -25,7 +25,6 @@ namespace polar_race {
         int valueFd;
         size_t valueFileSize;
 
-
         int mapFd;
 
         u_int64_t * keyBuffer;
@@ -42,11 +41,15 @@ namespace polar_race {
             fp << path << "/value-" << id;
             this->valueFd = open(fp.str().data(), O_CREAT | O_RDWR | O_DIRECT | O_NOATIME, 0777);
 
-            //Value Log
+            ftruncate(this->valueFd, valueFileSize);
+
+            //Map Log
             std::ostringstream mp;
             mp << path << "/map-" << id;
             this->mapFd = open(mp.str().data(), O_CREAT | O_RDWR | O_DIRECT | O_NOATIME, 0777);
-            fallocate(this->mapFd, 0, 0, keyFileSize + blockFileSize);
+//            fallocate(this->mapFd, 0, 0, keyFileSize + blockFileSize);
+            ftruncate(this->mapFd, keyFileSize + blockFileSize);
+
 
             this->keyBuffer = static_cast<u_int64_t *>(mmap(nullptr, keyFileSize, PROT_READ | PROT_WRITE,
                                                            MAP_SHARED, this->mapFd,

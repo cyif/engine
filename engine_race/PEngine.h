@@ -109,12 +109,8 @@ namespace polar_race {
                 printf("Open KeyValueLogs complete. time spent is %lims\n", (now() - t1).count());
                 milliseconds t2 = now();
 
-//                sortArray = new SortArray();
                 this->sortKeysArray = (u_int64_t*)malloc(SORT_LOG_SIZE * LOG_NUM * sizeof(u_int64_t));
                 this->sortValuesArray = (u_int16_t*)malloc(SORT_LOG_SIZE * LOG_NUM * sizeof(u_int16_t));
-
-                printf("malloc sortarray complete. time spent is %lims\n", (now() - t2).count());
-                milliseconds t3 = now();
 
                 for (int logId = 0; logId < LOG_NUM; logId++) {
                     int fileId = logId % FILE_NUM;
@@ -122,8 +118,8 @@ namespace polar_race {
                     sortLogs[logId] = new SortLog(sortKeysArray + SORT_LOG_SIZE * logId, sortValuesArray + SORT_LOG_SIZE * logId);
                 }
 
-                printf("Open sortlogs complete. time spent is %lims\n", (now() - t3).count());
-                milliseconds t4 = now();
+                printf("Open sortlogs complete. time spent is %lims\n", (now() - t2).count());
+                milliseconds t3 = now();
 
                 std::thread t[RECOVER_THREAD];
                 for (int i = 0; i < RECOVER_THREAD; i++) {
@@ -142,7 +138,7 @@ namespace polar_race {
                     i.join();
                 }
 
-                printf("Recover sortlogs complete. time spent is %lims\n", (now() - t4).count());
+                printf("Recover sortlogs complete. time spent is %lims\n", (now() - t3).count());
 
             }
 
