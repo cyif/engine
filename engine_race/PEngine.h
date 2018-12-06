@@ -101,7 +101,7 @@ namespace polar_race {
                     int slotId = logId / FILE_NUM;
                     keyValueLogs[logId] = new KeyValueLog(path, logId,
                                                           this->kvFiles[fileId]->getValueFd(),
-                                                          slotId * VALUE_LOG_SIZE,
+                                                          KEY_LOG_SIZE * num_log_per_file + BLOCK_SIZE * num_log_per_file + slotId * VALUE_LOG_SIZE,
                                                           this->kvFiles[fileId]->getBlockBuffer() + slotId * BLOCK_SIZE,
                                                           this->kvFiles[fileId]->getKeyBuffer() + slotId * NUM_PER_SLOT);
                 }
@@ -164,7 +164,7 @@ namespace polar_race {
                             int slotId = logId / FILE_NUM;
                             keyValueLogs[logId] = new KeyValueLog(path, logId,
                                                                   this->kvFiles[fileId]->getValueFd(),
-                                                                  slotId * VALUE_LOG_SIZE,
+                                                                  KEY_LOG_SIZE * num_log_per_file + BLOCK_SIZE * num_log_per_file + slotId * VALUE_LOG_SIZE,
                                                                   this->kvFiles[fileId]->getBlockBuffer() + slotId * BLOCK_SIZE,
                                                                   this->kvFiles[fileId]->getKeyBuffer() + slotId * NUM_PER_SLOT);
                         }

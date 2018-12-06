@@ -39,15 +39,17 @@ namespace polar_race {
             fp << path << "/value-" << id;
             this->valueFd = open(fp.str().data(), O_CREAT | O_RDWR | O_DIRECT | O_NOATIME, 0777);
 
-            if (!exist)
+            if (exist)
                 fallocate(this->valueFd, 0, 0, valueFileSize + keyFileSize + blockFileSize);
+            else
+                fallocate(this->valueFd, 0, 0, keyFileSize + blockFileSize);
 
             this->keyBuffer = static_cast<u_int64_t *>(mmap(nullptr, keyFileSize, PROT_READ | PROT_WRITE,
                                                            MAP_SHARED | MAP_POPULATE | MAP_NONBLOCK, this->valueFd,
-                                                            (off_t) valueFileSize));
+                                                            0));
             this->blockBuffer = static_cast<char *>(mmap(nullptr, blockFileSize, PROT_READ | PROT_WRITE,
                                                             MAP_SHARED | MAP_POPULATE | MAP_NONBLOCK, this->valueFd,
-                                                            (off_t) valueFileSize + keyFileSize));
+                                                            keyFileSize));
         }
 
         ~KVFiles() {
