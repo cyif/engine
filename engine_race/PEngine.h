@@ -68,6 +68,7 @@ namespace polar_race {
     private:
 
         milliseconds start;
+        int totalNum = 0;
 
     public:
         explicit PEngine(const string &path) {
@@ -133,6 +134,10 @@ namespace polar_race {
                 for (auto &i : t) {
                     i.join();
                 }
+
+                for (int logId = 0; logId < LOG_NUM; logId++)
+                    totalNum += sortLogs[logId]->size();
+
             } else {
                 for (int fileId = 0; fileId < FILE_NUM; fileId++) {
                     kvFiles[fileId] = new KVFiles(path, fileId,
@@ -233,12 +238,14 @@ namespace polar_race {
                 upperLogId = LOG_NUM - 1;
             }
 
+//            printf("%d %d \n", totalNum, RANGE_THRESHOLD);
+
 //            if (lower == "" && upper == "") {
 //                rangeAll(visitor);
 //                return kSucc;
 //            }
 
-            if (lower == "" && upper == "" && (sortLogs[0]->size() > 12000)) {
+            if (lower == "" && upper == "" && (totalNum > RANGE_THRESHOLD)) {
                 rangeAll(visitor);
                 return kSucc;
             }
@@ -335,7 +342,6 @@ namespace polar_race {
                 readDiskLogIdMtx.unlock();
 
                 keyValueLogs[logId]->readValue(0, cache, (size_t) keyValueLogs[logId]->size());
-                sortLogs[logId]->swap();
                 readDiskFinish[cacheIndex].lock();
                 isCacheReadable[cacheIndex] = true;
                 readDiskFinish[cacheIndex].notify_all();
@@ -347,6 +353,19 @@ namespace polar_race {
         void rangeAll(Visitor &visitor) {
             if (!readDiskFlag.test_and_set()) {
                 valueCache = static_cast<char *> (memalign((size_t) getpagesize(), CACHE_SIZE * CACHE_NUM));
+
+                std::thread t[RECOVER_THREAD];
+                for (int i = 0; i < RECOVER_THREAD; i++) {
+                    t[i] = std::thread([i, this] {
+                        for (int logId = i; logId < LOG_NUM; logId += RECOVER_THREAD) {
+                            sortLogs[logId]->swap();
+                        }
+                    });
+                }
+
+                for (auto &i : t) {
+                    i.join();
+                }
 
                 for (int i = 0; i < CACHE_NUM; i++) {
                     rangeCacheCount[i] = 0;

@@ -41,6 +41,9 @@ const int READDISK_THREAD = 2;
 
 const int MAX_LENGTH_INSERT_SORT = 12;
 
+const int RANGE_THRESHOLD = 10000000;
+
+
 std::mutex sortLogEnlargeMtx;
 std::mutex valueLogEnlargeMtx;
 
