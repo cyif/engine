@@ -157,6 +157,7 @@ namespace polar_race {
                                                           kvFiles[fileId]->getKeyBuffer() + slotId * NUM_PER_SLOT);
                 }
             }
+            printf("Open database complete. time spent is %lims\n", (now() - start).count());
         }
 
         ~PEngine() {
@@ -238,7 +239,6 @@ namespace polar_race {
                 upperLogId = LOG_NUM - 1;
             }
 
-//            printf("%d %d \n", totalNum, RANGE_THRESHOLD);
 
 //            if (lower == "" && upper == "") {
 //                rangeAll(visitor);
