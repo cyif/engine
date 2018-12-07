@@ -22,7 +22,6 @@
 #include "../include/polar_string.h"
 #include "../include/engine.h"
 #include "SortLog.h"
-#include "ThreadPool.h"
 #include "KVFiles.h"
 #include "KeyValueLog.h"
 #include "SortArray.h"
@@ -48,7 +47,6 @@ namespace polar_race {
 
     PMutex logMutex[LOG_NUM];
 
-    ThreadPool *readDiskThreadPool;
     char *valueCache;
     std::atomic_flag readDiskFlag = ATOMIC_FLAG_INIT;
 
@@ -60,6 +58,10 @@ namespace polar_race {
     bool isCacheReadable[CACHE_NUM];
     bool isCacheWritable[CACHE_NUM];
     int currentCacheLogId[CACHE_NUM];
+
+    PMutex readDiskLogIdMtx;
+    int readDiskLogId = 0;
+    int rangeAllCount = 0;
 
     class PEngine {
 
@@ -271,60 +273,63 @@ namespace polar_race {
             }
         }
 
+
         void readDisk() {
-            int logId = 0;
-            int rangeAllCount = 0;
+//            printf("Start Read Disk Thread!\n");
+
+            int cacheIndex;
+            char *cache;
+
             while (true) {
+
+                readDiskLogIdMtx.lock();
+
+                if (rangeAllCount == MAX_RANGE_COUNT) {
+                    readDiskFlag.clear();
+                    readDiskLogIdMtx.unlock();
+                    break;
+                }
+
+                int logId = readDiskLogId;
+                readDiskLogId++;
+
+                if (readDiskLogId >= LOG_NUM) {
+                    readDiskLogId = 0;
+                    rangeAllCount++;
+                }
+
                 if (logId < RESERVE_CACHE_NUM) {
-                    auto cacheIndex = logId + ACTIVE_CACHE_NUM;
-
-                    if (!isCacheReadable[cacheIndex]) {
-                        currentCacheLogId[cacheIndex] = logId;
-                        auto cache = valueCache + cacheIndex * CACHE_SIZE;
-
-                        readDiskThreadPool->enqueue([cacheIndex, cache, logId, this] {
-                            keyValueLogs[logId]->readValue(0, cache, (size_t) keyValueLogs[logId]->size());
-                            sortLogs[logId]->swap();
-                            readDiskFinish[cacheIndex].lock();
-                            isCacheReadable[cacheIndex] = true;
-                            readDiskFinish[cacheIndex].notify_all();
-                            readDiskFinish[cacheIndex].unlock();
-                        });
+                    cacheIndex = logId + ACTIVE_CACHE_NUM;
+                    if (isCacheReadable[cacheIndex]) {
+//                        printf("reserve logid: %d, cache index: %d \n", logId, cacheIndex);
+                        readDiskLogIdMtx.unlock();
+                        continue;
                     }
                 } else {
-                    auto cacheIndex = logId % ACTIVE_CACHE_NUM;
+                    cacheIndex = logId % ACTIVE_CACHE_NUM;
 
                     if (!isCacheWritable[cacheIndex]) {
-                        //等待获取可用的cache
                         rangeCacheFinish[cacheIndex].lock();
                         while (!isCacheWritable[cacheIndex]) {
-                            printf("WAIT...%d\n", logId);
+                            printf("wait for range log: %d , cache index: %d, range round: %d \n", logId, cacheIndex, rangeAllCount);
                             rangeCacheFinish[cacheIndex].wait();
                         }
                         rangeCacheFinish[cacheIndex].unlock();
                     }
-
-                    isCacheWritable[cacheIndex] = false;
-                    currentCacheLogId[cacheIndex] = logId;
-                    auto cache = valueCache + cacheIndex * CACHE_SIZE;
-
-                    readDiskThreadPool->enqueue([cacheIndex, cache, logId, this] {
-                        keyValueLogs[logId]->readValue(0, cache, (size_t) keyValueLogs[logId]->size());
-                        sortLogs[logId]->swap();
-                        readDiskFinish[cacheIndex].lock();
-                        isCacheReadable[cacheIndex] = true;
-                        readDiskFinish[cacheIndex].notify_all();
-                        readDiskFinish[cacheIndex].unlock();
-                    });
                 }
 
-                if (++logId >= LOG_NUM) {
-                    logId = 0;
-                    if (++rangeAllCount == MAX_RANGE_COUNT) {
-                        readDiskFlag.clear();
-                        break;
-                    }
-                }
+                isCacheWritable[cacheIndex] = false;
+                currentCacheLogId[cacheIndex] = logId;
+                cache = valueCache + cacheIndex * CACHE_SIZE;
+
+                readDiskLogIdMtx.unlock();
+
+                keyValueLogs[logId]->readValue(0, cache, (size_t) keyValueLogs[logId]->size());
+                sortLogs[logId]->swap();
+                readDiskFinish[cacheIndex].lock();
+                isCacheReadable[cacheIndex] = true;
+                readDiskFinish[cacheIndex].notify_all();
+                readDiskFinish[cacheIndex].unlock();
             }
         }
 
@@ -332,15 +337,18 @@ namespace polar_race {
         void rangeAll(Visitor &visitor) {
             if (!readDiskFlag.test_and_set()) {
                 valueCache = static_cast<char *> (memalign((size_t) getpagesize(), CACHE_SIZE * CACHE_NUM));
-                readDiskThreadPool = new ThreadPool(READDISK_THREAD);
+
                 for (int i = 0; i < CACHE_NUM; i++) {
                     rangeCacheCount[i] = 0;
                     isCacheReadable[i] = false;
                     isCacheWritable[i] = true;
                     currentCacheLogId[i] = -1;
                 }
-                std::thread t = std::thread(&PEngine::readDisk, this);
-                t.detach();
+
+                for (int i = 0; i < READDISK_THREAD; i++) {
+                    std::thread t = std::thread(&PEngine::readDisk, this);
+                    t.detach();
+                }
             }
 
             for (int logId = 0; logId < RESERVE_CACHE_NUM; logId++) {
