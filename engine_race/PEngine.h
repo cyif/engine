@@ -24,7 +24,6 @@
 #include "SortLog.h"
 #include "KVFiles.h"
 #include "KeyValueLog.h"
-#include "SortArray.h"
 #include "params.h"
 
 using namespace std;
@@ -76,7 +75,6 @@ namespace polar_race {
             milliseconds t0 = this->start;
 
             // init
-            //value cache file
             std::ostringstream ss;
             ss << path << "/value-0";
             string filePath = ss.str();
@@ -89,6 +87,8 @@ namespace polar_race {
             if (access(filePath.data(), 0) != -1) {
 
                 sortLogs = static_cast<SortLog **>(malloc(LOG_NUM * sizeof(SortLog *)));
+                sortKeysArray = (u_int64_t *) malloc(SORT_LOG_SIZE * LOG_NUM * sizeof(u_int64_t));
+                sortValuesArray = (u_int16_t *) malloc(SORT_LOG_SIZE * LOG_NUM * sizeof(u_int16_t));
 
                 for (int fileId = 0; fileId < FILE_NUM; fileId++) {
                     kvFiles[fileId] = new KVFiles(path, fileId,
@@ -106,14 +106,6 @@ namespace polar_race {
                                                           slotId * VALUE_LOG_SIZE,
                                                           kvFiles[fileId]->getBlockBuffer() + slotId * BLOCK_SIZE,
                                                           kvFiles[fileId]->getKeyBuffer() + slotId * NUM_PER_SLOT);
-                }
-
-                sortKeysArray = (u_int64_t *) malloc(SORT_LOG_SIZE * LOG_NUM * sizeof(u_int64_t));
-                sortValuesArray = (u_int16_t *) malloc(SORT_LOG_SIZE * LOG_NUM * sizeof(u_int16_t));
-
-                for (int logId = 0; logId < LOG_NUM; logId++) {
-                    int fileId = logId % FILE_NUM;
-                    int slotId = logId / FILE_NUM;
                     sortLogs[logId] = new SortLog(sortKeysArray + SORT_LOG_SIZE * logId,
                                                   sortValuesArray + SORT_LOG_SIZE * logId);
                 }
@@ -126,7 +118,6 @@ namespace polar_race {
                             while (keyValueLogs[logId]->getKey(k))
                                 sortLogs[logId]->put(k);
                             sortLogs[logId]->quicksort();
-                            keyValueLogs[logId]->setKeyBufferPosition((size_t) sortLogs[logId]->size());
                             keyValueLogs[logId]->recover((size_t) sortLogs[logId]->size());
                         }
                     });

@@ -26,10 +26,8 @@ namespace polar_race {
         size_t valueFileSize;
 
         int mapFd;
-
         u_int64_t * keyBuffer;
         size_t keyFileSize;
-
         char * blockBuffer;
         size_t blockFileSize;
 

@@ -29,7 +29,6 @@ private:
 
     size_t cacheBufferPosition;
     char *cacheBuffer;
-
     size_t keyBufferPosition;
     u_int64_t *keyBuffer;
 
@@ -119,6 +118,7 @@ public:
     }
 
     void recover(size_t sum) {
+        this->keyBufferPosition = sum;
         this->filePosition = sum << 12;
     }
 
@@ -126,10 +126,6 @@ public:
         key = *(keyBuffer + keyBufferPosition);
         keyBufferPosition++;
         return key != 0;
-    }
-
-    void setKeyBufferPosition(size_t position) {
-        this->keyBufferPosition = position;
     }
 };
 

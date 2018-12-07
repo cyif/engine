@@ -21,7 +21,6 @@ const size_t KEY_LOG_SIZE = NUM_PER_SLOT << 3;
 const int FILE_NUM = 64;
 
 const int SORT_LOG_SIZE = NUM_PER_SLOT;
-const int SORT_FILE_SIZE = SORT_LOG_SIZE * (LOG_NUM / FILE_NUM);
 
 const int KEY_ENLARGE_SIZE = 20010 * 8;
 const int VALUE_ENLARGE_SIZE = 20010 * 4096;
