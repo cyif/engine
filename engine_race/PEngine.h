@@ -298,7 +298,6 @@ namespace polar_race {
                         //等待获取可用的cache
                         rangeCacheFinish[cacheIndex].lock();
                         while (!isCacheWritable[cacheIndex]) {
-                            printf("WAIT...%d\n", logId);
                             rangeCacheFinish[cacheIndex].wait();
                         }
                         rangeCacheFinish[cacheIndex].unlock();
