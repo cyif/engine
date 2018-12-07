@@ -119,7 +119,7 @@ namespace polar_race {
 
                 std::thread t[RECOVER_THREAD];
                 for (int i = 0; i < RECOVER_THREAD; i++) {
-                    t[i] = std::thread([i, num_log_per_file, path, this] {
+                    t[i] = std::thread([i, this] {
                         u_int64_t k;
                         for (int logId = i; logId < LOG_NUM; logId += RECOVER_THREAD) {
                             while (keyValueLogs[logId]->getKey(k))
@@ -157,8 +157,18 @@ namespace polar_race {
         ~PEngine() {
             printf("deleting engine, total life is %lims\n", (now() - start).count());
 
-            for (auto keyValueLogsi : keyValueLogs)
-                delete keyValueLogsi;
+            std::thread t[RECOVER_THREAD];
+            for (int i = 0; i < RECOVER_THREAD; i++) {
+                t[i] = std::thread([i, this] {
+                    for (int logId = i; logId < LOG_NUM; logId += RECOVER_THREAD) {
+                        delete keyValueLogs[logId];
+                    }
+                });
+            }
+
+            for (auto &i : t) {
+                i.join();
+            }
 
             for (auto kvFilesi : kvFiles)
                 delete kvFilesi;
