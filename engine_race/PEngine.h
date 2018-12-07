@@ -53,7 +53,7 @@ namespace polar_race {
     std::atomic_flag readDiskFlag = ATOMIC_FLAG_INIT;
 
     PCond rangeCacheFinish[CACHE_NUM];
-    int rangeCacheCount[CACHE_NUM];
+    std::atomic<int> rangeCacheCount[CACHE_NUM];
 
     PCond readDiskFinish[CACHE_NUM];
 
@@ -265,7 +265,7 @@ namespace polar_race {
                 auto offset = sortLog->findValueByIndex(i);
                 if (offset >= 0) {
                     keyValueLog->readValue(offset, buffer);
-                    u_int64_t k = sortLog->findKeyByIndex(i);
+                    u_int64_t k = __builtin_bswap64(sortLog->findKeyByIndex(i));
                     visitor.Visit(PolarString(((char *) (&k)), 8), PolarString(buffer, 4096));
                 }
             }
@@ -275,7 +275,6 @@ namespace polar_race {
             int logId = 0;
             int rangeAllCount = 0;
             while (true) {
-
                 if (logId < RESERVE_CACHE_NUM) {
                     auto cacheIndex = logId + ACTIVE_CACHE_NUM;
 
@@ -285,6 +284,7 @@ namespace polar_race {
 
                         readDiskThreadPool->enqueue([cacheIndex, cache, logId, this] {
                             keyValueLogs[logId]->readValue(0, cache, (size_t) keyValueLogs[logId]->size());
+                            sortLogs[logId]->swap();
                             readDiskFinish[cacheIndex].lock();
                             isCacheReadable[cacheIndex] = true;
                             readDiskFinish[cacheIndex].notify_all();
@@ -309,6 +309,7 @@ namespace polar_race {
 
                     readDiskThreadPool->enqueue([cacheIndex, cache, logId, this] {
                         keyValueLogs[logId]->readValue(0, cache, (size_t) keyValueLogs[logId]->size());
+                        sortLogs[logId]->swap();
                         readDiskFinish[cacheIndex].lock();
                         isCacheReadable[cacheIndex] = true;
                         readDiskFinish[cacheIndex].notify_all();
@@ -316,11 +317,9 @@ namespace polar_race {
                     });
                 }
 
-                logId++;
-                if (logId >= LOG_NUM) {
+                if (++logId >= LOG_NUM) {
                     logId = 0;
-                    rangeAllCount++;
-                    if (rangeAllCount == MAX_RANGE_COUNT) {
+                    if (++rangeAllCount == MAX_RANGE_COUNT) {
                         readDiskFlag.clear();
                         break;
                     }
@@ -375,23 +374,22 @@ namespace polar_race {
                 }
 
                 auto cache = valueCache + cacheIndex * CACHE_SIZE;
+                auto sortLog = sortLogs[logId];
 
-                for (int i = 0, total = sortLogs[logId]->size(); i < total; i++) {
-                    auto k = sortLogs[logId]->findKeyByIndex(i);
-                    auto offset = sortLogs[logId]->findValueByIndex(i) << 12;
+                for (int i = 0, total = sortLog->size(); i < total; i++) {
+                    auto k = sortLog->findKeyByIndex(i);
+                    auto offset = sortLog->findValueByIndex(i) << 12;
                     visitor.Visit(PolarString(((char *) (&k)), 8), PolarString((cache + offset), 4096));
                 }
 
-                rangeCacheFinish[cacheIndex].lock();
-                auto rangeCount = ++rangeCacheCount[cacheIndex];
-                if (rangeCount == 64) {
+                if (++rangeCacheCount[cacheIndex] == 64) {
+                    rangeCacheFinish[cacheIndex].lock();
                     isCacheWritable[cacheIndex] = true;
                     isCacheReadable[cacheIndex] = false;
                     rangeCacheCount[cacheIndex] = 0;
                     rangeCacheFinish[cacheIndex].notify_all();
+                    rangeCacheFinish[cacheIndex].unlock();
                 }
-                rangeCacheFinish[cacheIndex].unlock();
-
             }
         }
 

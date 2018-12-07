@@ -19,10 +19,11 @@ namespace polar_race {
         u_int16_t * values;
         u_int16_t nums;
         bool enlarge;
+        bool isSwap;
 
     public:
 
-        SortLog(u_int64_t * keys, u_int16_t * values) : nums(0), enlarge(false), keys(keys), values(values){
+        SortLog(u_int64_t * keys, u_int16_t * values) : nums(0), enlarge(false), isSwap(false), keys(keys), values(values) {
         }
 
         ~SortLog() {
@@ -34,6 +35,15 @@ namespace polar_race {
 
         int size() {
             return nums;
+        }
+
+        void swap() {
+            if (!isSwap) {
+                for (int i = 0; i < nums; i++) {
+                    keys[i] = __builtin_bswap64(keys[i]);
+                }
+                isSwap = true;
+            }
         }
 
         bool hasGreaterEqualKey(u_int64_t key) {
@@ -195,7 +205,8 @@ namespace polar_race {
         }
 
         u_int64_t findKeyByIndex(int index) {
-            return __builtin_bswap64(keys[index]);
+            return keys[index];
+//            return __builtin_bswap64(keys[index]);
         }
 
         int getMinIndexGreaterEqualThan(u_int64_t key) {
