@@ -27,13 +27,13 @@
 #include "params.h"
 
 using namespace std;
-using namespace std::chrono;
+//using namespace std::chrono;
 
 namespace polar_race {
 
-    milliseconds now() {
-        return duration_cast<milliseconds>(system_clock::now().time_since_epoch());
-    }
+//    milliseconds now() {
+//        return duration_cast<milliseconds>(system_clock::now().time_since_epoch());
+//    }
 
     static thread_local std::unique_ptr<char> readBuffer(static_cast<char *> (memalign((size_t) getpagesize(), 4096)));
 
@@ -66,13 +66,13 @@ namespace polar_race {
 
     private:
 
-        milliseconds start;
+//        milliseconds start;
         int totalNum = 0;
 
     public:
         explicit PEngine(const string &path) {
-            this->start = now();
-            milliseconds t0 = this->start;
+//            this->start = now();
+//            milliseconds t0 = this->start;
 
             // init
             std::ostringstream ss;
@@ -148,11 +148,11 @@ namespace polar_race {
                                                           kvFiles[fileId]->getKeyBuffer() + slotId * NUM_PER_SLOT);
                 }
             }
-            printf("Open database complete. time spent is %lims\n", (now() - start).count());
+//            printf("Open database complete. time spent is %lims\n", (now() - start).count());
         }
 
         ~PEngine() {
-            printf("deleting engine, total life is %lims\n", (now() - start).count());
+//            printf("deleting engine, total life is %lims\n", (now() - start).count());
 
             std::thread t[RECOVER_THREAD];
             for (int i = 0; i < RECOVER_THREAD; i++) {
@@ -183,7 +183,7 @@ namespace polar_race {
                     free(valueCache);
                 }
             }
-            printf("Finish deleting engine, total life is %lims\n", (now() - start).count());
+//            printf("Finish deleting engine, total life is %lims\n", (now() - start).count());
         }
 
         static inline int getLogId(const char *k) {
@@ -319,7 +319,7 @@ namespace polar_race {
                     if (!isCacheWritable[cacheIndex]) {
                         rangeCacheFinish[cacheIndex].lock();
                         while (!isCacheWritable[cacheIndex]) {
-                            printf("wait for range log: %d , cache index: %d, range round: %d \n", logId, cacheIndex, rangeAllCount);
+//                            printf("wait for range log: %d , cache index: %d, range round: %d \n", logId, cacheIndex, rangeAllCount);
                             rangeCacheFinish[cacheIndex].wait();
                         }
                         rangeCacheFinish[cacheIndex].unlock();
