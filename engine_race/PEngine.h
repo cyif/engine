@@ -148,13 +148,15 @@ namespace polar_race {
                 milliseconds t2 = now();
 
 
-                //8线程读cache
-                std::thread t_cache[RESERVE_CACHE_NUM];
+                //4线程读cache
+                std::thread t_cache[PREPARE_CACHE_NUM];
 
-                for (int i = 0; i < RESERVE_CACHE_NUM; i++) {
+                for (int i = 0; i < PREPARE_CACHE_NUM; i++) {
                     t_cache[i] = std::thread([i, this] {
+                        auto s = now();
                         auto cache = reserveCache + i * CACHE_SIZE;
                         keyValueLogs[i]->readValue(0, cache, (size_t) CACHE_SIZE);
+                        printf("Finish Read Reserve Cache : %d,  %lims\n", i, (now() - s).count());
                     });
                 }
 
@@ -172,7 +174,7 @@ namespace polar_race {
                     i.join();
                 }
 
-                for (int i = 0; i < RESERVE_CACHE_NUM; i++) t_cache[i].join();
+                for (int i = 0; i < PREPARE_CACHE_NUM; i++) t_cache[i].join();
 
                 printf("sort and read cache complete. time spent is %lims\n", (now() - t2).count());
 
@@ -258,7 +260,7 @@ namespace polar_race {
             if (index == -1) {
                 return kNotFound;
             } else {
-                if (logId < RESERVE_CACHE_NUM && !enlarge) {
+                if (logId < PREPARE_CACHE_NUM && !enlarge) {
                     value->assign(reserveCache + logId * CACHE_SIZE + (index << 12), 4096);
                 } else {
                     auto buffer = readBuffer.get();
@@ -371,6 +373,12 @@ namespace polar_race {
                     if (!isCacheReadable[cacheIndex]) {
                         isCacheWritable[cacheIndex] = false;
                         currentCacheLogId[cacheIndex] = logId;
+
+                        if (logId >= PREPARE_CACHE_NUM) {
+                            cache = valueCache + cacheIndex * CACHE_SIZE;;
+                            keyValueLogs[logId]->readValue(0, cache, (size_t) keyValueLogs[logId]->size());
+                        }
+
                         readDiskFinish[cacheIndex].lock();
                         isCacheReadable[cacheIndex] = true;
                         readDiskFinish[cacheIndex].notify_all();

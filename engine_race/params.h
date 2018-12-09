@@ -30,6 +30,7 @@ const size_t CACHE_SIZE = VALUE_LOG_SIZE;
 const int CACHE_NUM = 16;
 const int ACTIVE_CACHE_NUM = 8;
 const int RESERVE_CACHE_NUM = CACHE_NUM - ACTIVE_CACHE_NUM;
+const int PREPARE_CACHE_NUM = 4;
 
 
 const int PAGE_PER_BLOCK = 4;
