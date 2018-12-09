@@ -69,11 +69,12 @@ namespace polar_race {
 
         milliseconds start;
         int totalNum = 0;
+        bool enlarge = false;
 
     public:
         explicit PEngine(const string &path) {
             this->start = now();
-//            milliseconds t0 = this->start;
+            milliseconds t0 = this->start;
 
             // init
             std::ostringstream ss;
@@ -122,6 +123,32 @@ namespace polar_race {
                     currentCacheLogId[i] = -1;
                 }
 
+                printf("Open files complete. time spent is %lims\n", (now() - t0).count());
+                milliseconds t1 = now();
+
+
+                //64线程读keylog
+                std::thread t[RECOVER_THREAD];
+                for (int i = 0; i < RECOVER_THREAD; i++) {
+                    t[i] = std::thread([i, this] {
+                        u_int64_t k;
+                        for (int logId = i; logId < LOG_NUM; logId += RECOVER_THREAD) {
+                            while (keyValueLogs[logId]->getKey(k))
+                                sortLogs[logId]->put(k);
+                            keyValueLogs[logId]->recover((size_t) sortLogs[logId]->size());
+                        }
+                    });
+                }
+
+                for (auto &i : t) {
+                    i.join();
+                }
+
+                printf("read keylogs complete. time spent is %lims\n", (now() - t1).count());
+                milliseconds t2 = now();
+
+
+                //8线程读cache
                 std::thread t_cache[RESERVE_CACHE_NUM];
 
                 for (int i = 0; i < RESERVE_CACHE_NUM; i++) {
@@ -131,15 +158,12 @@ namespace polar_race {
                     });
                 }
 
-                std::thread t[RECOVER_THREAD];
+                //64线程排序
                 for (int i = 0; i < RECOVER_THREAD; i++) {
                     t[i] = std::thread([i, this] {
                         u_int64_t k;
                         for (int logId = i; logId < LOG_NUM; logId += RECOVER_THREAD) {
-                            while (keyValueLogs[logId]->getKey(k))
-                                sortLogs[logId]->put(k);
                             sortLogs[logId]->quicksort();
-                            keyValueLogs[logId]->recover((size_t) sortLogs[logId]->size());
                         }
                     });
                 }
@@ -150,8 +174,14 @@ namespace polar_race {
 
                 for (int i = 0; i < RESERVE_CACHE_NUM; i++) t_cache[i].join();
 
+                printf("sort and read cache complete. time spent is %lims\n", (now() - t2).count());
+
                 for (int logId = 0; logId < LOG_NUM; logId++)
                     totalNum += sortLogs[logId]->size();
+
+                if (totalNum < RANGE_THRESHOLD) {
+                    enlarge = true;
+                }
 
             } else {
                 for (int fileId = 0; fileId < FILE_NUM; fileId++) {
@@ -228,7 +258,7 @@ namespace polar_race {
             if (index == -1) {
                 return kNotFound;
             } else {
-                if (logId < RESERVE_CACHE_NUM) {
+                if (logId < RESERVE_CACHE_NUM && !enlarge) {
                     value->assign(reserveCache + logId * CACHE_SIZE + (index << 12), 4096);
                 } else {
                     auto buffer = readBuffer.get();
@@ -336,11 +366,11 @@ namespace polar_race {
 
                 if (logId < RESERVE_CACHE_NUM) {
                     cacheIndex = logId + ACTIVE_CACHE_NUM;
-                    isCacheWritable[cacheIndex] = false;
-                    currentCacheLogId[cacheIndex] = logId;
                     readDiskLogIdMtx.unlock();
 
                     if (!isCacheReadable[cacheIndex]) {
+                        isCacheWritable[cacheIndex] = false;
+                        currentCacheLogId[cacheIndex] = logId;
                         readDiskFinish[cacheIndex].lock();
                         isCacheReadable[cacheIndex] = true;
                         readDiskFinish[cacheIndex].notify_all();
