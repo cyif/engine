@@ -31,16 +31,15 @@ using namespace std::chrono;
 
 namespace polar_race {
 
-    milliseconds now() {
-        return duration_cast<milliseconds>(system_clock::now().time_since_epoch());
-    }
+//    milliseconds now() {
+//        return duration_cast<milliseconds>(system_clock::now().time_since_epoch());
+//    }
 
     static thread_local std::unique_ptr<char> readBuffer(static_cast<char *> (memalign((size_t) getpagesize(), 4096)));
 
     KeyValueLog *keyValueLogs[LOG_NUM];
     KVFiles *kvFiles[FILE_NUM];
     SortLog **sortLogs;
-
     u_int64_t *sortKeysArray;
     u_int16_t *sortValuesArray;
 
@@ -63,18 +62,18 @@ namespace polar_race {
     int readDiskLogId = 0;
     int rangeAllCount = 0;
 
+    int totalNum = 0;
+    bool unEnlarge = true;
+
+
     class PEngine {
 
-    private:
-
-        milliseconds start;
-        int totalNum = 0;
-        bool enlarge = false;
-
+//    private:
+//        milliseconds start;
     public:
         explicit PEngine(const string &path) {
-            this->start = now();
-            milliseconds t0 = this->start;
+//            this->start = now();
+//            milliseconds t0 = this->start;
 
             // init
             std::ostringstream ss;
@@ -123,8 +122,8 @@ namespace polar_race {
                     currentCacheLogId[i] = -1;
                 }
 
-                printf("Open files complete. time spent is %lims\n", (now() - t0).count());
-                milliseconds t1 = now();
+//                printf("Open files complete. time spent is %lims\n", (now() - t0).count());
+//                milliseconds t1 = now();
 
 
                 //64线程读keylog
@@ -148,8 +147,8 @@ namespace polar_race {
                     i.join();
                 }
 
-                printf("read keylogs complete. time spent is %lims\n", (now() - t1).count());
-                milliseconds t2 = now();
+//                printf("read keylogs complete. time spent is %lims\n", (now() - t1).count());
+//                milliseconds t2 = now();
 
 
                 //4线程读cache
@@ -157,10 +156,10 @@ namespace polar_race {
 
                 for (int i = 0; i < PREPARE_CACHE_NUM; i++) {
                     t_cache[i] = std::thread([i, this] {
-                        auto s = now();
+//                        auto s = now();
                         auto cache = reserveCache + i * CACHE_SIZE;
                         keyValueLogs[i]->readValue(0, cache, (size_t) CACHE_SIZE);
-                        printf("Finish Read Reserve Cache : %d,  %lims\n", i, (now() - s).count());
+//                        printf("Finish Read Reserve Cache : %d,  %lims\n", i, (now() - s).count());
                     });
                 }
 
@@ -183,13 +182,13 @@ namespace polar_race {
 
                 for (int i = 0; i < PREPARE_CACHE_NUM; i++) t_cache[i].join();
 
-                printf("sort and read cache complete. time spent is %lims\n", (now() - t2).count());
+//                printf("sort and read cache complete. time spent is %lims\n", (now() - t2).count());
 
                 for (int logId = 0; logId < LOG_NUM; logId++)
                     totalNum += sortLogs[logId]->size();
 
                 if (totalNum < RANGE_THRESHOLD) {
-                    enlarge = true;
+                    unEnlarge = false;
                 }
 
             } else {
@@ -211,7 +210,7 @@ namespace polar_race {
                                                           kvFiles[fileId]->getKeyBuffer() + slotId * NUM_PER_SLOT);
                 }
             }
-            printf("Open database complete. time spent is %lims\n", (now() - start).count());
+//            printf("Open database complete. time spent is %lims\n", (now() - start).count());
         }
 
         ~PEngine() {
@@ -267,7 +266,7 @@ namespace polar_race {
             if (index == -1) {
                 return kNotFound;
             } else {
-                if (logId < PREPARE_CACHE_NUM && !enlarge) {
+                if (logId < PREPARE_CACHE_NUM && unEnlarge) {
                     value->assign(reserveCache + logId * CACHE_SIZE + (index << 12), 4096);
                 } else {
                     auto buffer = readBuffer.get();
