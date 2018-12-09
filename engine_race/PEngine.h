@@ -132,9 +132,13 @@ namespace polar_race {
                 for (int i = 0; i < RECOVER_THREAD; i++) {
                     t[i] = std::thread([i, this] {
                         u_int64_t k;
+                        int flag = 0;
                         for (int logId = i; logId < LOG_NUM; logId += RECOVER_THREAD) {
                             while (keyValueLogs[logId]->getKey(k))
                                 sortLogs[logId]->put(k);
+                            if (flag % 2 == 0)
+                                sortLogs[logId]->quicksort();
+                            flag++;
                             keyValueLogs[logId]->recover((size_t) sortLogs[logId]->size());
                         }
                     });
@@ -164,8 +168,11 @@ namespace polar_race {
                 for (int i = 0; i < RECOVER_THREAD; i++) {
                     t[i] = std::thread([i, this] {
                         u_int64_t k;
+                        int flag = 0;
                         for (int logId = i; logId < LOG_NUM; logId += RECOVER_THREAD) {
-                            sortLogs[logId]->quicksort();
+                            if (flag % 2 != 0)
+                                sortLogs[logId]->quicksort();
+                            flag++;
                         }
                     });
                 }
