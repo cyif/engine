@@ -1,3 +1,7 @@
+/*
+    Engine
+*/
+
 #ifndef ENGINE_RACE_PENGINE_H
 #define ENGINE_RACE_PENGINE_H
 
@@ -31,50 +35,49 @@ using namespace std::chrono;
 
 namespace polar_race {
 
-//    milliseconds now() {
-//        return duration_cast<milliseconds>(system_clock::now().time_since_epoch());
-//    }
+    milliseconds now() {
+        return duration_cast<milliseconds>(system_clock::now().time_since_epoch());
+    }
 
+    //readBuffer, 块对齐
     static thread_local std::unique_ptr<char> readBuffer(static_cast<char *> (memalign((size_t) getpagesize(), 4096)));
 
+    //key、value文件以及sortlog
     KeyValueLog *keyValueLogs[LOG_NUM];
     KVFiles *kvFiles[FILE_NUM];
     SortLog **sortLogs;
     u_int64_t *sortKeysArray;
     u_int16_t *sortValuesArray;
 
+    //写入锁
     PMutex logMutex[LOG_NUM];
 
+    //range阶段value缓存的相关变量、锁
     char *valueCache;
     char *reserveCache;
     std::atomic_flag readDiskFlag = ATOMIC_FLAG_INIT;
-
     PCond rangeCacheFinish[CACHE_NUM];
     std::atomic<int> rangeCacheCount[CACHE_NUM];
-
     PCond readDiskFinish[CACHE_NUM];
-
     bool isCacheReadable[CACHE_NUM];
     bool isCacheWritable[CACHE_NUM];
     int currentCacheLogId[CACHE_NUM];
-
     PMutex readDiskLogIdMtx;
     int readDiskLogId = 0;
     int rangeAllCount = 0;
 
+    //阈值判断
     int totalNum = 0;
     bool unEnlarge = true;
 
 
     class PEngine {
 
-//    private:
-//        milliseconds start;
+    private:
+        milliseconds start;
     public:
         explicit PEngine(const string &path) {
-//            this->start = now();
-//            milliseconds t0 = this->start;
-
+            this->start = now();
             // init
             std::ostringstream ss;
             ss << path << "/value-0";
@@ -85,6 +88,7 @@ namespace polar_race {
 
             int num_log_per_file = LOG_NUM / FILE_NUM;
 
+            //如果文件存在，说明不是第一次open，进行sortlog排序和valuecache预读
             if (access(filePath.data(), 0) != -1) {
 
                 sortLogs = static_cast<SortLog **>(malloc(LOG_NUM * sizeof(SortLog *)));
@@ -122,10 +126,6 @@ namespace polar_race {
                     currentCacheLogId[i] = -1;
                 }
 
-//                printf("Open files complete. time spent is %lims\n", (now() - t0).count());
-//                milliseconds t1 = now();
-
-
                 //64线程读keylog
                 std::thread t[RECOVER_THREAD];
                 for (int i = 0; i < RECOVER_THREAD; i++) {
@@ -146,20 +146,12 @@ namespace polar_race {
                 for (auto &i : t) {
                     i.join();
                 }
-
-//                printf("read keylogs complete. time spent is %lims\n", (now() - t1).count());
-//                milliseconds t2 = now();
-
-
-                //4线程读cache
+                //4线程读PREPARE_CACHE_NUM个cache
                 std::thread t_cache[PREPARE_CACHE_NUM];
-
                 for (int i = 0; i < PREPARE_CACHE_NUM; i++) {
                     t_cache[i] = std::thread([i, this] {
-//                        auto s = now();
                         auto cache = reserveCache + i * CACHE_SIZE;
                         keyValueLogs[i]->readValue(0, cache, (size_t) CACHE_SIZE);
-//                        printf("Finish Read Reserve Cache : %d,  %lims\n", i, (now() - s).count());
                     });
                 }
 
@@ -182,8 +174,6 @@ namespace polar_race {
 
                 for (int i = 0; i < PREPARE_CACHE_NUM; i++) t_cache[i].join();
 
-//                printf("sort and read cache complete. time spent is %lims\n", (now() - t2).count());
-
                 for (int logId = 0; logId < LOG_NUM; logId++)
                     totalNum += sortLogs[logId]->size();
 
@@ -191,7 +181,9 @@ namespace polar_race {
                     unEnlarge = false;
                 }
 
-            } else {
+            }
+            //第一次open
+            else {
                 for (int fileId = 0; fileId < FILE_NUM; fileId++) {
                     kvFiles[fileId] = new KVFiles(path, fileId,
                                                   false,
@@ -210,12 +202,10 @@ namespace polar_race {
                                                           kvFiles[fileId]->getKeyBuffer() + slotId * NUM_PER_SLOT);
                 }
             }
-//            printf("Open database complete. time spent is %lims\n", (now() - start).count());
+            printf("Open database complete. time spent is %lims\n", (now() - start).count());
         }
 
         ~PEngine() {
-//            printf("deleting engine, total life is %lims\n", (now() - start).count());
-
             std::thread t[RECOVER_THREAD];
             for (int i = 0; i < RECOVER_THREAD; i++) {
                 t[i] = std::thread([i, this] {
@@ -245,9 +235,10 @@ namespace polar_race {
                     free(valueCache);
                 }
             }
-//            printf("Finish deleting engine, total life is %lims\n", (now() - start).count());
+            printf("Finish deleting engine, total life is %lims\n", (now() - start).count());
         }
 
+        //根据key，判断属于哪个log
         static inline int getLogId(const char *k) {
             return ((u_int16_t) ((u_int8_t) k[0]) << 4) | ((u_int8_t) k[1] >> 4);
         }
@@ -348,30 +339,27 @@ namespace polar_race {
         }
 
 
+        //读磁盘线程
         void readDisk() {
-//            printf("Start Read Disk Thread!\n");
-
             int cacheIndex;
             char *cache;
 
             while (true) {
 
                 readDiskLogIdMtx.lock();
-
                 if (rangeAllCount == MAX_RANGE_COUNT) {
                     readDiskFlag.clear();
                     readDiskLogIdMtx.unlock();
                     break;
                 }
-
                 int logId = readDiskLogId;
                 readDiskLogId++;
-
                 if (readDiskLogId >= LOG_NUM) {
                     readDiskLogId = 0;
                     rangeAllCount++;
                 }
 
+                //小于RESERVE_CACHE_NUM的部分，只读一次磁盘
                 if (logId < RESERVE_CACHE_NUM) {
                     cacheIndex = logId + ACTIVE_CACHE_NUM;
                     readDiskLogIdMtx.unlock();
@@ -397,7 +385,6 @@ namespace polar_race {
                     if (!isCacheWritable[cacheIndex]) {
                         rangeCacheFinish[cacheIndex].lock();
                         while (!isCacheWritable[cacheIndex]) {
-//                            printf("wait for range log: %d , cache index: %d, range round: %d \n", logId, cacheIndex, rangeAllCount);
                             rangeCacheFinish[cacheIndex].wait();
                         }
                         rangeCacheFinish[cacheIndex].unlock();

@@ -1,6 +1,6 @@
-//
-// Created by parallels on 11/14/18.
-//
+/*
+    Sortlog in Memory
+*/
 
 #ifndef ENGINE_SORT_LOG_H
 #define ENGINE_SORT_LOG_H
