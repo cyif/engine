@@ -13,7 +13,6 @@
 #include <stdlib.h>
 #include <fcntl.h>
 #include <stdio.h>
-#include <aio.h>
 #include <sys/time.h>      //添加头文件
 #include <unistd.h>
 #include <string>
